@@ -1,0 +1,47 @@
+/**
+ * @see https://www.electron.build/configuration/configuration
+ */
+{
+  appId: "com.pluto.desktop",
+  productName: "Pluto Desktop",
+  copyright: "Copyright © 2022 ${author}",
+  asar: true,
+  directories: {
+    output: "release/${version}",
+    buildResources: "resources",
+  },
+  extraResources: [
+    {
+      from: "./extraResources/",
+      to: "extraResources",
+      filter: ["**/*"],
+    },
+  ],
+  fileAssociations: {
+    ext: "pluto.jl",
+  },
+  files: ["dist"],
+  win: {
+    target: [
+      {
+        target: "nsis",
+        arch: ["x64"],
+      },
+    ],
+    artifactName: "${productName}-${version}-Setup.${ext}",
+  },
+  nsis: {
+    oneClick: false,
+    perMachine: false,
+    allowToChangeInstallationDirectory: true,
+    deleteAppDataOnUninstall: false,
+  },
+  mac: {
+    target: ["dmg"],
+    artifactName: "${productName}-${version}-Installer.${ext}",
+  },
+  linux: {
+    target: ["AppImage"],
+    artifactName: "${productName}-${version}-Installer.${ext}",
+  },
+}
