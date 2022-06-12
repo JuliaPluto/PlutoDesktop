@@ -76,15 +76,6 @@ const createWindow = async (
   project?: string,
   notebook?: string
 ) => {
-  if (checkIfCalledViaCLI(process.argv)) {
-    url = arg.url;
-    project = arg.project;
-    notebook = arg.notebook;
-  }
-  if (isDebug) {
-    await installExtensions();
-  }
-
   const RESOURCES_PATH = app.isPackaged
     ? path.join(process.resourcesPath, 'assets')
     : path.join(__dirname, '../../assets');
@@ -92,6 +83,22 @@ const createWindow = async (
   const getAssetPath = (...paths: string[]): string => {
     return path.join(RESOURCES_PATH, ...paths);
   };
+
+  if (checkIfCalledViaCLI(process.argv)) {
+    url = arg.url;
+    project = arg.project;
+    notebook =
+      arg.notebook ??
+      (typeof arg._[0] === 'string' && arg._[0].includes('.pluto.jl'))
+        ? (arg._[0] as string)
+        : undefined;
+  }
+
+  log.info('CLI received:', arg);
+
+  if (isDebug) {
+    await installExtensions();
+  }
 
   mainWindow = new BrowserWindow({
     title: '⚡ Pluto ⚡',
@@ -154,6 +161,10 @@ app.on('window-all-closed', () => {
   }
 });
 
+app.on('open-file', async (_event, file) => {
+  await createWindow(undefined, undefined, file);
+});
+
 app
   .whenReady()
   .then(() => {
@@ -164,4 +175,4 @@ app
       if (mainWindow === null) createWindow();
     });
   })
-  .catch(console.log);
+  .catch(log.error);
