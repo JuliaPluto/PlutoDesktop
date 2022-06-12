@@ -4,7 +4,11 @@ import {
   shell,
   BrowserWindow,
   MenuItemConstructorOptions,
+  dialog,
 } from 'electron';
+import { URL } from 'node:url';
+import { PlutoExport } from '../../types/enums';
+import { exportNotebook, openNotebook } from './pluto';
 
 interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
   selector?: string;
@@ -200,6 +204,28 @@ export default class MenuBuilder {
           {
             label: '&Open',
             accelerator: 'Ctrl+O',
+            click: async () => {
+              const r = await dialog.showOpenDialog(this.mainWindow, {
+                message: 'Please select a Pluto Notebook.',
+                filters: [{ name: 'Pluto Notebook', extensions: ['pluto.jl'] }],
+                properties: ['openFile'],
+              });
+
+              if (r.canceled) return;
+
+              const res = await openNotebook(r.filePaths[0]);
+              if (typeof res === 'string') this.mainWindow.loadURL(res);
+              else dialog.showErrorBox(res.name, res.message);
+            },
+          },
+          {
+            label: '&New',
+            accelerator: 'Ctrl+N',
+            click: async () => {
+              const res = await openNotebook();
+              if (typeof res === 'string') this.mainWindow.loadURL(res);
+              else dialog.showErrorBox(res.name, res.message);
+            },
           },
           {
             label: '&Close',
@@ -279,6 +305,56 @@ export default class MenuBuilder {
             label: 'Search Issues',
             click() {
               shell.openExternal('https://github.com/electron/electron/issues');
+            },
+          },
+        ],
+      },
+      {
+        label: 'Export',
+        submenu: [
+          {
+            label: 'Pluto Notebook',
+            click: async () => {
+              const url = new URL(this.mainWindow.webContents.getURL());
+              const id = url.searchParams.get('id');
+              if (!id) {
+                return dialog.showErrorBox(
+                  'Invalid ID',
+                  'Invalid ID in the url, cannot export.'
+                );
+              }
+
+              return exportNotebook(id, PlutoExport.FILE);
+            },
+          },
+          {
+            label: 'HTML File',
+            click: async () => {
+              const url = new URL(this.mainWindow.webContents.getURL());
+              const id = url.searchParams.get('id');
+              if (!id) {
+                return dialog.showErrorBox(
+                  'Invalid ID',
+                  'Invalid ID in the url, cannot export.'
+                );
+              }
+
+              return exportNotebook(id, PlutoExport.HTML);
+            },
+          },
+          {
+            label: 'Pluto Statefile',
+            click: async () => {
+              const url = new URL(this.mainWindow.webContents.getURL());
+              const id = url.searchParams.get('id');
+              if (!id) {
+                return dialog.showErrorBox(
+                  'Invalid ID',
+                  'Invalid ID in the url, cannot export.'
+                );
+              }
+
+              return exportNotebook(id, PlutoExport.STATE);
             },
           },
         ],
