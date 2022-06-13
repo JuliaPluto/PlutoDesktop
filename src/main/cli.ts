@@ -1,3 +1,8 @@
+/**
+ * This file includes all the CLI functionalities.
+ * You can call something like "pluto -n="test.pluto.jl""
+ */
+
 import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
 

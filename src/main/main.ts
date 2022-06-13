@@ -71,6 +71,22 @@ const installExtensions = async () => {
     .catch(console.log);
 };
 
+/**
+ * - A function to create a pluto window.
+ * - It checks whether called from CLI or GUI.
+ * - It checks if a pluto instance is already running.
+ * - Installs dev extensions if needed
+ * - Takes care of app updates
+ *
+ * *NOTE:* If any param is `unknown` it is overwritten by the CLI options,
+ * if possible.
+ *
+ * @param url the URL to open in this window
+ * @param project the project folder location
+ * @param notebook the path to a pluto notebook
+ * @returns nothing
+ */
+
 const createWindow = async (
   url?: string,
   project?: string,

@@ -48,6 +48,16 @@ const openNotebook: (path?: string) => Promise<string | Error> = async (
   };
 };
 
+/**
+ * The main function the actually runs a `julia` script that
+ * checks and runs `Pluto` with specified options
+ * It also updates the render process about the current status in the `pluto-url` channel.
+ * @param win the BrowserWindow in which we are tryng to run pluto
+ * @param getAssetPath a function to get asset path in dev and prod environment
+ * @param project project path
+ * @param notebook pluto notebook path
+ * @returns nothing
+ */
 const runPluto = async (
   win: BrowserWindow,
   getAssetPath: (...paths: string[]) => string,
