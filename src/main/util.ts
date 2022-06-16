@@ -16,3 +16,26 @@ if (process.env.NODE_ENV === 'development') {
     return `file://${path.resolve(__dirname, '../renderer/', htmlFileName)}`;
   };
 }
+
+const PLUTO_FILE_EXTENSIONS = [
+  '.pluto.jl',
+  '.Pluto.jl',
+  '.nb.jl',
+  '.jl',
+  '.plutojl',
+  '.pluto',
+  '.nbjl',
+  '.pljl',
+  '.pluto.jl.txt',
+  '.jl.txt',
+];
+
+const isExtMatch = (file: string) => {
+  for (let index = 0; index < PLUTO_FILE_EXTENSIONS.length; index += 1) {
+    const ext = PLUTO_FILE_EXTENSIONS[index];
+    if (file.endsWith(ext)) return true;
+  }
+  return false;
+};
+
+export { isExtMatch, PLUTO_FILE_EXTENSIONS };

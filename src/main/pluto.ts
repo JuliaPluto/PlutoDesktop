@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import isDev from 'electron-is-dev';
 import { PlutoExport } from '../../types/enums';
 import store from './store';
+import { isExtMatch, PLUTO_FILE_EXTENSIONS } from './util';
 
 // console.log(Pluto);
 
@@ -73,15 +74,35 @@ let plutoURL: PlutoURL | null = null;
  * * a URL to a new notebook if no path passed
  * * an Error in all other cases
  */
-// https://github.com/fonsp/Pluto.jl/blob/727b18d277a4c6f4547eaaa4bd90564641fbfc9e/src/notebook/path%20helpers.jl#L106-L117
-const openNotebook: (path?: string) => Promise<string | Error> = async (
-  path?: string
-) => {
-  // if (path && !path.includes('.jl'))
-  //   return {
-  //     name: 'pluto-cannot-open-notebook',
-  //     message: 'Not a valid .pluto.jl or .jl file',
-  //   };
+const openNotebook = async (path?: string, forceNew = false) => {
+  const window = BrowserWindow.getFocusedWindow()!;
+
+  if (path && !isExtMatch(path)) {
+    dialog.showErrorBox(
+      'PLUTO-CANNOT-OPEN-NOTEBOOK',
+      'Not a supported file type.'
+    );
+    return;
+  }
+
+  if (!forceNew && !path) {
+    const r = await dialog.showOpenDialog(window, {
+      message: 'Please select a Pluto Notebook.',
+      filters: [
+        {
+          name: 'Pluto Notebook',
+          extensions: PLUTO_FILE_EXTENSIONS.map((v) => v.slice(1)),
+        },
+      ],
+      properties: ['openFile'],
+    });
+
+    if (r.canceled) return;
+
+    // eslint-disable-next-line no-param-reassign
+    [path] = r.filePaths;
+  }
+
   if (plutoURL) {
     const res = await axios.post(
       `http://localhost:${plutoURL.port}/${path ? 'open' : 'new'}?secret=${
@@ -89,18 +110,22 @@ const openNotebook: (path?: string) => Promise<string | Error> = async (
       }${path ? `&path=${path}` : ''}`
     );
     if (res.status === 200) {
-      return `http://localhost:${plutoURL.port}/edit?secret=${plutoURL.secret}&id=${res.data}`;
+      await window.loadURL(
+        `http://localhost:${plutoURL.port}/edit?secret=${plutoURL.secret}&id=${res.data}`
+      );
+      return;
     }
-    return {
-      name: 'pluto-cannot-open-notebook',
-      message: 'Please check if you are using the correct secret.',
-    };
+    dialog.showErrorBox(
+      'PLUTO-CANNOT-OPEN-NOTEBOOK',
+      'Please check if you are using the correct secret.'
+    );
+    return;
   }
 
-  return {
-    name: 'pluto-not-initialized',
-    message: 'Please wait for pluto to initialize.',
-  };
+  dialog.showErrorBox(
+    'PLUTO-CANNOT-OPEN-NOTEBOOK',
+    'Please wait for pluto to initialize.'
+  );
 };
 
 /**
@@ -121,18 +146,9 @@ const runPluto = async (
 ) => {
   if (plutoURL) {
     log.info('LAUNCHING\n', 'project:', project, '\nnotebook:', notebook);
-    if (notebook) {
-      const res = await openNotebook(notebook);
-      if (typeof res === 'string') {
-        win.loadURL(res);
-      } else {
-        dialog.showErrorBox(res.name, res.message);
-      }
-    }
+    await openNotebook(notebook);
     return;
   }
-
-  await extractJulia(getAssetPath);
 
   win.webContents.send('pluto-url', 'loading');
 
