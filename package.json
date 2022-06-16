@@ -191,7 +191,16 @@
       {
         "name": "Pluto Notebook",
         "ext": [
-          "pluto.jl"
+          "pluto.jl",
+          "Pluto.jl",
+          "nb.jl",
+          "jl",
+          "plutojl",
+          "pluto",
+          "nbjl",
+          "pljl",
+          "pluto.jl.txt",
+          "jl.txt"
         ],
         "role": "Editor"
       }
