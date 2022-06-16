@@ -6,6 +6,10 @@ declare global {
   };
 
   type RunPlutoResponse = 'loading' | 'updating' | 'no_update' | PlutoURL;
+
+  type SettingsStore = {
+    'JULIA-PATH'?: string;
+  };
 }
 
 export {};

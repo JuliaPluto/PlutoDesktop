@@ -15,8 +15,8 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { release } from 'os';
 import MenuBuilder from './menu';
-import { resolveHtmlPath } from './util';
-import { runPluto } from './pluto';
+import { isExtMatch, resolveHtmlPath } from './util';
+import { extractJulia, runPluto } from './pluto';
 import { arg, checkIfCalledViaCLI } from './cli';
 
 export default class AppUpdater {
@@ -100,12 +100,13 @@ const createWindow = async (
     return path.join(RESOURCES_PATH, ...paths);
   };
 
+  await extractJulia(getAssetPath);
+
   if (checkIfCalledViaCLI(process.argv)) {
     url = arg.url;
     project = arg.project;
     notebook =
-      arg.notebook ??
-      (typeof arg._[0] === 'string' && arg._[0].includes('.pluto.jl'))
+      arg.notebook ?? (typeof arg._[0] === 'string' && isExtMatch(arg._[0]))
         ? (arg._[0] as string)
         : undefined;
   }

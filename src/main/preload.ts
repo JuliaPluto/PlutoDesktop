@@ -18,4 +18,9 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.once(channel, (_event, ...args) => func(...args));
     },
   },
+  fileSystem: {
+    openNotebook(path?: string, forceNew?: boolean) {
+      ipcRenderer.send('PLUTO-OPEN-NOTEBOOK', path, forceNew);
+    },
+  },
 });

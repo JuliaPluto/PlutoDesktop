@@ -1,15 +1,68 @@
-import { BrowserWindow, dialog } from 'electron';
+import { BrowserWindow, dialog, ipcMain } from 'electron';
 import log from 'electron-log';
 import { ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import chalk from 'chalk';
 import axios from 'axios';
 import electronDl, { download } from 'electron-dl';
 import fs from 'node:fs';
+import unzip from 'extract-zip';
+import { join } from 'node:path';
+import isDev from 'electron-is-dev';
 import { PlutoExport } from '../../types/enums';
-
-// console.log(Pluto);
+import store from './store';
+import { isExtMatch, PLUTO_FILE_EXTENSIONS } from './util';
 
 electronDl();
+
+/**
+ * * Extracts Julia from bundled zip
+ * * removes used zip for space saving
+ * @param getAssetPath a function to get asset path
+ * @returns nothing
+ */
+const extractJulia = async (getAssetPath: (...paths: string[]) => string) => {
+  if (
+    store.has('JULIA-PATH') &&
+    fs.existsSync(getAssetPath(store.get('JULIA-PATH') as string))
+  )
+    return;
+
+  try {
+    const files = fs.readdirSync(getAssetPath('.'));
+    const idx = files.findIndex(
+      (v) => v.startsWith('julia-') && v.endsWith('zip')
+    );
+    if (idx === -1) {
+      log.error('JULIA-INSTALL-ERROR', "Can't find Julia zip");
+      return;
+    }
+    let zip = files[idx];
+    const nameInitial = zip.replace('-win64.zip', '');
+    console.log('File found:', zip);
+    zip = getAssetPath(zip);
+    const name = getAssetPath(nameInitial);
+    if (fs.existsSync(name)) {
+      console.log('Deleting already existing directory');
+      fs.rmSync(name, { recursive: true, force: true });
+    }
+
+    console.log('Unzipping');
+    await unzip(zip, { dir: getAssetPath('.') });
+    console.log('Unzipped');
+    if (!isDev) {
+      console.log('Removing zip');
+      fs.rm(zip, (e) => {
+        if (e) {
+          console.log(e);
+        }
+      });
+      console.log('Zip removed');
+    }
+    store.set('JULIA-PATH', join(nameInitial, '/bin/julia.exe'));
+  } catch (error) {
+    console.error(error);
+  }
+};
 
 let plutoURL: PlutoURL | null = null;
 
@@ -19,14 +72,35 @@ let plutoURL: PlutoURL | null = null;
  * * a URL to a new notebook if no path passed
  * * an Error in all other cases
  */
-const openNotebook: (path?: string) => Promise<string | Error> = async (
-  path?: string
-) => {
-  if (path && !path.includes('.pluto.jl'))
-    return {
-      name: 'pluto-cannot-open-notebook',
-      message: 'Not a valid .pluto.jl file',
-    };
+const openNotebook = async (path?: string, forceNew = false) => {
+  const window = BrowserWindow.getFocusedWindow()!;
+
+  if (path && !isExtMatch(path)) {
+    dialog.showErrorBox(
+      'PLUTO-CANNOT-OPEN-NOTEBOOK',
+      'Not a supported file type.'
+    );
+    return;
+  }
+
+  if (!forceNew && !path) {
+    const r = await dialog.showOpenDialog(window, {
+      message: 'Please select a Pluto Notebook.',
+      filters: [
+        {
+          name: 'Pluto Notebook',
+          extensions: PLUTO_FILE_EXTENSIONS.map((v) => v.slice(1)),
+        },
+      ],
+      properties: ['openFile'],
+    });
+
+    if (r.canceled) return;
+
+    // eslint-disable-next-line no-param-reassign
+    [path] = r.filePaths;
+  }
+
   if (plutoURL) {
     const res = await axios.post(
       `http://localhost:${plutoURL.port}/${path ? 'open' : 'new'}?secret=${
@@ -34,18 +108,22 @@ const openNotebook: (path?: string) => Promise<string | Error> = async (
       }${path ? `&path=${path}` : ''}`
     );
     if (res.status === 200) {
-      return `http://localhost:${plutoURL.port}/edit?secret=${plutoURL.secret}&id=${res.data}`;
+      await window.loadURL(
+        `http://localhost:${plutoURL.port}/edit?secret=${plutoURL.secret}&id=${res.data}`
+      );
+      return;
     }
-    return {
-      name: 'pluto-cannot-open-notebook',
-      message: 'Please check if you are using the correct secret.',
-    };
+    dialog.showErrorBox(
+      'PLUTO-CANNOT-OPEN-NOTEBOOK',
+      'Please check if you are using the correct secret.'
+    );
+    return;
   }
 
-  return {
-    name: 'pluto-not-initialized',
-    message: 'Please wait for pluto to initialize.',
-  };
+  dialog.showErrorBox(
+    'PLUTO-CANNOT-OPEN-NOTEBOOK',
+    'Please wait for pluto to initialize.'
+  );
 };
 
 /**
@@ -66,14 +144,7 @@ const runPluto = async (
 ) => {
   if (plutoURL) {
     log.info('LAUNCHING\n', 'project:', project, '\nnotebook:', notebook);
-    if (notebook) {
-      const res = await openNotebook(notebook);
-      if (typeof res === 'string') {
-        win.loadURL(res);
-      } else {
-        dialog.showErrorBox(res.name, res.message);
-      }
-    }
+    await openNotebook(notebook);
     return;
   }
 
@@ -90,13 +161,27 @@ const runPluto = async (
 
   let res: ChildProcessWithoutNullStreams | null;
 
+  if (!store.has('JULIA-PATH')) {
+    dialog.showErrorBox(
+      'JULIA NOT FOUND',
+      'If dev env, please download latest julia win64 portable zip and place it in the assets folder.'
+    );
+    return;
+  }
+
+  const julia = getAssetPath(store.get('JULIA-PATH') as string);
+
   if (notebook) {
-    res = spawn('julia', [
+    res = spawn(julia as string, [
       `--project=${loc}`,
       getAssetPath(`script.jl`),
       notebook,
     ]);
-  } else res = spawn('julia', [`--project=${loc}`, getAssetPath(`script.jl`)]);
+  } else
+    res = spawn(julia as string, [
+      `--project=${loc}`,
+      getAssetPath(`script.jl`),
+    ]);
 
   res.stdout.on('data', (data: { toString: () => any }) => {
     //   console.log(`stdout: ${data}`);
@@ -205,4 +290,10 @@ const exportNotebook: (id: string, type: PlutoExport) => Promise<void> = async (
   });
 };
 
-export { runPluto, updatePluto, openNotebook, exportNotebook };
+ipcMain.on(
+  'PLUTO-OPEN-NOTEBOOK',
+  async (_event, path?: string, forceNew?: boolean): Promise<void> =>
+    openNotebook(path, forceNew)
+);
+
+export { runPluto, updatePluto, openNotebook, exportNotebook, extractJulia };

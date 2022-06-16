@@ -205,26 +205,14 @@ export default class MenuBuilder {
             label: '&Open',
             accelerator: 'Ctrl+O',
             click: async () => {
-              const r = await dialog.showOpenDialog(this.mainWindow, {
-                message: 'Please select a Pluto Notebook.',
-                filters: [{ name: 'Pluto Notebook', extensions: ['pluto.jl'] }],
-                properties: ['openFile'],
-              });
-
-              if (r.canceled) return;
-
-              const res = await openNotebook(r.filePaths[0]);
-              if (typeof res === 'string') this.mainWindow.loadURL(res);
-              else dialog.showErrorBox(res.name, res.message);
+              await openNotebook();
             },
           },
           {
             label: '&New',
             accelerator: 'Ctrl+N',
             click: async () => {
-              const res = await openNotebook();
-              if (typeof res === 'string') this.mainWindow.loadURL(res);
-              else dialog.showErrorBox(res.name, res.message);
+              await openNotebook(undefined, true);
             },
           },
           {
