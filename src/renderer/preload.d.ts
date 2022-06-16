@@ -12,12 +12,12 @@ declare global {
         once(channel: string, func: (...args: unknown[]) => void): void;
       };
       fileSystem: {
-        // /**
-        //  * @param path path to a notebook, if already selected
-        //  * @param forceNew [default = false] If false and valid path is there,
-        //  * opens that notebook. If false and no path is there, opens the file selector.
-        //  * If true, opens a new blank notebook.
-        //  */
+        /**
+         * @param path path to a notebook, if already selected
+         * @param forceNew [default = false] If false and valid path is there,
+         * opens that notebook. If false and no path is there, opens the file selector.
+         * If true, opens a new blank notebook.
+         */
         openNotebook(path?: string, forceNew?: boolean): void;
       };
     };
