@@ -1,5 +1,4 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
-import { openNotebook } from './pluto';
 
 export type Channels = 'ipc-example';
 
@@ -20,6 +19,8 @@ contextBridge.exposeInMainWorld('electron', {
     },
   },
   fileSystem: {
-    openNotebook,
+    openNotebook(path?: string, forceNew?: boolean) {
+      ipcRenderer.send('PLUTO-OPEN-NOTEBOOK', path, forceNew);
+    },
   },
 });

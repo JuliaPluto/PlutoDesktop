@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog } from 'electron';
+import { BrowserWindow, dialog, ipcMain } from 'electron';
 import log from 'electron-log';
 import { ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import chalk from 'chalk';
@@ -11,8 +11,6 @@ import isDev from 'electron-is-dev';
 import { PlutoExport } from '../../types/enums';
 import store from './store';
 import { isExtMatch, PLUTO_FILE_EXTENSIONS } from './util';
-
-// console.log(Pluto);
 
 electronDl();
 
@@ -291,5 +289,11 @@ const exportNotebook: (id: string, type: PlutoExport) => Promise<void> = async (
     saveAs: true,
   });
 };
+
+ipcMain.on(
+  'PLUTO-OPEN-NOTEBOOK',
+  async (_event, path?: string, forceNew?: boolean): Promise<void> =>
+    openNotebook(path, forceNew)
+);
 
 export { runPluto, updatePluto, openNotebook, exportNotebook, extractJulia };
