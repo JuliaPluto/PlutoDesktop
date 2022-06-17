@@ -14,10 +14,11 @@ import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { release } from 'os';
-import MenuBuilder from './menu';
+import chalk from 'chalk';
 import { isExtMatch, resolveHtmlPath } from './util';
-import { extractJulia, runPluto } from './pluto';
+import { extractJulia, isPlutoRunning, runPluto } from './pluto';
 import { arg, checkIfCalledViaCLI } from './cli';
+import MenuBuilder from './menu';
 
 export default class AppUpdater {
   constructor() {
@@ -103,9 +104,9 @@ const createWindow = async (
   await extractJulia(getAssetPath);
 
   if (checkIfCalledViaCLI(process.argv)) {
-    url = arg.url;
-    project = arg.project;
-    notebook =
+    url ??= arg.url;
+    project ??= arg.project;
+    notebook ??=
       arg.notebook ?? (typeof arg._[0] === 'string' && isExtMatch(arg._[0]))
         ? (arg._[0] as string)
         : undefined;
@@ -117,6 +118,7 @@ const createWindow = async (
     await installExtensions();
   }
 
+  console.log(chalk.bgGreenBright('Creating a new window.'));
   mainWindow = new BrowserWindow({
     title: '⚡ Pluto ⚡',
     height: 600,
@@ -131,10 +133,14 @@ const createWindow = async (
     },
   });
 
-  if (url) mainWindow.loadURL(url);
-  else {
-    mainWindow.loadURL(resolveHtmlPath('index.html'));
+  mainWindow.loadURL(resolveHtmlPath('index.html'));
+
+  if (!isPlutoRunning()) {
     runPluto(mainWindow, getAssetPath, project, notebook);
+  }
+
+  if (url) {
+    mainWindow.loadURL(url);
   }
 
   mainWindow.on('ready-to-show', () => {
@@ -152,7 +158,7 @@ const createWindow = async (
     mainWindow = null;
   });
 
-  const menuBuilder = new MenuBuilder(mainWindow);
+  const menuBuilder = new MenuBuilder(mainWindow, createWindow);
   menuBuilder.buildMenu();
 
   // Open urls in the user's browser
@@ -193,3 +199,5 @@ app
     });
   })
   .catch(log.error);
+
+export { createWindow };
