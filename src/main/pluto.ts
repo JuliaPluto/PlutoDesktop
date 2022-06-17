@@ -155,9 +155,9 @@ const runPluto = async (
     fs.mkdirSync(p);
   }
 
-  const loc = project ?? p;
+  const loc = project ?? process.env.JULIA_PATH ?? p;
 
-  log.info('LAUNCHING\n', 'project:', project, '\nnotebook:', notebook);
+  log.info('LAUNCHING\n', 'project:', loc, '\nnotebook:', notebook);
 
   let res: ChildProcessWithoutNullStreams | null;
 
@@ -296,4 +296,13 @@ ipcMain.on(
     openNotebook(path, forceNew)
 );
 
-export { runPluto, updatePluto, openNotebook, exportNotebook, extractJulia };
+const isPlutoRunning = () => plutoURL !== null;
+
+export {
+  runPluto,
+  updatePluto,
+  openNotebook,
+  exportNotebook,
+  extractJulia,
+  isPlutoRunning,
+};
