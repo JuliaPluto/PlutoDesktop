@@ -155,7 +155,7 @@ const runPluto = async (
     fs.mkdirSync(p);
   }
 
-  const loc = project ?? process.env.JULIA_PATH ?? p;
+  const loc = project ?? process.env.DEBUG_PROJECT_PATH ?? p;
 
   log.info('LAUNCHING\n', 'project:', loc, '\nnotebook:', notebook);
 
