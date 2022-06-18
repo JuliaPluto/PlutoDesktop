@@ -16,7 +16,7 @@ import log from 'electron-log';
 import { release } from 'os';
 import chalk from 'chalk';
 import { isExtMatch, resolveHtmlPath } from './util';
-import { extractJulia, isPlutoRunning, runPluto } from './pluto';
+import { isPlutoRunning, runPluto } from './pluto';
 import { arg, checkIfCalledViaCLI } from './cli';
 import MenuBuilder from './menu';
 

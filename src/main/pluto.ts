@@ -315,11 +315,4 @@ ipcMain.on(
 
 const isPlutoRunning = () => plutoURL !== null;
 
-export {
-  runPluto,
-  updatePluto,
-  openNotebook,
-  exportNotebook,
-  extractJulia,
-  isPlutoRunning,
-};
+export { runPluto, updatePluto, openNotebook, exportNotebook, isPlutoRunning };
