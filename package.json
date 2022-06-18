@@ -111,6 +111,7 @@
     "extract-zip": "^2.0.1",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
+    "react-loader-spinner": "^5.1.5",
     "react-router-dom": "^6.3.0",
     "yargs": "^17.5.1"
   },
