@@ -16,7 +16,7 @@ import log from 'electron-log';
 import { release } from 'os';
 import chalk from 'chalk';
 import { isExtMatch, resolveHtmlPath } from './util';
-import { extractJulia, isPlutoRunning, runPluto } from './pluto';
+import { isPlutoRunning, runPluto } from './pluto';
 import { arg, checkIfCalledViaCLI } from './cli';
 import MenuBuilder from './menu';
 
@@ -93,83 +93,113 @@ const createWindow = async (
   project?: string,
   notebook?: string
 ) => {
-  const RESOURCES_PATH = app.isPackaged
-    ? path.join(process.resourcesPath, 'assets')
-    : path.join(__dirname, '../../assets');
+  try {
+    const RESOURCES_PATH = app.isPackaged
+      ? path.join(process.resourcesPath, 'assets')
+      : path.join(__dirname, '../../assets');
 
-  const getAssetPath = (...paths: string[]): string => {
-    return path.join(RESOURCES_PATH, ...paths);
-  };
+    const getAssetPath = (...paths: string[]): string => {
+      return path.join(RESOURCES_PATH, ...paths);
+    };
 
-  await extractJulia(getAssetPath);
-
-  if (checkIfCalledViaCLI(process.argv)) {
-    url ??= arg.url;
-    project ??= arg.project;
-    notebook ??=
-      arg.notebook ?? (typeof arg._[0] === 'string' && isExtMatch(arg._[0]))
-        ? (arg._[0] as string)
-        : undefined;
-  }
-
-  log.info('CLI received:', arg);
-
-  if (isDebug) {
-    await installExtensions();
-  }
-
-  console.log(chalk.bgGreenBright('Creating a new window.'));
-  mainWindow = new BrowserWindow({
-    title: '⚡ Pluto ⚡',
-    height: 600,
-    width: 800,
-    resizable: true,
-    show: false,
-    icon: getAssetPath('icon.png'),
-    webPreferences: {
-      preload: app.isPackaged
-        ? path.join(__dirname, 'preload.js')
-        : path.join(__dirname, '../../.erb/dll/preload.js'),
-    },
-  });
-
-  mainWindow.loadURL(resolveHtmlPath('index.html'));
-
-  if (!isPlutoRunning()) {
-    runPluto(mainWindow, getAssetPath, project, notebook);
-  }
-
-  if (url) {
-    mainWindow.loadURL(url);
-  }
-
-  mainWindow.on('ready-to-show', () => {
-    if (!mainWindow) {
-      throw new Error('"mainWindow" is not defined');
+    if (checkIfCalledViaCLI(process.argv)) {
+      url ??= arg.url;
+      project ??= arg.project;
+      notebook ??=
+        arg.notebook ?? (typeof arg._[0] === 'string' && isExtMatch(arg._[0]))
+          ? (arg._[0] as string)
+          : undefined;
     }
-    if (process.env.START_MINIMIZED) {
-      mainWindow.minimize();
-    } else {
-      mainWindow.show();
+
+    log.info('CLI received:', arg);
+
+    if (isDebug) {
+      await installExtensions();
     }
-  });
 
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
+    console.log(chalk.bgGreenBright('Creating a new window.'));
 
-  const menuBuilder = new MenuBuilder(mainWindow, createWindow);
-  menuBuilder.buildMenu();
+    const loading = new BrowserWindow({
+      frame: false,
+      height: 200,
+      width: 200,
+      resizable: false,
+      movable: false,
+      fullscreenable: false,
+      title: 'Loading',
+      show: false,
+      icon: getAssetPath('icon.png'),
+      webPreferences: {
+        preload: app.isPackaged
+          ? path.join(__dirname, 'preload.js')
+          : path.join(__dirname, '../../.erb/dll/preload.js'),
+      },
+    });
 
-  // Open urls in the user's browser
-  mainWindow.webContents.setWindowOpenHandler((edata) => {
-    shell.openExternal(edata.url);
-    return { action: 'deny' };
-  });
+    loading.once('show', () => {
+      mainWindow = new BrowserWindow({
+        title: '⚡ Pluto ⚡',
+        height: 600,
+        width: 800,
+        resizable: true,
+        show: false,
+        icon: getAssetPath('icon.png'),
+        webPreferences: {
+          preload: app.isPackaged
+            ? path.join(__dirname, 'preload.js')
+            : path.join(__dirname, '../../.erb/dll/preload.js'),
+        },
+      });
 
-  // Remove this if your app does not use auto updates
-  // eslint-disable-next-line
-  new AppUpdater();
+      if (!isPlutoRunning()) {
+        runPluto(loading, mainWindow, getAssetPath, project, notebook);
+      }
+
+      mainWindow.webContents.once('dom-ready', () => {
+        mainWindow?.show();
+        loading.hide();
+        loading.close();
+      });
+
+      if (url) {
+        mainWindow.loadURL(url);
+      }
+
+      mainWindow.on('ready-to-show', () => {
+        if (!mainWindow) {
+          throw new Error('"mainWindow" is not defined');
+        }
+        if (process.env.START_MINIMIZED) {
+          mainWindow.minimize();
+        } else {
+          mainWindow.show();
+        }
+      });
+
+      mainWindow.on('closed', () => {
+        mainWindow = null;
+      });
+
+      const menuBuilder = new MenuBuilder(mainWindow, createWindow);
+      menuBuilder.buildMenu();
+
+      // Open urls in the user's browser
+      mainWindow.webContents.setWindowOpenHandler((edata) => {
+        shell.openExternal(edata.url);
+        return { action: 'deny' };
+      });
+    });
+
+    await loading.loadURL(resolveHtmlPath('index.html'));
+    loading.webContents.send('CHANGE_PAGE', '/loading');
+    loading.show();
+
+    // Remove this if your app does not use auto updates
+    // eslint-disable-next-line
+    new AppUpdater();
+  } catch (e) {
+    log.error(chalk.red(e));
+  }
 };
 
 /**
