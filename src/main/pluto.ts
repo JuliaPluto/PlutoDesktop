@@ -20,7 +20,10 @@ electronDl();
  * @param getAssetPath a function to get asset path
  * @returns nothing
  */
-const extractJulia = async (getAssetPath: (...paths: string[]) => string) => {
+const extractJulia = async (
+  loading: BrowserWindow,
+  getAssetPath: (...paths: string[]) => string
+) => {
   if (
     store.has('JULIA-PATH') &&
     fs.existsSync(getAssetPath(store.get('JULIA-PATH') as string))
@@ -38,27 +41,37 @@ const extractJulia = async (getAssetPath: (...paths: string[]) => string) => {
     }
     let zip = files[idx];
     const nameInitial = zip.replace('-win64.zip', '');
+    loading.webContents.send('pluto-url', `File found:${zip}`);
     console.log('File found:', zip);
     zip = getAssetPath(zip);
     const name = getAssetPath(nameInitial);
     if (fs.existsSync(name)) {
+      loading.webContents.send(
+        'pluto-url',
+        'Deleting already existing directory'
+      );
       console.log('Deleting already existing directory');
       fs.rmSync(name, { recursive: true, force: true });
     }
 
+    loading.webContents.send('pluto-url', 'Unzipping');
     console.log('Unzipping');
     await unzip(zip, { dir: getAssetPath('.') });
+    loading.webContents.send('pluto-url', 'Unzipped');
     console.log('Unzipped');
     if (!isDev) {
+      loading.webContents.send('pluto-url', 'Removing zip');
       console.log('Removing zip');
       fs.rm(zip, (e) => {
         if (e) {
           console.log(e);
         }
       });
+      loading.webContents.send('pluto-url', 'Zip removed');
       console.log('Zip removed');
     }
     store.set('JULIA-PATH', join(nameInitial, '/bin/julia.exe'));
+    loading.webContents.send('pluto-url', 'Julia Successfully Installed.');
   } catch (error) {
     console.error(error);
   }
@@ -137,6 +150,7 @@ const openNotebook = async (path?: string, forceNew = false) => {
  * @returns nothing
  */
 const runPluto = async (
+  loading: BrowserWindow,
   win: BrowserWindow,
   getAssetPath: (...paths: string[]) => string,
   project?: string,
@@ -148,7 +162,9 @@ const runPluto = async (
     return;
   }
 
-  win.webContents.send('pluto-url', 'loading');
+  await extractJulia(loading, getAssetPath);
+
+  loading.webContents.send('pluto-url', 'loading');
 
   const p = getAssetPath('../project/');
   if (!fs.existsSync(p)) {
@@ -198,7 +214,7 @@ const runPluto = async (
           secret: url.searchParams.get('secret')!,
         };
 
-        win.webContents.send('pluto-url', plutoURL);
+        loading.webContents.send('pluto-url', 'loaded');
         win.loadURL(entryUrl);
 
         console.log('Entry url found:', plutoURL);
@@ -217,9 +233,9 @@ const runPluto = async (
     // let secret1 : string | null;
 
     if (dataString.includes('Updating'))
-      win.webContents.send('pluto-url', 'updating');
-    else if (dataString.includes('No Changes'))
-      win.webContents.send('pluto-url', 'no_update');
+      loading.webContents.send('pluto-url', 'updating');
+    // else if (dataString.includes('No Changes'))
+    //   loading.webContents.send('pluto-url', 'No update found');
     if (plutoURL === null) {
       const plutoLog = dataString;
       if (plutoLog.includes('?secret=')) {
@@ -233,7 +249,7 @@ const runPluto = async (
           secret: url.searchParams.get('secret')!,
         };
 
-        win.webContents.send('pluto-url', plutoURL);
+        loading.webContents.send('pluto-url', 'loaded');
         win.loadURL(entryUrl);
 
         log.verbose('Entry url found:', plutoURL);
