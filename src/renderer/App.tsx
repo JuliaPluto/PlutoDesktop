@@ -1,8 +1,17 @@
-import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
+import {
+  MemoryRouter as Router,
+  Routes,
+  Route,
+  Link,
+  useNavigate,
+} from 'react-router-dom';
 import icon from '../../assets/icon.svg';
 import './App.css';
+import Loading from './Loading';
+// import useElectron from './useElectron';
 
 const Hello = () => {
+  // const b = useElectron();
   return (
     <div>
       <div className="Hello">
@@ -22,29 +31,30 @@ const Hello = () => {
             Read our docs
           </button>
         </a>
-        <a
-          href="https://github.com/sponsors/electron-react-boilerplate"
-          target="_blank"
-          rel="noreferrer"
-        >
+        <Link to="/loading">
           <button type="button">
             <span role="img" aria-label="books">
               🙏
             </span>
             Donate
           </button>
-        </a>
+        </Link>
       </div>
     </div>
   );
 };
 
 export default function App() {
+  const navigate = useNavigate();
+
+  window.electron.ipcRenderer.on('CHANGE_PAGE', (path) =>
+    navigate(String(path))
+  );
+
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Hello />} />
-      </Routes>
-    </Router>
+    <Routes>
+      <Route path="/" element={<Hello />} />
+      <Route path="/loading" element={<Loading />} />
+    </Routes>
   );
 }

@@ -1,3 +1,4 @@
+/* eslint-disable no-underscore-dangle */
 import {
   app,
   Menu,
@@ -18,17 +19,29 @@ interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
 export default class MenuBuilder {
   mainWindow: BrowserWindow;
 
-  constructor(mainWindow: BrowserWindow) {
+  private _createWindow: (
+    url?: string,
+    project?: string,
+    notebook?: string
+  ) => Promise<void>;
+
+  constructor(
+    mainWindow: BrowserWindow,
+    createWindow: (
+      url?: string,
+      project?: string,
+      notebook?: string
+    ) => Promise<void>
+  ) {
     this.mainWindow = mainWindow;
+    this._createWindow = createWindow;
   }
 
   buildMenu(): Menu {
-    if (
+    this.setupContextMenu(
       process.env.NODE_ENV === 'development' ||
-      process.env.DEBUG_PROD === 'true'
-    ) {
-      this.setupDevelopmentEnvironment();
-    }
+        process.env.DEBUG_PROD === 'true'
+    );
 
     const template =
       process.platform === 'darwin'
@@ -41,18 +54,30 @@ export default class MenuBuilder {
     return menu;
   }
 
-  setupDevelopmentEnvironment(): void {
+  setupContextMenu(isDebug = false): void {
     this.mainWindow.webContents.on('context-menu', (_, props) => {
-      const { x, y } = props;
+      const { x, y, linkURL } = props;
 
-      Menu.buildFromTemplate([
-        {
-          label: 'Inspect element',
+      const template = isDebug
+        ? [
+            {
+              label: 'Inspect element',
+              click: () => {
+                this.mainWindow.webContents.inspectElement(x, y);
+              },
+            },
+          ]
+        : [];
+
+      if (linkURL.length > 0)
+        template.push({
+          label: 'Open in new window',
           click: () => {
-            this.mainWindow.webContents.inspectElement(x, y);
+            this._createWindow(linkURL);
           },
-        },
-      ]).popup({ window: this.mainWindow });
+        });
+
+      Menu.buildFromTemplate(template).popup({ window: this.mainWindow });
     });
   }
 
