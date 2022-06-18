@@ -31,6 +31,7 @@ const extractJulia = async (
     return;
 
   try {
+    loading.webContents.send('pluto-url', 'Installing Julia');
     const files = fs.readdirSync(getAssetPath('.'));
     const idx = files.findIndex(
       (v) => v.startsWith('julia-') && v.endsWith('zip')
