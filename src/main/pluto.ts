@@ -26,9 +26,15 @@ const extractJulia = async (
 ) => {
   if (
     store.has('JULIA-PATH') &&
-    fs.existsSync(store.get('JULIA-PATH') as string)
-  )
+    fs.existsSync(getAssetPath(store.get('JULIA-PATH') as string))
+  ) {
+    console.log(
+      chalk.bgBlueBright(
+        `Julia found at: ${getAssetPath(store.get('JULIA-PATH') as string)}`
+      )
+    );
     return;
+  }
 
   try {
     loading.webContents.send('pluto-url', 'Installing Julia');
@@ -41,11 +47,11 @@ const extractJulia = async (
       return;
     }
     let zip = files[idx];
-    const name = `${app.getPath('userData')}/${zip.replace('-win64.zip', '')}`;
-    loading.webContents.send('pluto-url', `File found:${zip}`);
+    const nameInitial = zip.replace('-win64.zip', '');
+    loading.webContents.send('pluto-url', `File found: ${zip}`);
     console.log('File found:', zip);
     zip = getAssetPath(zip);
-    // const name = getAssetPath(nameInitial);
+    const name = getAssetPath(nameInitial);
     if (fs.existsSync(name)) {
       loading.webContents.send(
         'pluto-url',
@@ -57,7 +63,7 @@ const extractJulia = async (
 
     loading.webContents.send('pluto-url', 'Unzipping');
     console.log('Unzipping');
-    await unzip(zip, { dir: app.getPath('userData') });
+    await unzip(zip, { dir: getAssetPath('.') });
     loading.webContents.send('pluto-url', 'Unzipped');
     console.log('Unzipped');
     if (!isDev) {
@@ -71,9 +77,11 @@ const extractJulia = async (
       loading.webContents.send('pluto-url', 'Zip removed');
       console.log('Zip removed');
     }
-    store.set('JULIA-PATH', join(name, '/bin/julia.exe'));
+    store.set('JULIA-PATH', join(nameInitial, '/bin/julia.exe'));
     console.log(
-      chalk.bgBlueBright(`Julia installed at: ${store.get('JULIA-PATH')}`)
+      chalk.bgBlueBright(
+        `Julia installed at: ${getAssetPath(store.get('JULIA-PATH') as string)}`
+      )
     );
     loading.webContents.send('pluto-url', 'Julia Successfully Installed.');
   } catch (error) {
@@ -143,6 +151,9 @@ const openNotebook = async (path?: string, forceNew = false) => {
   );
 };
 
+// eslint-disable-next-line import/no-mutable-exports
+let closePluto: (() => void) | undefined;
+
 /**
  * The main function the actually runs a `julia` script that
  * checks and runs `Pluto` with specified options
@@ -163,14 +174,14 @@ const runPluto = async (
   if (plutoURL) {
     log.info('LAUNCHING\n', 'project:', project, '\nnotebook:', notebook);
     await openNotebook(notebook);
-    return undefined;
+    return;
   }
 
   await extractJulia(loading, getAssetPath);
 
   loading.webContents.send('pluto-url', 'loading');
 
-  const p = getAssetPath('../project/');
+  const p = join(app.getPath('userData'), '/project/');
   if (!fs.existsSync(p)) {
     fs.mkdirSync(p);
   }
@@ -186,10 +197,10 @@ const runPluto = async (
       'JULIA NOT FOUND',
       'If dev env, please download latest julia win64 portable zip and place it in the assets folder.'
     );
-    return undefined;
+    return;
   }
 
-  const julia = store.get('JULIA-PATH') as string;
+  const julia = getAssetPath(store.get('JULIA-PATH') as string);
 
   if (notebook) {
     res = spawn(julia, [
@@ -273,11 +284,12 @@ const runPluto = async (
     console.log(`child process exited with code ${code}`);
   });
 
-  const close = () => {
-    console.log('Killing Pluto process.');
-    res?.kill();
+  closePluto = () => {
+    if (res) {
+      console.log('Killing Pluto process.');
+      res?.kill();
+    }
   };
-  return close;
 };
 
 const updatePluto = () => {};
@@ -329,4 +341,11 @@ ipcMain.on(
 
 const isPlutoRunning = () => plutoURL !== null;
 
-export { runPluto, updatePluto, openNotebook, exportNotebook, isPlutoRunning };
+export {
+  runPluto,
+  updatePluto,
+  openNotebook,
+  exportNotebook,
+  isPlutoRunning,
+  closePluto,
+};

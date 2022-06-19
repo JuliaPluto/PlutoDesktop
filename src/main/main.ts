@@ -16,7 +16,7 @@ import log from 'electron-log';
 import { release } from 'os';
 import chalk from 'chalk';
 import { isExtMatch, resolveHtmlPath } from './util';
-import { isPlutoRunning, runPluto } from './pluto';
+import { closePluto, isPlutoRunning, runPluto } from './pluto';
 import { arg, checkIfCalledViaCLI } from './cli';
 import MenuBuilder from './menu';
 
@@ -152,17 +152,7 @@ const createWindow = async (
       });
 
       if (!isPlutoRunning()) {
-        const f = await runPluto(
-          loading,
-          mainWindow,
-          getAssetPath,
-          project,
-          notebook
-        );
-
-        if (f) {
-          app.on('quit', () => f());
-        }
+        await runPluto(loading, mainWindow, getAssetPath, project, notebook);
       }
 
       mainWindow.webContents.once('dom-ready', () => {
@@ -220,6 +210,7 @@ app.on('window-all-closed', () => {
   // Respect the OSX convention of having the application in memory even
   // after all windows have been closed
   if (process.platform !== 'darwin') {
+    if (closePluto) closePluto();
     app.quit();
   }
 });
@@ -236,6 +227,9 @@ app
       // On macOS it's common to re-create a window in the app when the
       // dock icon is clicked and there are no other windows open.
       if (mainWindow === null) createWindow();
+    });
+    app.on('quit', () => {
+      if (closePluto) closePluto();
     });
   })
   .catch(log.error);
