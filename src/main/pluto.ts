@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import log from 'electron-log';
 import { ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import chalk from 'chalk';
@@ -26,7 +26,7 @@ const extractJulia = async (
 ) => {
   if (
     store.has('JULIA-PATH') &&
-    fs.existsSync(getAssetPath(store.get('JULIA-PATH') as string))
+    fs.existsSync(store.get('JULIA-PATH') as string)
   )
     return;
 
@@ -41,11 +41,11 @@ const extractJulia = async (
       return;
     }
     let zip = files[idx];
-    const nameInitial = zip.replace('-win64.zip', '');
+    const name = `${app.getPath('userData')}/${zip.replace('-win64.zip', '')}`;
     loading.webContents.send('pluto-url', `File found:${zip}`);
     console.log('File found:', zip);
     zip = getAssetPath(zip);
-    const name = getAssetPath(nameInitial);
+    // const name = getAssetPath(nameInitial);
     if (fs.existsSync(name)) {
       loading.webContents.send(
         'pluto-url',
@@ -57,7 +57,7 @@ const extractJulia = async (
 
     loading.webContents.send('pluto-url', 'Unzipping');
     console.log('Unzipping');
-    await unzip(zip, { dir: getAssetPath('.') });
+    await unzip(zip, { dir: app.getPath('userData') });
     loading.webContents.send('pluto-url', 'Unzipped');
     console.log('Unzipped');
     if (!isDev) {
@@ -71,7 +71,10 @@ const extractJulia = async (
       loading.webContents.send('pluto-url', 'Zip removed');
       console.log('Zip removed');
     }
-    store.set('JULIA-PATH', join(nameInitial, '/bin/julia.exe'));
+    store.set('JULIA-PATH', join(name, '/bin/julia.exe'));
+    console.log(
+      chalk.bgBlueBright(`Julia installed at: ${store.get('JULIA-PATH')}`)
+    );
     loading.webContents.send('pluto-url', 'Julia Successfully Installed.');
   } catch (error) {
     console.error(error);
@@ -148,7 +151,7 @@ const openNotebook = async (path?: string, forceNew = false) => {
  * @param getAssetPath a function to get asset path in dev and prod environment
  * @param project project path
  * @param notebook pluto notebook path
- * @returns nothing
+ * @returns if pluto is running, a fundtion to kill the process
  */
 const runPluto = async (
   loading: BrowserWindow,
@@ -160,7 +163,7 @@ const runPluto = async (
   if (plutoURL) {
     log.info('LAUNCHING\n', 'project:', project, '\nnotebook:', notebook);
     await openNotebook(notebook);
-    return;
+    return undefined;
   }
 
   await extractJulia(loading, getAssetPath);
@@ -183,26 +186,24 @@ const runPluto = async (
       'JULIA NOT FOUND',
       'If dev env, please download latest julia win64 portable zip and place it in the assets folder.'
     );
-    return;
+    return undefined;
   }
 
-  const julia = getAssetPath(store.get('JULIA-PATH') as string);
+  const julia = store.get('JULIA-PATH') as string;
 
   if (notebook) {
-    res = spawn(julia as string, [
+    res = spawn(julia, [
       `--project=${loc}`,
       getAssetPath(`script.jl`),
       notebook,
     ]);
-  } else
-    res = spawn(julia as string, [
-      `--project=${loc}`,
-      getAssetPath(`script.jl`),
-    ]);
+  } else res = spawn(julia, [`--project=${loc}`, getAssetPath(`script.jl`)]);
 
   res.stdout.on('data', (data: { toString: () => any }) => {
     //   console.log(`stdout: ${data}`);
     const plutoLog = data.toString();
+    if (plutoLog.includes('Loading') || plutoLog.includes('loading'))
+      loading.webContents.send('pluto-url', 'loading');
     if (plutoURL === null) {
       if (plutoLog.includes('?secret=')) {
         const urlMatch = plutoLog.match(/http\S+/g);
@@ -235,6 +236,9 @@ const runPluto = async (
 
     if (dataString.includes('Updating'))
       loading.webContents.send('pluto-url', 'updating');
+
+    if (dataString.includes('Loading') || dataString.includes('loading'))
+      loading.webContents.send('pluto-url', 'loading');
     // else if (dataString.includes('No Changes'))
     //   loading.webContents.send('pluto-url', 'No update found');
     if (plutoURL === null) {
@@ -264,6 +268,16 @@ const runPluto = async (
   res.on('close', (code: any) => {
     console.log(`child process exited with code ${code}`);
   });
+
+  res.on('exit', (code: any) => {
+    console.log(`child process exited with code ${code}`);
+  });
+
+  const close = () => {
+    console.log('Killing Pluto process.');
+    res?.kill();
+  };
+  return close;
 };
 
 const updatePluto = () => {};

@@ -136,7 +136,7 @@ const createWindow = async (
       },
     });
 
-    loading.once('show', () => {
+    loading.once('show', async () => {
       mainWindow = new BrowserWindow({
         title: '⚡ Pluto ⚡',
         height: 600,
@@ -152,7 +152,17 @@ const createWindow = async (
       });
 
       if (!isPlutoRunning()) {
-        runPluto(loading, mainWindow, getAssetPath, project, notebook);
+        const f = await runPluto(
+          loading,
+          mainWindow,
+          getAssetPath,
+          project,
+          notebook
+        );
+
+        if (f) {
+          app.on('quit', () => f());
+        }
       }
 
       mainWindow.webContents.once('dom-ready', () => {
