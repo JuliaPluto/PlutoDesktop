@@ -16,8 +16,14 @@ import log from 'electron-log';
 import { release } from 'os';
 import chalk from 'chalk';
 import { isExtMatch, resolveHtmlPath } from './util';
-import { closePluto, isPlutoRunning, runPluto } from './pluto';
+import {
+  closePluto,
+  isPlutoRunning,
+  runPluto,
+  shutdownNotebook,
+} from './pluto';
 import { arg, checkIfCalledViaCLI } from './cli';
+import './baseEventListeners';
 import MenuBuilder from './menu';
 
 export default class AppUpdater {
@@ -174,6 +180,10 @@ const createWindow = async (
         } else {
           mainWindow.show();
         }
+      });
+
+      mainWindow.on('close', () => {
+        shutdownNotebook();
       });
 
       mainWindow.on('closed', () => {

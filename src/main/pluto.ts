@@ -328,16 +328,75 @@ const exportNotebook: (id: string, type: PlutoExport) => Promise<void> = async (
   }
 
   await download(BrowserWindow.getFocusedWindow()!, url, {
-    openFolderWhenDone: true,
     saveAs: true,
+    openFolderWhenDone: true,
   });
 };
 
-ipcMain.on(
-  'PLUTO-OPEN-NOTEBOOK',
-  async (_event, path?: string, forceNew?: boolean): Promise<void> =>
-    openNotebook(path, forceNew)
-);
+const shutdownNotebook = async (_id?: string) => {
+  try {
+    if (!plutoURL) {
+      dialog.showErrorBox(
+        'Pluto not intialized',
+        'Please wait for pluto to initialize first'
+      );
+      return;
+    }
+
+    const window = BrowserWindow.getFocusedWindow()!;
+    const id =
+      _id ?? new URL(window.webContents.getURL()).searchParams.get('id');
+    const res = await axios.get(
+      `http://localhost:${plutoURL.port}/shutdown?secret=${plutoURL.secret}&id=${id}`
+    );
+
+    if (res.status === 200) {
+      log.info(chalk.blue(`File ${id} has been shutdown.`));
+      window.loadURL(plutoURL.url);
+    } else {
+      dialog.showErrorBox(res.statusText, res.data);
+    }
+  } catch (error) {
+    log.error(chalk.red(error));
+  }
+};
+
+const moveNotebook = async (_id?: string) => {
+  try {
+    if (!plutoURL) {
+      dialog.showErrorBox(
+        'Pluto not intialized',
+        'Please wait for pluto to initialize first'
+      );
+      return undefined;
+    }
+
+    const window = BrowserWindow.getFocusedWindow()!;
+    const id =
+      _id ?? new URL(window.webContents.getURL()).searchParams.get('id');
+    const { canceled, filePath } = await dialog.showSaveDialog(window, {
+      title: 'Select location to move your file',
+      buttonLabel: 'Select',
+      filters: [{ name: 'Pluto Notebook', extensions: PLUTO_FILE_EXTENSIONS }],
+    });
+
+    if (canceled) return undefined;
+
+    const res = await axios.get(
+      `http://localhost:${plutoURL.port}/move?secret=${plutoURL.secret}&id=${id}&newpath=${filePath}`
+    );
+
+    if (res.status === 200) {
+      log.info(chalk.blue(`File ${id} has been moved to ${filePath}.`));
+      return filePath;
+    }
+    dialog.showErrorBox(res.statusText, res.data);
+  } catch (error) {
+    log.error(chalk.red(error));
+  }
+
+  return undefined;
+};
 
 const isPlutoRunning = () => plutoURL !== null;
 
@@ -346,6 +405,8 @@ export {
   updatePluto,
   openNotebook,
   exportNotebook,
+  shutdownNotebook,
+  moveNotebook,
   isPlutoRunning,
   closePluto,
 };

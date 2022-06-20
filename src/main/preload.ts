@@ -22,5 +22,11 @@ contextBridge.exposeInMainWorld('electron', {
     openNotebook(path?: string, forceNew?: boolean) {
       ipcRenderer.send('PLUTO-OPEN-NOTEBOOK', path, forceNew);
     },
+    shutdownNotebook(id?: string) {
+      ipcRenderer.send('PLUTO-SHUTDOWN-NOTEBOOK', id);
+    },
+    moveNotebook(id?: string) {
+      ipcRenderer.send('PLUTO-MOVE-NOTEBOOK', id);
+    },
   },
 });

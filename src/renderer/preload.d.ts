@@ -19,6 +19,8 @@ declare global {
          * If true, opens a new blank notebook.
          */
         openNotebook(path?: string, forceNew?: boolean): void;
+        shutdownNotebook(id?: string): void;
+        moveNotebook(id?: string): void;
       };
     };
   }
