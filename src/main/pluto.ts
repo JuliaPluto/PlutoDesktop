@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog } from 'electron';
 import log from 'electron-log';
 import { ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import chalk from 'chalk';
