@@ -220,7 +220,6 @@ app.on('window-all-closed', () => {
   // Respect the OSX convention of having the application in memory even
   // after all windows have been closed
   if (process.platform !== 'darwin') {
-    if (closePluto) closePluto();
     app.quit();
   }
 });
@@ -238,7 +237,7 @@ app
       // dock icon is clicked and there are no other windows open.
       if (mainWindow === null) createWindow();
     });
-    app.on('quit', () => {
+    app.on('will-quit', () => {
       if (closePluto) closePluto();
     });
   })
