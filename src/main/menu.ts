@@ -10,6 +10,7 @@ import {
 import { URL } from 'node:url';
 import { PlutoExport } from '../../types/enums';
 import { exportNotebook, openNotebook } from './pluto';
+import { PLUTO_FILE_EXTENSIONS } from './util';
 
 interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
   selector?: string;
@@ -231,6 +232,27 @@ export default class MenuBuilder {
             accelerator: 'Ctrl+O',
             click: async () => {
               await openNotebook();
+            },
+          },
+          {
+            label: 'Open in new window',
+            accelerator: 'Ctrl+Shift+O',
+            click: async () => {
+              const r = await dialog.showOpenDialog(this.mainWindow, {
+                message: 'Please select a Pluto Notebook.',
+                filters: [
+                  {
+                    name: 'Pluto Notebook',
+                    extensions: PLUTO_FILE_EXTENSIONS.map((v) => v.slice(1)),
+                  },
+                ],
+                properties: ['openFile'],
+              });
+
+              if (r.canceled) return;
+
+              const [path] = r.filePaths;
+              await this._createWindow(undefined, undefined, path);
             },
           },
           {
