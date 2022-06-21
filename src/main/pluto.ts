@@ -1,6 +1,10 @@
 import { app, BrowserWindow, dialog } from 'electron';
 import log from 'electron-log';
-import { ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
+import {
+  ChildProcessWithoutNullStreams,
+  spawn,
+  exec,
+} from 'node:child_process';
 import chalk from 'chalk';
 import axios from 'axios';
 import electronDl, { download } from 'electron-dl';
@@ -35,8 +39,26 @@ const extractJulia = async (
     );
     return;
   }
+  console.log(chalk.yellow('Starting Julia installation'));
 
   try {
+    // ask for permissions
+    if (!isDev)
+      exec('NET SESSION', (_error, _so, se) => {
+        if (se.length === 0) {
+          // admin
+          console.log('Admin permissions granted.');
+        } else {
+          // noadmin
+          dialog.showErrorBox(
+            'ADMIN PERMISSIONS NOT AVAILABLE',
+            'Julia is not installed, to install it the application needs admin privileges. Please close the app and run again using right clicking and using "Run as administrator".'
+          );
+          log.error("Can't install Julia, permissions not granted.");
+          app.quit();
+        }
+      });
+
     loading.webContents.send('pluto-url', 'Installing Julia');
     const files = fs.readdirSync(getAssetPath('.'));
     const idx = files.findIndex(
@@ -79,7 +101,7 @@ const extractJulia = async (
     }
     store.set('JULIA-PATH', join(nameInitial, '/bin/julia.exe'));
     console.log(
-      chalk.bgBlueBright(
+      chalk.yellow(
         `Julia installed at: ${getAssetPath(store.get('JULIA-PATH') as string)}`
       )
     );
@@ -208,7 +230,13 @@ const runPluto = async (
       getAssetPath(`script.jl`),
       notebook,
     ]);
-  } else res = spawn(julia, [`--project=${loc}`, getAssetPath(`script.jl`)]);
+  } else
+    res = spawn(julia, [
+      `--project=${loc}`,
+      getAssetPath(
+        process.env.DEBUG_PROJECT_PATH ? `pluto_no_update.jl` : `script.jl`
+      ),
+    ]);
 
   res.stdout.on('data', (data: { toString: () => any }) => {
     //   console.log(`stdout: ${data}`);
@@ -357,6 +385,7 @@ const shutdownNotebook = async (_id?: string) => {
       dialog.showErrorBox(res.statusText, res.data);
     }
   } catch (error) {
+    // dialog.showErrorBox('Cannot shutdown file', 'We are logging this error');
     log.error(chalk.red(error));
   }
 };
@@ -377,7 +406,12 @@ const moveNotebook = async (_id?: string) => {
     const { canceled, filePath } = await dialog.showSaveDialog(window, {
       title: 'Select location to move your file',
       buttonLabel: 'Select',
-      filters: [{ name: 'Pluto Notebook', extensions: PLUTO_FILE_EXTENSIONS }],
+      filters: [
+        {
+          name: 'Pluto Notebook',
+          extensions: PLUTO_FILE_EXTENSIONS.map((v) => v.slice(1)),
+        },
+      ],
     });
 
     if (canceled) return undefined;
@@ -392,6 +426,10 @@ const moveNotebook = async (_id?: string) => {
     }
     dialog.showErrorBox(res.statusText, res.data);
   } catch (error) {
+    dialog.showErrorBox(
+      'Cannot move file',
+      'Please check if you are using a valid file name.'
+    );
     log.error(chalk.red(error));
   }
 

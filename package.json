@@ -206,7 +206,9 @@
       }
     ],
     "nsis": {
-      "perMachine": true
+      "oneClick": false,
+      "perMachine": true,
+      "runAfterFinish": false
     },
     "files": [
       "dist",
