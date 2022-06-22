@@ -112,7 +112,10 @@ const createWindow = async (
       url ??= arg.url;
       project ??= arg.project;
       notebook ??=
-        arg.notebook ?? (typeof arg._[0] === 'string' && isExtMatch(arg._[0]))
+        arg.notebook ??
+        (arg._.length > 0 &&
+          typeof arg._[0] === 'string' &&
+          isExtMatch(arg._[0]))
           ? (arg._[0] as string)
           : undefined;
     }
