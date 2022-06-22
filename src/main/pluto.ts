@@ -14,7 +14,7 @@ import { join } from 'node:path';
 import isDev from 'electron-is-dev';
 import { PlutoExport } from '../../types/enums';
 import store from './store';
-import { isExtMatch, PLUTO_FILE_EXTENSIONS } from './util';
+import { isExtMatch, Loader, PLUTO_FILE_EXTENSIONS } from './util';
 
 electronDl();
 
@@ -49,7 +49,7 @@ const extractJulia = async (
           // admin
           console.log('Admin permissions granted.');
         } else {
-          // noadmin
+          // no admin
           dialog.showErrorBox(
             'ADMIN PERMISSIONS NOT AVAILABLE',
             'Julia is not installed, to install it the application needs admin privileges. Please close the app and run again using right clicking and using "Run as administrator".'
@@ -148,6 +148,8 @@ const openNotebook = async (path?: string, forceNew = false) => {
     [path] = r.filePaths;
   }
 
+  const loader = new Loader(window);
+
   if (plutoURL) {
     const res = await axios.post(
       `http://localhost:${plutoURL.port}/${path ? 'open' : 'new'}?secret=${
@@ -158,15 +160,17 @@ const openNotebook = async (path?: string, forceNew = false) => {
       await window.loadURL(
         `http://localhost:${plutoURL.port}/edit?secret=${plutoURL.secret}&id=${res.data}`
       );
+      loader.stopLoading();
       return;
     }
+    loader.stopLoading();
     dialog.showErrorBox(
       'PLUTO-CANNOT-OPEN-NOTEBOOK',
       'Please check if you are using the correct secret.'
     );
     return;
   }
-
+  loader.stopLoading();
   dialog.showErrorBox(
     'PLUTO-CANNOT-OPEN-NOTEBOOK',
     'Please wait for pluto to initialize.'
@@ -358,9 +362,15 @@ const exportNotebook: (id: string, type: PlutoExport) => Promise<void> = async (
       break;
   }
 
-  await download(BrowserWindow.getFocusedWindow()!, url, {
+  const details = await download(BrowserWindow.getFocusedWindow()!, url, {
     saveAs: true,
     openFolderWhenDone: true,
+  });
+
+  details.on('done', () => {
+    const line = `${details.getFilename()} download to ${details.getSavePath()}.`;
+    console.log(chalk.green(line));
+    log.info(line);
   });
 };
 

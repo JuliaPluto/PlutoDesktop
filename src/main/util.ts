@@ -1,6 +1,8 @@
+/* eslint-disable no-underscore-dangle */
 /* eslint import/prefer-default-export: off, import/no-mutable-exports: off */
 import { URL } from 'url';
 import path from 'path';
+import { BrowserWindow } from 'electron';
 
 export let resolveHtmlPath: (htmlFileName: string) => string;
 
@@ -38,4 +40,28 @@ const isExtMatch = (file: string) => {
   return false;
 };
 
-export { isExtMatch, PLUTO_FILE_EXTENSIONS };
+class Loader {
+  private _window: BrowserWindow;
+
+  private _key: string | null;
+
+  static POINTER_LOADING_CSS: string = '* {cursor: progress !important;}';
+
+  constructor(w: BrowserWindow, autoStart = true) {
+    this._window = w;
+    this._key = null;
+    if (autoStart) this.startLoading();
+  }
+
+  startLoading = async () => {
+    this._key = await this._window.webContents.insertCSS(
+      Loader.POINTER_LOADING_CSS
+    );
+  };
+
+  stopLoading = async () => {
+    await this._window.webContents.removeInsertedCSS(this._key!);
+  };
+}
+
+export { isExtMatch, PLUTO_FILE_EXTENSIONS, Loader };
