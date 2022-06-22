@@ -305,6 +305,9 @@ const runPluto = async (
   });
 
   res.on('close', (code: any) => {
+    if (code !== 0) {
+      dialog.showErrorBox(code, 'Pluto crashed');
+    }
     console.log(`child process exited with code ${code}`);
   });
 
