@@ -341,6 +341,13 @@ const exportNotebook: (id: string, type: PlutoExport) => Promise<void> = async (
     return;
   }
 
+  const window = BrowserWindow.getFocusedWindow();
+
+  if (!window) {
+    dialog.showErrorBox('Pluto Export Error', 'No Exportable window in focus.');
+    return;
+  }
+
   let url: string | null;
   let ext: string | null;
   let title: string | null;
@@ -355,6 +362,9 @@ const exportNotebook: (id: string, type: PlutoExport) => Promise<void> = async (
       ext = 'html';
       title = 'HTML File';
       break;
+    case PlutoExport.PDF:
+      window.webContents.print();
+      return;
     default:
       url = `http://localhost:${plutoURL.port}/statefile?secret=${plutoURL.secret}&id=${id}`;
       ext = 'plutostate';
@@ -362,7 +372,7 @@ const exportNotebook: (id: string, type: PlutoExport) => Promise<void> = async (
       break;
   }
 
-  const details = await download(BrowserWindow.getFocusedWindow()!, url, {
+  const details = await download(window, url, {
     saveAs: true,
     openFolderWhenDone: true,
   });
@@ -449,7 +459,7 @@ const moveNotebook = async (_id?: string) => {
   return undefined;
 };
 
-const isPlutoRunning = () => plutoURL !== null;
+const isPlutoRunning = () => (plutoURL !== null ? plutoURL : null);
 
 export {
   runPluto,
