@@ -2,7 +2,7 @@ import { Channels } from 'main/preload';
 
 declare global {
   interface Window {
-    electron: {
+    plutoDesktop: {
       ipcRenderer: {
         sendMessage(channel: Channels, args: unknown[]): void;
         on(

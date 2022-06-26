@@ -6,7 +6,7 @@ const Loading = () => {
   const [message, setMessage] = useState('');
 
   useElectron((window) => {
-    window.electron.ipcRenderer.on('pluto-url', (m) => {
+    window.plutoDesktop.ipcRenderer.on('pluto-url', (m) => {
       setMessage(String(m));
       console.log(m);
     });
