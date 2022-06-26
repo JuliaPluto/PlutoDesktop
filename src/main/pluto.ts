@@ -349,27 +349,19 @@ const exportNotebook: (id: string, type: PlutoExport) => Promise<void> = async (
   }
 
   let url: string | null;
-  let ext: string | null;
-  let title: string | null;
   switch (type) {
     case PlutoExport.FILE:
       url = `http://localhost:${plutoURL.port}/notebookfile?secret=${plutoURL.secret}&id=${id}`;
-      ext = 'pluto.jl';
-      title = 'Pluto Notebook';
       break;
     case PlutoExport.HTML:
       url = `http://localhost:${plutoURL.port}/notebookexport?secret=${plutoURL.secret}&id=${id}`;
-      ext = 'html';
-      title = 'HTML File';
       break;
-    case PlutoExport.PDF:
+    case PlutoExport.STATE:
+      url = `http://localhost:${plutoURL.port}/statefile?secret=${plutoURL.secret}&id=${id}`;
+      break;
+    default:
       window.webContents.print();
       return;
-    default:
-      url = `http://localhost:${plutoURL.port}/statefile?secret=${plutoURL.secret}&id=${id}`;
-      ext = 'plutostate';
-      title = 'Pluto State File';
-      break;
   }
 
   const details = await download(window, url, {
