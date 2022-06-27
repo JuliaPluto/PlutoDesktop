@@ -16,8 +16,14 @@ import log from 'electron-log';
 import { release } from 'os';
 import chalk from 'chalk';
 import { isExtMatch, resolveHtmlPath } from './util';
-import { isPlutoRunning, runPluto } from './pluto';
+import {
+  closePluto,
+  isPlutoRunning,
+  runPluto,
+  shutdownNotebook,
+} from './pluto';
 import { arg, checkIfCalledViaCLI } from './cli';
+import './baseEventListeners';
 import MenuBuilder from './menu';
 
 export default class AppUpdater {
@@ -106,7 +112,10 @@ const createWindow = async (
       url ??= arg.url;
       project ??= arg.project;
       notebook ??=
-        arg.notebook ?? (typeof arg._[0] === 'string' && isExtMatch(arg._[0]))
+        arg.notebook ??
+        (arg._.length > 0 &&
+          typeof arg._[0] === 'string' &&
+          isExtMatch(arg._[0]))
           ? (arg._[0] as string)
           : undefined;
     }
@@ -136,7 +145,7 @@ const createWindow = async (
       },
     });
 
-    loading.once('show', () => {
+    loading.once('show', async () => {
       mainWindow = new BrowserWindow({
         title: '⚡ Pluto ⚡',
         height: 600,
@@ -152,7 +161,7 @@ const createWindow = async (
       });
 
       if (!isPlutoRunning()) {
-        runPluto(loading, mainWindow, getAssetPath, project, notebook);
+        await runPluto(loading, mainWindow, getAssetPath, project, notebook);
       }
 
       mainWindow.webContents.once('dom-ready', () => {
@@ -174,6 +183,10 @@ const createWindow = async (
         } else {
           mainWindow.show();
         }
+      });
+
+      mainWindow.on('close', () => {
+        shutdownNotebook();
       });
 
       mainWindow.on('closed', () => {
@@ -226,6 +239,9 @@ app
       // On macOS it's common to re-create a window in the app when the
       // dock icon is clicked and there are no other windows open.
       if (mainWindow === null) createWindow();
+    });
+    app.on('will-quit', () => {
+      if (closePluto) closePluto();
     });
   })
   .catch(log.error);

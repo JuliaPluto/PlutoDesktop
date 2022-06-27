@@ -2,7 +2,7 @@ import { Channels } from 'main/preload';
 
 declare global {
   interface Window {
-    electron: {
+    plutoDesktop: {
       ipcRenderer: {
         sendMessage(channel: Channels, args: unknown[]): void;
         on(
@@ -19,6 +19,8 @@ declare global {
          * If true, opens a new blank notebook.
          */
         openNotebook(path?: string, forceNew?: boolean): void;
+        shutdownNotebook(id?: string): void;
+        moveNotebook(id?: string): void;
       };
     };
   }

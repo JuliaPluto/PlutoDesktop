@@ -6,10 +6,12 @@ import {
   BrowserWindow,
   MenuItemConstructorOptions,
   dialog,
+  clipboard,
 } from 'electron';
 import { URL } from 'node:url';
 import { PlutoExport } from '../../types/enums';
-import { exportNotebook, openNotebook } from './pluto';
+import { exportNotebook, isPlutoRunning, openNotebook } from './pluto';
+import { PLUTO_FILE_EXTENSIONS } from './util';
 
 interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
   selector?: string;
@@ -234,10 +236,49 @@ export default class MenuBuilder {
             },
           },
           {
+            label: 'Open in new window',
+            accelerator: 'Ctrl+Shift+O',
+            click: async () => {
+              const r = await dialog.showOpenDialog(this.mainWindow, {
+                message: 'Please select a Pluto Notebook.',
+                filters: [
+                  {
+                    name: 'Pluto Notebook',
+                    extensions: PLUTO_FILE_EXTENSIONS.map((v) => v.slice(1)),
+                  },
+                ],
+                properties: ['openFile'],
+              });
+
+              if (r.canceled) return;
+
+              const [path] = r.filePaths;
+              await this._createWindow(undefined, undefined, path);
+            },
+          },
+          {
             label: '&New',
             accelerator: 'Ctrl+N',
             click: async () => {
               await openNotebook(undefined, true);
+            },
+          },
+          {
+            label: 'Copy current URL',
+            click: async () => {
+              let url = this.mainWindow.webContents.getURL();
+              if (!url.includes('secret'))
+                url += `&secret=${isPlutoRunning()?.secret}`;
+              clipboard.writeText(url);
+            },
+          },
+          {
+            label: 'Open current URL in browser',
+            click: async () => {
+              let url = this.mainWindow.webContents.getURL();
+              if (!url.includes('secret'))
+                url += `&secret=${isPlutoRunning()?.secret}`;
+              shell.openExternal(url);
             },
           },
           {
@@ -328,46 +369,25 @@ export default class MenuBuilder {
           {
             label: 'Pluto Notebook',
             click: async () => {
-              const url = new URL(this.mainWindow.webContents.getURL());
-              const id = url.searchParams.get('id');
-              if (!id) {
-                return dialog.showErrorBox(
-                  'Invalid ID',
-                  'Invalid ID in the url, cannot export.'
-                );
-              }
-
-              return exportNotebook(id, PlutoExport.FILE);
+              await this.executeIfID(exportNotebook, PlutoExport.FILE);
             },
           },
           {
             label: 'HTML File',
             click: async () => {
-              const url = new URL(this.mainWindow.webContents.getURL());
-              const id = url.searchParams.get('id');
-              if (!id) {
-                return dialog.showErrorBox(
-                  'Invalid ID',
-                  'Invalid ID in the url, cannot export.'
-                );
-              }
-
-              return exportNotebook(id, PlutoExport.HTML);
+              await this.executeIfID(exportNotebook, PlutoExport.HTML);
             },
           },
           {
             label: 'Pluto Statefile',
             click: async () => {
-              const url = new URL(this.mainWindow.webContents.getURL());
-              const id = url.searchParams.get('id');
-              if (!id) {
-                return dialog.showErrorBox(
-                  'Invalid ID',
-                  'Invalid ID in the url, cannot export.'
-                );
-              }
-
-              return exportNotebook(id, PlutoExport.STATE);
+              await this.executeIfID(exportNotebook, PlutoExport.STATE);
+            },
+          },
+          {
+            label: 'PDF File',
+            click: async () => {
+              await this.executeIfID(exportNotebook, PlutoExport.PDF);
             },
           },
         ],
@@ -375,5 +395,21 @@ export default class MenuBuilder {
     ];
 
     return templateDefault;
+  }
+
+  async executeIfID(
+    callback: (id: string, ...extra: any[]) => Promise<void> | void,
+    ...extraArgs: any[]
+  ) {
+    const url = new URL(this.mainWindow.webContents.getURL());
+    const id = url.searchParams.get('id');
+    if (id) {
+      await callback(id, ...extraArgs);
+    } else {
+      dialog.showErrorBox(
+        'Invalid ID',
+        'Invalid ID in the url, cannot export.'
+      );
+    }
   }
 }

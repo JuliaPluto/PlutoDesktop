@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 
 export type Channels = 'ipc-example';
 
-contextBridge.exposeInMainWorld('electron', {
+contextBridge.exposeInMainWorld('plutoDesktop', {
   ipcRenderer: {
     sendMessage(channel: Channels, args: unknown[]) {
       ipcRenderer.send(channel, args);
@@ -21,6 +21,12 @@ contextBridge.exposeInMainWorld('electron', {
   fileSystem: {
     openNotebook(path?: string, forceNew?: boolean) {
       ipcRenderer.send('PLUTO-OPEN-NOTEBOOK', path, forceNew);
+    },
+    shutdownNotebook(id?: string) {
+      ipcRenderer.send('PLUTO-SHUTDOWN-NOTEBOOK', id);
+    },
+    moveNotebook(id?: string) {
+      ipcRenderer.send('PLUTO-MOVE-NOTEBOOK', id);
     },
   },
 });

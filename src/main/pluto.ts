@@ -1,6 +1,10 @@
-import { BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog } from 'electron';
 import log from 'electron-log';
-import { ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
+import {
+  ChildProcessWithoutNullStreams,
+  spawn,
+  exec,
+} from 'node:child_process';
 import chalk from 'chalk';
 import axios from 'axios';
 import electronDl, { download } from 'electron-dl';
@@ -10,7 +14,7 @@ import { join } from 'node:path';
 import isDev from 'electron-is-dev';
 import { PlutoExport } from '../../types/enums';
 import store from './store';
-import { isExtMatch, PLUTO_FILE_EXTENSIONS } from './util';
+import { isExtMatch, Loader, PLUTO_FILE_EXTENSIONS } from './util';
 
 electronDl();
 
@@ -27,10 +31,34 @@ const extractJulia = async (
   if (
     store.has('JULIA-PATH') &&
     fs.existsSync(getAssetPath(store.get('JULIA-PATH') as string))
-  )
+  ) {
+    console.log(
+      chalk.bgBlueBright(
+        `Julia found at: ${getAssetPath(store.get('JULIA-PATH') as string)}`
+      )
+    );
     return;
+  }
+  console.log(chalk.yellow('Starting Julia installation'));
 
   try {
+    // ask for permissions
+    if (!isDev)
+      exec('NET SESSION', (_error, _so, se) => {
+        if (se.length === 0) {
+          // admin
+          console.log('Admin permissions granted.');
+        } else {
+          // no admin
+          dialog.showErrorBox(
+            'ADMIN PERMISSIONS NOT AVAILABLE',
+            'Julia is not installed, to install it the application needs admin privileges. Please close the app and run again using right clicking and using "Run as administrator".'
+          );
+          log.error("Can't install Julia, permissions not granted.");
+          app.quit();
+        }
+      });
+
     loading.webContents.send('pluto-url', 'Installing Julia');
     const files = fs.readdirSync(getAssetPath('.'));
     const idx = files.findIndex(
@@ -42,7 +70,7 @@ const extractJulia = async (
     }
     let zip = files[idx];
     const nameInitial = zip.replace('-win64.zip', '');
-    loading.webContents.send('pluto-url', `File found:${zip}`);
+    loading.webContents.send('pluto-url', `File found: ${zip}`);
     console.log('File found:', zip);
     zip = getAssetPath(zip);
     const name = getAssetPath(nameInitial);
@@ -72,6 +100,11 @@ const extractJulia = async (
       console.log('Zip removed');
     }
     store.set('JULIA-PATH', join(nameInitial, '/bin/julia.exe'));
+    console.log(
+      chalk.yellow(
+        `Julia installed at: ${getAssetPath(store.get('JULIA-PATH') as string)}`
+      )
+    );
     loading.webContents.send('pluto-url', 'Julia Successfully Installed.');
   } catch (error) {
     console.error(error);
@@ -115,6 +148,8 @@ const openNotebook = async (path?: string, forceNew = false) => {
     [path] = r.filePaths;
   }
 
+  const loader = new Loader(window);
+
   if (plutoURL) {
     const res = await axios.post(
       `http://localhost:${plutoURL.port}/${path ? 'open' : 'new'}?secret=${
@@ -125,20 +160,25 @@ const openNotebook = async (path?: string, forceNew = false) => {
       await window.loadURL(
         `http://localhost:${plutoURL.port}/edit?secret=${plutoURL.secret}&id=${res.data}`
       );
+      loader.stopLoading();
       return;
     }
+    loader.stopLoading();
     dialog.showErrorBox(
       'PLUTO-CANNOT-OPEN-NOTEBOOK',
       'Please check if you are using the correct secret.'
     );
     return;
   }
-
+  loader.stopLoading();
   dialog.showErrorBox(
     'PLUTO-CANNOT-OPEN-NOTEBOOK',
     'Please wait for pluto to initialize.'
   );
 };
+
+// eslint-disable-next-line import/no-mutable-exports
+let closePluto: (() => void) | undefined;
 
 /**
  * The main function the actually runs a `julia` script that
@@ -148,7 +188,7 @@ const openNotebook = async (path?: string, forceNew = false) => {
  * @param getAssetPath a function to get asset path in dev and prod environment
  * @param project project path
  * @param notebook pluto notebook path
- * @returns nothing
+ * @returns if pluto is running, a fundtion to kill the process
  */
 const runPluto = async (
   loading: BrowserWindow,
@@ -167,7 +207,7 @@ const runPluto = async (
 
   loading.webContents.send('pluto-url', 'loading');
 
-  const p = getAssetPath('../project/');
+  const p = join(app.getPath('userData'), '/project/');
   if (!fs.existsSync(p)) {
     fs.mkdirSync(p);
   }
@@ -189,20 +229,24 @@ const runPluto = async (
   const julia = getAssetPath(store.get('JULIA-PATH') as string);
 
   if (notebook) {
-    res = spawn(julia as string, [
+    res = spawn(julia, [
       `--project=${loc}`,
       getAssetPath(`script.jl`),
       notebook,
     ]);
   } else
-    res = spawn(julia as string, [
+    res = spawn(julia, [
       `--project=${loc}`,
-      getAssetPath(`script.jl`),
+      getAssetPath(
+        process.env.DEBUG_PROJECT_PATH ? `pluto_no_update.jl` : `script.jl`
+      ),
     ]);
 
   res.stdout.on('data', (data: { toString: () => any }) => {
     //   console.log(`stdout: ${data}`);
     const plutoLog = data.toString();
+    if (plutoLog.includes('Loading') || plutoLog.includes('loading'))
+      loading.webContents.send('pluto-url', 'loading');
     if (plutoURL === null) {
       if (plutoLog.includes('?secret=')) {
         const urlMatch = plutoLog.match(/http\S+/g);
@@ -235,6 +279,9 @@ const runPluto = async (
 
     if (dataString.includes('Updating'))
       loading.webContents.send('pluto-url', 'updating');
+
+    if (dataString.includes('Loading') || dataString.includes('loading'))
+      loading.webContents.send('pluto-url', 'loading');
     // else if (dataString.includes('No Changes'))
     //   loading.webContents.send('pluto-url', 'No update found');
     if (plutoURL === null) {
@@ -262,8 +309,22 @@ const runPluto = async (
   });
 
   res.on('close', (code: any) => {
+    if (code !== 0) {
+      dialog.showErrorBox(code, 'Pluto crashed');
+    }
     console.log(`child process exited with code ${code}`);
   });
+
+  res.on('exit', (code: any) => {
+    console.log(`child process exited with code ${code}`);
+  });
+
+  closePluto = () => {
+    if (res) {
+      console.log('Killing Pluto process.');
+      res?.kill();
+    }
+  };
 };
 
 const updatePluto = () => {};
@@ -280,39 +341,125 @@ const exportNotebook: (id: string, type: PlutoExport) => Promise<void> = async (
     return;
   }
 
+  const window = BrowserWindow.getFocusedWindow();
+
+  if (!window) {
+    dialog.showErrorBox('Pluto Export Error', 'No Exportable window in focus.');
+    return;
+  }
+
   let url: string | null;
-  let ext: string | null;
-  let title: string | null;
   switch (type) {
     case PlutoExport.FILE:
       url = `http://localhost:${plutoURL.port}/notebookfile?secret=${plutoURL.secret}&id=${id}`;
-      ext = 'pluto.jl';
-      title = 'Pluto Notebook';
       break;
     case PlutoExport.HTML:
       url = `http://localhost:${plutoURL.port}/notebookexport?secret=${plutoURL.secret}&id=${id}`;
-      ext = 'html';
-      title = 'HTML File';
+      break;
+    case PlutoExport.STATE:
+      url = `http://localhost:${plutoURL.port}/statefile?secret=${plutoURL.secret}&id=${id}`;
       break;
     default:
-      url = `http://localhost:${plutoURL.port}/statefile?secret=${plutoURL.secret}&id=${id}`;
-      ext = 'plutostate';
-      title = 'Pluto State File';
-      break;
+      window.webContents.print();
+      return;
   }
 
-  await download(BrowserWindow.getFocusedWindow()!, url, {
-    openFolderWhenDone: true,
+  const details = await download(window, url, {
     saveAs: true,
+    openFolderWhenDone: true,
+  });
+
+  details.on('done', () => {
+    const line = `${details.getFilename()} download to ${details.getSavePath()}.`;
+    console.log(chalk.green(line));
+    log.info(line);
   });
 };
 
-ipcMain.on(
-  'PLUTO-OPEN-NOTEBOOK',
-  async (_event, path?: string, forceNew?: boolean): Promise<void> =>
-    openNotebook(path, forceNew)
-);
+const shutdownNotebook = async (_id?: string) => {
+  try {
+    if (!plutoURL) {
+      dialog.showErrorBox(
+        'Pluto not intialized',
+        'Please wait for pluto to initialize first'
+      );
+      return;
+    }
 
-const isPlutoRunning = () => plutoURL !== null;
+    const window = BrowserWindow.getFocusedWindow()!;
+    const id =
+      _id ?? new URL(window.webContents.getURL()).searchParams.get('id');
+    const res = await axios.get(
+      `http://localhost:${plutoURL.port}/shutdown?secret=${plutoURL.secret}&id=${id}`
+    );
 
-export { runPluto, updatePluto, openNotebook, exportNotebook, isPlutoRunning };
+    if (res.status === 200) {
+      log.info(chalk.blue(`File ${id} has been shutdown.`));
+      window.loadURL(plutoURL.url);
+    } else {
+      dialog.showErrorBox(res.statusText, res.data);
+    }
+  } catch (error) {
+    // dialog.showErrorBox('Cannot shutdown file', 'We are logging this error');
+    log.error(chalk.red(error));
+  }
+};
+
+const moveNotebook = async (_id?: string) => {
+  try {
+    if (!plutoURL) {
+      dialog.showErrorBox(
+        'Pluto not intialized',
+        'Please wait for pluto to initialize first'
+      );
+      return undefined;
+    }
+
+    const window = BrowserWindow.getFocusedWindow()!;
+    const id =
+      _id ?? new URL(window.webContents.getURL()).searchParams.get('id');
+    const { canceled, filePath } = await dialog.showSaveDialog(window, {
+      title: 'Select location to move your file',
+      buttonLabel: 'Select',
+      filters: [
+        {
+          name: 'Pluto Notebook',
+          extensions: PLUTO_FILE_EXTENSIONS.map((v) => v.slice(1)),
+        },
+      ],
+    });
+
+    if (canceled) return undefined;
+
+    const res = await axios.get(
+      `http://localhost:${plutoURL.port}/move?secret=${plutoURL.secret}&id=${id}&newpath=${filePath}`
+    );
+
+    if (res.status === 200) {
+      log.info(chalk.blue(`File ${id} has been moved to ${filePath}.`));
+      return filePath;
+    }
+    dialog.showErrorBox(res.statusText, res.data);
+  } catch (error) {
+    dialog.showErrorBox(
+      'Cannot move file',
+      'Please check if you are using a valid file name.'
+    );
+    log.error(chalk.red(error));
+  }
+
+  return undefined;
+};
+
+const isPlutoRunning = () => (plutoURL !== null ? plutoURL : null);
+
+export {
+  runPluto,
+  updatePluto,
+  openNotebook,
+  exportNotebook,
+  shutdownNotebook,
+  moveNotebook,
+  isPlutoRunning,
+  closePluto,
+};
