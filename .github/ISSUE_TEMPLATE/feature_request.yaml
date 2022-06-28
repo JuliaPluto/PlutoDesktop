@@ -1,0 +1,58 @@
+name: Feature Request
+description: Request for a new feature
+title: '[Feature]: '
+labels: ['feature-request', 'enhancement']
+assignees:
+  - illusion47586
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this feature request!
+  - type: dropdown
+    id: where
+    attributes:
+      label: In which process do you want a new feature?
+      description: For features that do not use native features and are more related to Pluto/Julia, please report them to there respective repos.
+      options:
+        - Software Installation
+        - Julia Installation
+        - Pluto Installation
+        - Opening a file
+        - Moving a file
+        - Exporting a file
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: feature
+    attributes:
+      label: Feature / Improvement
+      description: You can use images to explain better.
+    validations:
+      required: true
+  - type: dropdown
+    id: version
+    attributes:
+      label: Version
+      description: What version of our software are you running?
+      options:
+        - 0.0.1-alpha (Default)
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output from C:\Users\{USER_NAME}\AppData\Roaming\pluto\logs\main.log
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell
+    validations:
+      required: false
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant output from C:\Users\{USER_NAME}\AppData\Roaming\pluto\config.json
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks. If no file created, please type NA.
+      render: json
+    validations:
+      required: false
