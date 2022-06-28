@@ -32,6 +32,17 @@ body:
         - Something else
     validations:
       required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Level of issue
+      description: For issues that do not use native features and are more related to Pluto/Julia, please report them to there respective repos.
+      options:
+        - Causes crash [severe:s3]
+        - Does not cause crash, but is a major issue [severe:s2]
+        - Does not cause crash, a minor issue but it would be nice if fixed [severe:s3]
+    validations:
+      required: true
   - type: textarea
     id: what-happened
     attributes:
@@ -47,7 +58,7 @@ body:
       label: Version
       description: What version of our software are you running?
       options:
-        - 0.0.1-alpha (Default)
+        - 0.0.1-alpha
     validations:
       required: true
   - type: textarea
