@@ -40,7 +40,7 @@ body:
       options:
         - Causes crash [severe:s3]
         - Does not cause crash, but is a major issue [severe:s2]
-        - Does not cause crash, a minor issue but it would be nice if fixed [severe:s3]
+        - Does not cause crash, a minor issue but it would be nice if fixed [severe:s1]
     validations:
       required: true
   - type: textarea
