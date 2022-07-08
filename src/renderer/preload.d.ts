@@ -1,4 +1,5 @@
 import { Channels } from 'main/preload';
+import { PlutoExport } from '../../types/enums';
 
 declare global {
   interface Window {
@@ -21,6 +22,7 @@ declare global {
         openNotebook(path?: string, forceNew?: boolean): void;
         shutdownNotebook(id?: string): void;
         moveNotebook(id?: string): void;
+        exportNotebook(id: string, type: PlutoExport): void;
       };
     };
   }

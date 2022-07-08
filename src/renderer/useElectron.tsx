@@ -24,7 +24,13 @@ const useElectron = (callback?: (window: Window) => void) => {
     };
   }, [callback]);
 
-  return isDesktop;
+  const conditionalCallback = (execute: () => void, fallback: () => void) => {
+    if (isDesktop) {
+      execute();
+    } else if (fallback) fallback();
+  };
+
+  return { isDesktop, conditionalCallback };
 };
 
 export default useElectron;
