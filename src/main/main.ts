@@ -133,7 +133,6 @@ const createWindow = async (
       height: 200,
       width: 200,
       resizable: false,
-      movable: false,
       fullscreenable: false,
       title: 'Loading',
       show: false,
@@ -151,6 +150,7 @@ const createWindow = async (
         height: 600,
         width: 800,
         resizable: true,
+        darkTheme: true,
         show: false,
         icon: getAssetPath('icon.png'),
         webPreferences: {
@@ -195,6 +195,20 @@ const createWindow = async (
 
       const menuBuilder = new MenuBuilder(mainWindow, createWindow);
       menuBuilder.buildMenu();
+
+      let showExport = false;
+      mainWindow.on('page-title-updated', (_e, title) => {
+        log.verbose(
+          chalk.grey('Window', mainWindow!.id / 2, 'moved to page:', title)
+        );
+        const pageUrl = new URL(mainWindow!.webContents.getURL());
+        const hasId = pageUrl.searchParams.has('id');
+        const shouldChange = (!showExport && hasId) || (showExport && !hasId);
+        if (shouldChange) {
+          menuBuilder.buildMenu();
+          showExport = !showExport;
+        }
+      });
 
       // Open urls in the user's browser
       mainWindow.webContents.setWindowOpenHandler((edata) => {

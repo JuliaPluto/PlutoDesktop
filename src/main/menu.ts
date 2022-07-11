@@ -363,7 +363,10 @@ export default class MenuBuilder {
           },
         ],
       },
-      {
+    ];
+
+    if (this.showExport()) {
+      templateDefault.push({
         label: 'Export',
         submenu: [
           {
@@ -391,10 +394,19 @@ export default class MenuBuilder {
             },
           },
         ],
-      },
-    ];
+      });
+    }
 
     return templateDefault;
+  }
+
+  showExport() {
+    try {
+      const url = new URL(this.mainWindow.webContents.getURL());
+      return url.searchParams.has('id');
+    } catch (error) {
+      return false;
+    }
   }
 
   async executeIfID(

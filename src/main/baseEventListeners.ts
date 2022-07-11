@@ -1,6 +1,12 @@
 import { app, ipcMain } from 'electron';
 import log from 'electron-log';
-import { moveNotebook, openNotebook, shutdownNotebook } from './pluto';
+import { PlutoExport } from '../../types/enums';
+import {
+  exportNotebook,
+  moveNotebook,
+  openNotebook,
+  shutdownNotebook,
+} from './pluto';
 
 app.on('open-url', (_, url) => {
   log.info(`Url changed to ${url}`);
@@ -22,5 +28,12 @@ ipcMain.on(
   async (_event, id?: string): Promise<void> => {
     const loc = await moveNotebook(id);
     _event.sender.send('PLUTO-MOVE-NOTEBOOK', loc);
+  }
+);
+
+ipcMain.on(
+  'PLUTO-EXPORT-NOTEBOOK',
+  async (_event, id: string, type: PlutoExport): Promise<void> => {
+    await exportNotebook(id, type);
   }
 );

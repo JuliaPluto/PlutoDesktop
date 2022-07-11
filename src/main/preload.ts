@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import { PlutoExport } from '../../types/enums';
 
 export type Channels = 'ipc-example';
 
@@ -27,6 +28,9 @@ contextBridge.exposeInMainWorld('plutoDesktop', {
     },
     moveNotebook(id?: string) {
       ipcRenderer.send('PLUTO-MOVE-NOTEBOOK', id);
+    },
+    exportNotebook(id: string, type: PlutoExport) {
+      ipcRenderer.send('PLUTO-EXPORT-NOTEBOOK', id, type);
     },
   },
 });
