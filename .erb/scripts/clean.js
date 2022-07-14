@@ -36,4 +36,4 @@ const deleteJuliaFolder = () => {
   }
 };
 
-deleteJuliaFolder();
+// deleteJuliaFolder();

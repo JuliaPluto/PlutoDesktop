@@ -19,6 +19,8 @@ import { isExtMatch, Loader, PLUTO_FILE_EXTENSIONS } from './util';
 electronDl();
 
 /**
+ * * Checks for CUSTOM-JULIA-PATH, if not found then JULIA-PATH
+ * else looks for a zip to extract Julia
  * * Extracts Julia from bundled zip
  * * removes used zip for space saving
  * @param getAssetPath a function to get asset path
@@ -29,16 +31,23 @@ const extractJulia = async (
   getAssetPath: (...paths: string[]) => string
 ) => {
   if (
+    store.has('CUSTOM-JULIA-PATH') &&
+    fs.existsSync(store.get('CUSTOM-JULIA-PATH') as string)
+  ) {
+    return;
+  }
+
+  if (
     store.has('JULIA-PATH') &&
     fs.existsSync(getAssetPath(store.get('JULIA-PATH') as string))
   ) {
-    console.log(
-      chalk.bgBlueBright(
-        `Julia found at: ${getAssetPath(store.get('JULIA-PATH') as string)}`
-      )
-    );
     return;
   }
+
+  /**
+   * Prefer to use extracted folder
+   */
+
   console.log(chalk.yellow('Starting Julia installation'));
 
   try {
@@ -221,12 +230,16 @@ const runPluto = async (
   if (!store.has('JULIA-PATH')) {
     dialog.showErrorBox(
       'JULIA NOT FOUND',
-      'If dev env, please download latest julia win64 portable zip and place it in the assets folder.'
+      'Please download latest julia win64 portable zip and place it in the assets folder.'
     );
     return;
   }
 
-  const julia = getAssetPath(store.get('JULIA-PATH') as string);
+  const julia = store.has('CUSTOM-JULIA-PATH')
+    ? (store.get('CUSTOM-JULIA-PATH') as string)
+    : getAssetPath(store.get('JULIA-PATH') as string);
+
+  log.verbose(chalk.bgBlueBright(`Julia found at: ${julia}`));
 
   if (notebook) {
     res = spawn(julia, [

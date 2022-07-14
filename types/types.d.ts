@@ -8,7 +8,8 @@ declare global {
   type RunPlutoResponse = 'loading' | 'updating' | 'no_update' | PlutoURL;
 
   type SettingsStore = {
-    'JULIA-PATH'?: string;
+    'JULIA-PATH': string;
+    'CUSTOM-JULIA-PATH'?: string;
   };
 }
 
