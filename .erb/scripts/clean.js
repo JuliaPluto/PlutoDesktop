@@ -2,7 +2,6 @@
 import rimraf from 'rimraf';
 import process from 'process';
 import path from 'node:path';
-import fs from 'fs';
 import webpackPaths from '../configs/webpack.paths';
 
 const args = process.argv.slice(2);
@@ -18,22 +17,3 @@ args.forEach((x) => {
     rimraf.sync(pathToRemove);
   }
 });
-
-const deleteJuliaFolder = () => {
-  const assetPath = path.join(webpackPaths.rootPath, 'assets');
-  const files = fs.readdirSync(assetPath);
-  const juliaIdx = files.findIndex(
-    (v) => v.startsWith('julia-') && !v.endsWith('zip')
-  );
-  if (juliaIdx !== -1) {
-    console.log(
-      'Deleted Julia folder, hence not bundling it, only zip is bundled.'
-    );
-    rimraf.sync(path.join(assetPath, files[juliaIdx]), {
-      recursive: true,
-      force: true,
-    });
-  }
-};
-
-// deleteJuliaFolder();
