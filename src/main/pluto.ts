@@ -119,10 +119,14 @@ let plutoURL: PlutoURL | null = null;
  * * a URL to a new notebook if no path passed
  * * an Error in all other cases
  */
-const openNotebook = async (path?: string, forceNew = false) => {
+const openNotebook = async (
+  pathOrURL?: string,
+  forceNew = false,
+  type: 'url' | 'path' = 'path'
+) => {
   const window = BrowserWindow.getFocusedWindow()!;
 
-  if (path && !isExtMatch(path)) {
+  if (type === 'path' && pathOrURL && !isExtMatch(pathOrURL)) {
     dialog.showErrorBox(
       'PLUTO-CANNOT-OPEN-NOTEBOOK',
       'Not a supported file type.'
@@ -130,31 +134,38 @@ const openNotebook = async (path?: string, forceNew = false) => {
     return;
   }
 
-  if (!forceNew && !path) {
-    const r = await dialog.showOpenDialog(window, {
-      message: 'Please select a Pluto Notebook.',
-      filters: [
-        {
-          name: 'Pluto Notebook',
-          extensions: PLUTO_FILE_EXTENSIONS.map((v) => v.slice(1)),
-        },
-      ],
-      properties: ['openFile'],
-    });
+  if (!forceNew && !pathOrURL) {
+    if (type === 'path') {
+      const r = await dialog.showOpenDialog(window, {
+        message: 'Please select a Pluto Notebook.',
+        filters: [
+          {
+            name: 'Pluto Notebook',
+            extensions: PLUTO_FILE_EXTENSIONS.map((v) => v.slice(1)),
+          },
+        ],
+        properties: ['openFile'],
+      });
 
-    if (r.canceled) return;
+      if (r.canceled) return;
 
-    // eslint-disable-next-line no-param-reassign
-    [path] = r.filePaths;
+      // eslint-disable-next-line no-param-reassign
+      [pathOrURL] = r.filePaths;
+    }
   }
 
   const loader = new Loader(window);
 
   if (plutoURL) {
+    let query = '';
+    if (pathOrURL) {
+      if (type === 'path') query = `&path=${pathOrURL}`;
+      else query = `&url=${pathOrURL}`;
+    }
     const res = await axios.post(
-      `http://localhost:${plutoURL.port}/${path ? 'open' : 'new'}?secret=${
+      `http://localhost:${plutoURL.port}/${pathOrURL ? 'open' : 'new'}?secret=${
         plutoURL.secret
-      }${path ? `&path=${path}` : ''}`
+      }${query}`
     );
     if (res.status === 200) {
       await window.loadURL(

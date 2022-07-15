@@ -19,7 +19,11 @@ declare global {
          * opens that notebook. If false and no path is there, opens the file selector.
          * If true, opens a new blank notebook.
          */
-        openNotebook(path?: string, forceNew?: boolean): void;
+        openNotebook(
+          pathOrURL?: string,
+          forceNew?: boolean,
+          type?: 'url' | 'path'
+        ): void;
         shutdownNotebook(id?: string): void;
         moveNotebook(id?: string): void;
         exportNotebook(id: string, type: PlutoExport): void;

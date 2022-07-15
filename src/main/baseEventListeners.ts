@@ -14,8 +14,12 @@ app.on('open-url', (_, url) => {
 
 ipcMain.on(
   'PLUTO-OPEN-NOTEBOOK',
-  async (_event, path?: string, forceNew?: boolean): Promise<void> =>
-    openNotebook(path, forceNew)
+  async (
+    _event,
+    pathOrURL?: string,
+    forceNew = false,
+    type: 'path' | 'url' = 'path'
+  ): Promise<void> => openNotebook(pathOrURL, forceNew, type)
 );
 
 ipcMain.on(
