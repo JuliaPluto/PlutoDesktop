@@ -7,7 +7,7 @@ import {
 } from 'node:child_process';
 import chalk from 'chalk';
 import axios from 'axios';
-import electronDl, { download } from 'electron-dl';
+// import electronDl, { download } from 'electron-dl';
 import fs from 'node:fs';
 import unzip from 'extract-zip';
 import { join } from 'node:path';
@@ -15,8 +15,6 @@ import isDev from 'electron-is-dev';
 import { PlutoExport } from '../../types/enums';
 import store from './store';
 import { isExtMatch, Loader, PLUTO_FILE_EXTENSIONS } from './util';
-
-electronDl();
 
 /**
  * * Extracts Julia from bundled zip
@@ -258,8 +256,8 @@ const runPluto = async (
     ]);
 
   res.stdout.on('data', (data: { toString: () => any }) => {
-    //   console.log(`stdout: ${data}`);
     const plutoLog = data.toString();
+
     if (plutoLog.includes('Loading') || plutoLog.includes('loading'))
       loading.webContents.send('pluto-url', 'loading');
     if (plutoURL === null) {
@@ -290,15 +288,12 @@ const runPluto = async (
       message: dataString,
     };
 
-    // let secret1 : string | null;
-
     if (dataString.includes('Updating'))
       loading.webContents.send('pluto-url', 'updating');
 
     if (dataString.includes('Loading') || dataString.includes('loading'))
       loading.webContents.send('pluto-url', 'loading');
-    // else if (dataString.includes('No Changes'))
-    //   loading.webContents.send('pluto-url', 'No update found');
+
     if (plutoURL === null) {
       const plutoLog = dataString;
       if (plutoLog.includes('?secret=')) {
@@ -316,10 +311,20 @@ const runPluto = async (
         win.loadURL(entryUrl);
 
         log.verbose('Entry url found:', plutoURL);
+      } else if (
+        plutoLog.includes(
+          'failed to send request: The server name or address could not be resolved'
+        )
+      ) {
+        log.error('Pluto install failed, no internet connection.');
+        dialog.showErrorBox(
+          'CANNOT-INSTALL-PLUTO',
+          'Please check your internet connection!'
+        );
+        app.exit();
       }
     }
 
-    // win.webContents.send("pluto-url", error);
     log.error(chalk.bgRed(error.name), error.message);
   });
 
@@ -379,16 +384,7 @@ const exportNotebook: (id: string, type: PlutoExport) => Promise<void> = async (
       return;
   }
 
-  const details = await download(window, url, {
-    saveAs: true,
-    openFolderWhenDone: true,
-  });
-
-  details.on('done', () => {
-    const line = `${details.getFilename()} download to ${details.getSavePath()}.`;
-    console.log(chalk.green(line));
-    log.info(line);
-  });
+  window.webContents.downloadURL(url);
 };
 
 const shutdownNotebook = async (_id?: string) => {

@@ -10,7 +10,7 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, session } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { release } from 'os';
@@ -256,6 +256,28 @@ app
     });
     app.on('will-quit', () => {
       if (closePluto) closePluto();
+    });
+    session.defaultSession.on('will-download', (_event, item) => {
+      item.once('done', (_e, state) => {
+        if (state === 'completed')
+          log.verbose(
+            chalk.gray(
+              'Successfully downloaded',
+              item.getFilename(),
+              'to',
+              item.getSavePath()
+            )
+          );
+        else
+          log.verbose(
+            chalk.gray(
+              'Download failed',
+              item.getFilename(),
+              'because of',
+              chalk.underline(state)
+            )
+          );
+      });
     });
   })
   .catch(log.error);
