@@ -1,5 +1,4 @@
-import chalk from 'chalk';
-import { app, ipcMain, session } from 'electron';
+import { app, ipcMain } from 'electron';
 import log from 'electron-log';
 import { PlutoExport } from '../../types/enums';
 import {

@@ -7,7 +7,6 @@ import {
 } from 'node:child_process';
 import chalk from 'chalk';
 import axios from 'axios';
-// import electronDl, { download } from 'electron-dl';
 import fs from 'node:fs';
 import unzip from 'extract-zip';
 import { join } from 'node:path';

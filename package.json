@@ -104,7 +104,6 @@
   "dependencies": {
     "axios": "^0.27.2",
     "electron-debug": "^3.2.0",
-    "electron-dl": "^3.3.1",
     "electron-log": "^4.4.7",
     "electron-store": "^8.0.2",
     "electron-updater": "^5.0.1",
