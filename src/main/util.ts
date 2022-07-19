@@ -64,4 +64,15 @@ class Loader {
   };
 }
 
-export { isExtMatch, PLUTO_FILE_EXTENSIONS, Loader };
+const tryCatch = async (
+  exec: (...args: any[]) => Promise<void>,
+  catchExec?: (...args: any[]) => Promise<void>
+) => {
+  try {
+    await exec();
+  } catch (error) {
+    if (catchExec) await catchExec();
+  }
+};
+
+export { isExtMatch, PLUTO_FILE_EXTENSIONS, Loader, tryCatch };

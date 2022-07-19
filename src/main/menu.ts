@@ -232,7 +232,7 @@ export default class MenuBuilder {
             label: '&Open',
             accelerator: 'Ctrl+O',
             click: async () => {
-              await openNotebook();
+              await openNotebook('path');
             },
           },
           {
@@ -260,7 +260,7 @@ export default class MenuBuilder {
             label: '&New',
             accelerator: 'Ctrl+N',
             click: async () => {
-              await openNotebook(undefined, true);
+              await openNotebook();
             },
           },
           {

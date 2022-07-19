@@ -114,78 +114,82 @@ const extractJulia = async (
 let plutoURL: PlutoURL | null = null;
 
 /**
- * @param path path to a .pluto.jl file
- * @returns * a URL to openend .pluto.jl notebook if valid path passed
- * * a URL to a new notebook if no path passed
- * * an Error in all other cases
+ * @param type [default = 'new'] whether you want to open a new notebook
+ * open a notebook from a path or from a url
+ * @param pathOrURL location to the file, not needed if opening a new file,
+ * opens that notebook. If false and no path is there, opens the file selector.
+ * If true, opens a new blank notebook.
  */
 const openNotebook = async (
-  pathOrURL?: string,
-  forceNew = false,
-  type: 'url' | 'path' = 'path'
+  type: 'url' | 'path' | 'new' = 'new',
+  pathOrURL?: string
 ) => {
-  const window = BrowserWindow.getFocusedWindow()!;
+  try {
+    const window = BrowserWindow.getFocusedWindow()!;
 
-  if (type === 'path' && pathOrURL && !isExtMatch(pathOrURL)) {
-    dialog.showErrorBox(
-      'PLUTO-CANNOT-OPEN-NOTEBOOK',
-      'Not a supported file type.'
-    );
-    return;
-  }
-
-  if (!forceNew && !pathOrURL) {
-    if (type === 'path') {
-      const r = await dialog.showOpenDialog(window, {
-        message: 'Please select a Pluto Notebook.',
-        filters: [
-          {
-            name: 'Pluto Notebook',
-            extensions: PLUTO_FILE_EXTENSIONS.map((v) => v.slice(1)),
-          },
-        ],
-        properties: ['openFile'],
-      });
-
-      if (r.canceled) return;
-
-      // eslint-disable-next-line no-param-reassign
-      [pathOrURL] = r.filePaths;
-    }
-  }
-
-  const loader = new Loader(window);
-
-  if (plutoURL) {
-    let query = '';
-    if (pathOrURL) {
-      if (type === 'path') query = `&path=${pathOrURL}`;
-      else query = `&url=${pathOrURL}`;
-    }
-    const res = await axios.post(
-      `http://localhost:${plutoURL.port}/${pathOrURL ? 'open' : 'new'}?secret=${
-        plutoURL.secret
-      }${query}`
-    );
-    if (res.status === 200) {
-      await window.loadURL(
-        `http://localhost:${plutoURL.port}/edit?secret=${plutoURL.secret}&id=${res.data}`
+    if (type === 'path' && pathOrURL && !isExtMatch(pathOrURL)) {
+      dialog.showErrorBox(
+        'PLUTO-CANNOT-OPEN-NOTEBOOK',
+        'Not a supported file type.'
       );
+      return;
+    }
+
+    if (type !== 'new' && !pathOrURL) {
+      if (type === 'path') {
+        const r = await dialog.showOpenDialog(window, {
+          message: 'Please select a Pluto Notebook.',
+          filters: [
+            {
+              name: 'Pluto Notebook',
+              extensions: PLUTO_FILE_EXTENSIONS.map((v) => v.slice(1)),
+            },
+          ],
+          properties: ['openFile'],
+        });
+
+        if (r.canceled) return;
+
+        // eslint-disable-next-line no-param-reassign
+        [pathOrURL] = r.filePaths;
+      }
+    }
+
+    const loader = new Loader(window);
+
+    if (plutoURL) {
+      let query = '';
+      if (pathOrURL) {
+        if (type === 'path') query = `&path=${pathOrURL}`;
+        else if (type === 'url') query = `&url=${pathOrURL}`;
+      }
+      const res = await axios.post(
+        `http://localhost:${plutoURL.port}/${
+          type === 'new' ? 'new' : 'open'
+        }?secret=${plutoURL.secret}${query}`
+      );
+      if (res.status === 200) {
+        await window.loadURL(
+          `http://localhost:${plutoURL.port}/edit?secret=${plutoURL.secret}&id=${res.data}`
+        );
+        loader.stopLoading();
+        return;
+      }
       loader.stopLoading();
+      dialog.showErrorBox(
+        'PLUTO-CANNOT-OPEN-NOTEBOOK',
+        'Please check if you are using the correct secret.'
+      );
       return;
     }
     loader.stopLoading();
     dialog.showErrorBox(
       'PLUTO-CANNOT-OPEN-NOTEBOOK',
-      'Please check if you are using the correct secret.'
+      'Please wait for pluto to initialize.'
     );
-    return;
+  } catch (error) {
+    log.error(chalk.red('PLUTO-NOTEBOOK-OPEN-ERROR', error));
   }
-  loader.stopLoading();
-  dialog.showErrorBox(
-    'PLUTO-CANNOT-OPEN-NOTEBOOK',
-    'Please wait for pluto to initialize.'
-  );
 };
 
 // eslint-disable-next-line import/no-mutable-exports
@@ -210,7 +214,7 @@ const runPluto = async (
 ) => {
   if (plutoURL) {
     log.info('LAUNCHING\n', 'project:', project, '\nnotebook:', notebook);
-    await openNotebook(notebook);
+    await openNotebook('path', notebook);
     return;
   }
 

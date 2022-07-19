@@ -16,10 +16,9 @@ ipcMain.on(
   'PLUTO-OPEN-NOTEBOOK',
   async (
     _event,
-    pathOrURL?: string,
-    forceNew = false,
-    type: 'path' | 'url' = 'path'
-  ): Promise<void> => openNotebook(pathOrURL, forceNew, type)
+    type: 'path' | 'url' | 'new' = 'new',
+    pathOrURL?: string
+  ): Promise<void> => openNotebook(type, pathOrURL)
 );
 
 ipcMain.on(
