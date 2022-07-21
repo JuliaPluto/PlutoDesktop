@@ -248,6 +248,7 @@ app.on('open-file', async (_event, file) => {
 app
   .whenReady()
   .then(() => {
+    log.verbose(chalk.grey('---------- BEGIN ----------'));
     createWindow();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the
