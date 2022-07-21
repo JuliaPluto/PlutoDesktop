@@ -25,6 +25,12 @@ import {
 import { arg, checkIfCalledViaCLI } from './cli';
 import './baseEventListeners';
 import MenuBuilder from './menu';
+import { store, userStore } from './store';
+
+log.verbose(chalk.grey('---------- BEGIN ----------'));
+log.verbose(chalk.grey('Application Version:', app.getVersion()));
+log.verbose(chalk.green('CONFIG STORE:'), store.store);
+log.verbose(chalk.green('USER STORE:'), userStore.store);
 
 export default class AppUpdater {
   constructor() {
@@ -107,6 +113,13 @@ const createWindow = async (
     const getAssetPath = (...paths: string[]): string => {
       return path.join(RESOURCES_PATH, ...paths);
     };
+
+    if (!store.has('JULIA-PATH')) {
+      store.set('JULIA-PATH', getAssetPath('julia-1.7.3\\bin\\julia.exe'));
+    }
+    if (!store.has('PLUTO-PRECOMPILED')) {
+      store.set('PLUTO-PRECOMPILED', getAssetPath('pluto-sysimage.so'));
+    }
 
     if (checkIfCalledViaCLI(process.argv)) {
       url ??= arg.url;
@@ -247,8 +260,6 @@ app.on('open-file', async (_event, file) => {
 app
   .whenReady()
   .then(() => {
-    log.verbose(chalk.grey('---------- BEGIN ----------'));
-    log.verbose(chalk.grey('Application Version:', app.getVersion()));
     createWindow();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the

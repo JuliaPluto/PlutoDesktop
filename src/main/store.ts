@@ -1,10 +1,13 @@
-import chalk from 'chalk';
 import Store from 'electron-store';
+import fs from 'fs';
 
-const store = new Store<SettingsStore>({
-  defaults: { 'JULIA-PATH': 'julia-1.7.3\\bin\\julia.exe' },
-});
+const store = new Store<SettingsStore>({});
 
-console.log(chalk.green('STORE:'), store.store);
+const userStore = new Store<UserSettingsStore>({ name: 'user-config' });
 
-export default store;
+const openUserStoreInEditor = () => {
+  if (!fs.existsSync(userStore.path)) fs.writeFileSync(userStore.path, '{}');
+  userStore.openInEditor();
+};
+
+export { store, userStore, openUserStoreInEditor };

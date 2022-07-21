@@ -9,7 +9,11 @@ declare global {
 
   type SettingsStore = {
     'JULIA-PATH': string;
-    'CUSTOM-JULIA-PATH'?: string;
+    'PLUTO-PRECOMPILED': string;
+  };
+
+  type UserSettingsStore = {
+    'CUSTOM-JULIA-PATH': string;
   };
 }
 

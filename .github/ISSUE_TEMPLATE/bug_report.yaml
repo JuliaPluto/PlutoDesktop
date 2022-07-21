@@ -73,7 +73,15 @@ body:
     id: config
     attributes:
       label: Relevant output from C:\Users\{USER_NAME}\AppData\Roaming\pluto\config.json
-      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks. If no file created, please type NA.
+      description: This will be automatically formatted into code, so no need for backticks. If no file created, please type NA.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: userConfig
+    attributes:
+      label: Relevant output from C:\Users\{USER_NAME}\AppData\Roaming\pluto\userConfig.json
+      description: This will be automatically formatted into code, so no need for backticks. If no file created, please type NA.
       render: json
     validations:
       required: true

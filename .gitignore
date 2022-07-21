@@ -34,6 +34,8 @@ npm-debug.log.*
 *.toml
 project
 assets/julia*
+assets/pluto-sysimage.so
+assets/pluto_precompile.jl
 
 # ENV
 .env.local

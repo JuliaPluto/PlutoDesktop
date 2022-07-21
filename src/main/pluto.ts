@@ -1,10 +1,6 @@
 import { app, BrowserWindow, dialog } from 'electron';
 import log from 'electron-log';
-import {
-  ChildProcessWithoutNullStreams,
-  spawn,
-  exec,
-} from 'node:child_process';
+import { spawn, exec } from 'node:child_process';
 import chalk from 'chalk';
 import axios from 'axios';
 import fs from 'node:fs';
@@ -12,7 +8,7 @@ import unzip from 'extract-zip';
 import { join } from 'node:path';
 import isDev from 'electron-is-dev';
 import { PlutoExport } from '../../types/enums';
-import store from './store';
+import { store, userStore } from './store';
 import { isExtMatch, Loader, PLUTO_FILE_EXTENSIONS } from './util';
 
 /**
@@ -28,16 +24,13 @@ const extractJulia = async (
   getAssetPath: (...paths: string[]) => string
 ) => {
   if (
-    store.has('CUSTOM-JULIA-PATH') &&
-    fs.existsSync(store.get('CUSTOM-JULIA-PATH') as string)
+    userStore.has('CUSTOM-JULIA-PATH') &&
+    fs.existsSync(userStore.get('CUSTOM-JULIA-PATH'))
   ) {
     return;
   }
 
-  if (
-    store.has('JULIA-PATH') &&
-    fs.existsSync(getAssetPath(store.get('JULIA-PATH') as string))
-  ) {
+  if (store.has('JULIA-PATH') && fs.existsSync(store.get('JULIA-PATH'))) {
     return;
   }
 
@@ -105,12 +98,9 @@ const extractJulia = async (
       loading.webContents.send('pluto-url', 'Zip removed');
       console.log('Zip removed');
     }
-    store.set('JULIA-PATH', join(nameInitial, '/bin/julia.exe'));
-    console.log(
-      chalk.yellow(
-        `Julia installed at: ${getAssetPath(store.get('JULIA-PATH') as string)}`
-      )
-    );
+    const finalPath = getAssetPath(join(nameInitial, '/bin/julia.exe'));
+    store.set('JULIA-PATH', finalPath);
+    console.log(chalk.yellow(`Julia installed at: ${finalPath}`));
     loading.webContents.send('pluto-url', 'Julia Successfully Installed.');
   } catch (error) {
     log.error(chalk.red('JULIA-INSTALL-ERROR', error));
@@ -198,6 +188,91 @@ const openNotebook = async (
   }
 };
 
+const precompilePluto = (
+  win: BrowserWindow,
+  projectPath: string,
+  scriptLocation: string,
+  precompileSharedObjectLocation: string,
+  precompileScriptLocation: string
+) => {
+  if (process.env.DEBUG_PROJECT_PATH) {
+    log.silly(
+      'Not precompiling because currently using',
+      process.env.DEBUG_PROJECT_PATH
+    );
+    return;
+  }
+
+  if (
+    store.has('PLUTO-PRECOMPILED') &&
+    fs.existsSync(store.get('PLUTO-PRECOMPILED'))
+  ) {
+    log.silly('Already precompiled, so not precompiling.');
+    return;
+  }
+
+  const julia =
+    userStore.has('CUSTOM-JULIA-PATH') && !isDev
+      ? userStore.get('CUSTOM-JULIA-PATH')
+      : store.get('JULIA-PATH');
+
+  try {
+    log.verbose(chalk.yellow.bold('Trying to precompile Pluto.'));
+    dialog.showMessageBox(win, {
+      title: 'Precompiling Pluto',
+      message:
+        "Trying to precompile Pluto in the background, you'll be prompted when it is done. Once completed it will decrease the load time for further usage.\nThis is a one time process.",
+    });
+    const res = spawn(julia, [
+      `--project=${projectPath}`,
+      scriptLocation,
+      precompileSharedObjectLocation,
+      precompileScriptLocation,
+    ]);
+    log.verbose(
+      'Executing Command:',
+      julia,
+      `--project=${projectPath}`,
+      scriptLocation,
+      precompileSharedObjectLocation,
+      precompileScriptLocation
+    );
+
+    res.stderr.on('data', (data: { toString: () => any }) => {
+      const plutoLog = data.toString();
+      log.info(chalk.yellow(plutoLog));
+    });
+
+    res.once('close', (code) => {
+      if (code === 0) {
+        log.verbose(
+          chalk.green(
+            'Pluto has been precompiled to',
+            precompileSharedObjectLocation
+          )
+        );
+        store.set('PLUTO-PRECOMPILED', precompileSharedObjectLocation);
+        dialog.showMessageBox(win, {
+          title: 'Pluto has been precompiled',
+          message: 'Pluto has been precompiled successfully.',
+        });
+      } else {
+        log.error(
+          chalk.bgRed('PLUTO-PRECOMPILE-ERROR'),
+          'Failed with error code',
+          code
+        );
+        dialog.showErrorBox(
+          'PLUTO-PRECOMPILE-ERROR',
+          `Failed with error code ${code}.`
+        );
+      }
+    });
+  } catch (error) {
+    log.error(chalk.red('PLUTO-PRECOMPLIE-ERROR', error));
+  }
+};
+
 // eslint-disable-next-line import/no-mutable-exports
 let closePluto: (() => void) | undefined;
 
@@ -237,8 +312,6 @@ const runPluto = async (
 
   log.info('LAUNCHING\n', 'project:', loc, '\nnotebook:', notebook);
 
-  let res: ChildProcessWithoutNullStreams | null;
-
   if (!store.has('JULIA-PATH')) {
     dialog.showErrorBox(
       'JULIA NOT FOUND',
@@ -247,26 +320,33 @@ const runPluto = async (
     return;
   }
 
-  const julia = store.has('CUSTOM-JULIA-PATH')
-    ? (store.get('CUSTOM-JULIA-PATH') as string)
-    : getAssetPath(store.get('JULIA-PATH') as string);
+  const julia = userStore.has('CUSTOM-JULIA-PATH')
+    ? userStore.get('CUSTOM-JULIA-PATH')
+    : store.get('JULIA-PATH');
 
   log.verbose(chalk.bgBlueBright(`Julia found at: ${julia}`));
 
+  const options = [`--project=${loc}`];
+  if (
+    store.has('PLUTO-PRECOMPILED') &&
+    fs.existsSync(store.get('PLUTO-PRECOMPILED')) &&
+    !process.env.DEBUG_PROJECT_PATH
+  )
+    options.push(`--sysimage=${store.get('PLUTO-PRECOMPILED')}`);
+  else options.push(`--trace-compile=${getAssetPath('pluto_precompile.jl')}`);
+  if (process.env.DEBUG_PROJECT_PATH)
+    options.push(getAssetPath('pluto_no_update.jl'));
+  else options.push(getAssetPath('script.jl'));
+  if (notebook) options.push(notebook);
+
   try {
-    if (notebook) {
-      res = spawn(julia, [
-        `--project=${loc}`,
-        getAssetPath(`script.jl`),
-        notebook,
-      ]);
-    } else
-      res = spawn(julia, [
-        `--project=${loc}`,
-        getAssetPath(
-          process.env.DEBUG_PROJECT_PATH ? `pluto_no_update.jl` : `script.jl`
-        ),
-      ]);
+    const res = spawn(julia, options);
+    log.verbose(
+      'Executing',
+      chalk.bold(julia),
+      'with options',
+      chalk.bold(options)
+    );
 
     res.stdout.on('data', (data: { toString: () => any }) => {
       const plutoLog = data.toString();
@@ -289,6 +369,13 @@ const runPluto = async (
           win.loadURL(entryUrl);
 
           console.log('Entry url found:', plutoURL);
+          precompilePluto(
+            win,
+            loc,
+            getAssetPath('precompile.jl'),
+            getAssetPath('pluto-sysimage.so'),
+            getAssetPath('pluto_precompile.jl')
+          );
         }
       }
       log.info(chalk.blue(plutoLog));
@@ -345,16 +432,16 @@ const runPluto = async (
       if (code !== 0) {
         dialog.showErrorBox(code, 'Pluto crashed');
       }
-      console.log(`child process exited with code ${code}`);
+      log.error(`child process exited with code ${code}`);
     });
 
     res.on('exit', (code: any) => {
-      console.log(`child process exited with code ${code}`);
+      log.error(`child process exited with code ${code}`);
     });
 
     closePluto = () => {
       if (res) {
-        console.log('Killing Pluto process.');
+        log.verbose('Killing Pluto process.');
         res?.kill();
       }
     };
