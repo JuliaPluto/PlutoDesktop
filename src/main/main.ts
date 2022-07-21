@@ -218,7 +218,6 @@ const createWindow = async (
     });
 
     await loading.loadURL(resolveHtmlPath('index.html'));
-    loading.webContents.send('CHANGE_PAGE', '/loading');
     loading.show();
 
     // Remove this if your app does not use auto updates
@@ -249,6 +248,7 @@ app
   .whenReady()
   .then(() => {
     log.verbose(chalk.grey('---------- BEGIN ----------'));
+    log.verbose(chalk.grey('Application Version:', app.getVersion()));
     createWindow();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the
