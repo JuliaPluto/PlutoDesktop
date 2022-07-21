@@ -113,7 +113,7 @@ const extractJulia = async (
     );
     loading.webContents.send('pluto-url', 'Julia Successfully Installed.');
   } catch (error) {
-    console.error(error);
+    log.error(chalk.red('JULIA-INSTALL-ERROR', error));
   }
 };
 
@@ -253,110 +253,114 @@ const runPluto = async (
 
   log.verbose(chalk.bgBlueBright(`Julia found at: ${julia}`));
 
-  if (notebook) {
-    res = spawn(julia, [
-      `--project=${loc}`,
-      getAssetPath(`script.jl`),
-      notebook,
-    ]);
-  } else
-    res = spawn(julia, [
-      `--project=${loc}`,
-      getAssetPath(
-        process.env.DEBUG_PROJECT_PATH ? `pluto_no_update.jl` : `script.jl`
-      ),
-    ]);
+  try {
+    if (notebook) {
+      res = spawn(julia, [
+        `--project=${loc}`,
+        getAssetPath(`script.jl`),
+        notebook,
+      ]);
+    } else
+      res = spawn(julia, [
+        `--project=${loc}`,
+        getAssetPath(
+          process.env.DEBUG_PROJECT_PATH ? `pluto_no_update.jl` : `script.jl`
+        ),
+      ]);
 
-  res.stdout.on('data', (data: { toString: () => any }) => {
-    const plutoLog = data.toString();
+    res.stdout.on('data', (data: { toString: () => any }) => {
+      const plutoLog = data.toString();
 
-    if (plutoLog.includes('Loading') || plutoLog.includes('loading'))
-      loading.webContents.send('pluto-url', 'loading');
-    if (plutoURL === null) {
-      if (plutoLog.includes('?secret=')) {
-        const urlMatch = plutoLog.match(/http\S+/g);
-        const entryUrl = urlMatch[0];
+      if (plutoLog.includes('Loading') || plutoLog.includes('loading'))
+        loading.webContents.send('pluto-url', 'loading');
+      if (plutoURL === null) {
+        if (plutoLog.includes('?secret=')) {
+          const urlMatch = plutoLog.match(/http\S+/g);
+          const entryUrl = urlMatch[0];
 
-        const url = new URL(entryUrl);
-        plutoURL = {
-          url: entryUrl,
-          port: url.port,
-          secret: url.searchParams.get('secret')!,
-        };
+          const url = new URL(entryUrl);
+          plutoURL = {
+            url: entryUrl,
+            port: url.port,
+            secret: url.searchParams.get('secret')!,
+          };
 
-        loading.webContents.send('pluto-url', 'loaded');
-        win.loadURL(entryUrl);
+          loading.webContents.send('pluto-url', 'loaded');
+          win.loadURL(entryUrl);
 
-        console.log('Entry url found:', plutoURL);
+          console.log('Entry url found:', plutoURL);
+        }
       }
-    }
-    log.info(chalk.blue(plutoLog));
-  });
+      log.info(chalk.blue(plutoLog));
+    });
 
-  res.stderr.on('data', (data: any) => {
-    const dataString = data.toString();
-    const error: Error = {
-      name: 'pluto-launch-error',
-      message: dataString,
+    res.stderr.on('data', (data: any) => {
+      const dataString = data.toString();
+      const error: Error = {
+        name: 'pluto-launch-error',
+        message: dataString,
+      };
+
+      if (dataString.includes('Updating'))
+        loading.webContents.send('pluto-url', 'updating');
+
+      if (dataString.includes('Loading') || dataString.includes('loading'))
+        loading.webContents.send('pluto-url', 'loading');
+
+      if (plutoURL === null) {
+        const plutoLog = dataString;
+        if (plutoLog.includes('?secret=')) {
+          const urlMatch = plutoLog.match(/http\S+/g);
+          const entryUrl = urlMatch[0];
+
+          const url = new URL(entryUrl);
+          plutoURL = {
+            url: entryUrl,
+            port: url.port,
+            secret: url.searchParams.get('secret')!,
+          };
+
+          loading.webContents.send('pluto-url', 'loaded');
+          win.loadURL(entryUrl);
+
+          log.verbose('Entry url found:', plutoURL);
+        } else if (
+          plutoLog.includes(
+            'failed to send request: The server name or address could not be resolved'
+          )
+        ) {
+          log.error('Pluto install failed, no internet connection.');
+          dialog.showErrorBox(
+            'CANNOT-INSTALL-PLUTO',
+            'Please check your internet connection!'
+          );
+          app.exit();
+        }
+      }
+
+      log.error(chalk.bgRed(error.name), error.message);
+    });
+
+    res.on('close', (code: any) => {
+      if (code !== 0) {
+        dialog.showErrorBox(code, 'Pluto crashed');
+      }
+      console.log(`child process exited with code ${code}`);
+    });
+
+    res.on('exit', (code: any) => {
+      console.log(`child process exited with code ${code}`);
+    });
+
+    closePluto = () => {
+      if (res) {
+        console.log('Killing Pluto process.');
+        res?.kill();
+      }
     };
-
-    if (dataString.includes('Updating'))
-      loading.webContents.send('pluto-url', 'updating');
-
-    if (dataString.includes('Loading') || dataString.includes('loading'))
-      loading.webContents.send('pluto-url', 'loading');
-
-    if (plutoURL === null) {
-      const plutoLog = dataString;
-      if (plutoLog.includes('?secret=')) {
-        const urlMatch = plutoLog.match(/http\S+/g);
-        const entryUrl = urlMatch[0];
-
-        const url = new URL(entryUrl);
-        plutoURL = {
-          url: entryUrl,
-          port: url.port,
-          secret: url.searchParams.get('secret')!,
-        };
-
-        loading.webContents.send('pluto-url', 'loaded');
-        win.loadURL(entryUrl);
-
-        log.verbose('Entry url found:', plutoURL);
-      } else if (
-        plutoLog.includes(
-          'failed to send request: The server name or address could not be resolved'
-        )
-      ) {
-        log.error('Pluto install failed, no internet connection.');
-        dialog.showErrorBox(
-          'CANNOT-INSTALL-PLUTO',
-          'Please check your internet connection!'
-        );
-        app.exit();
-      }
-    }
-
-    log.error(chalk.bgRed(error.name), error.message);
-  });
-
-  res.on('close', (code: any) => {
-    if (code !== 0) {
-      dialog.showErrorBox(code, 'Pluto crashed');
-    }
-    console.log(`child process exited with code ${code}`);
-  });
-
-  res.on('exit', (code: any) => {
-    console.log(`child process exited with code ${code}`);
-  });
-
-  closePluto = () => {
-    if (res) {
-      console.log('Killing Pluto process.');
-      res?.kill();
-    }
-  };
+  } catch (e) {
+    log.error(chalk.red('PLUTO-RUN-ERROR', e));
+  }
 };
 
 const updatePluto = () => {};
