@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+
 import chalk from 'chalk';
 import log from 'electron-log';
 import util from 'util';
@@ -23,11 +25,14 @@ const functions = {
 
 const format = '{y}-{m}-{d} {h}:{i}:{s}.{ms} {level} {label} > {text}';
 
+/**
+ * **generalLogger** is the logger that logs the electron main process.
+ */
+
 const generalLogger = log.create('general-log');
 generalLogger.variables.label = 'general';
 generalLogger.levels.add('announce');
 generalLogger.transports.file.format = format;
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 generalLogger.transports.console = (message) => {
   const text = util.format(...message.data);
@@ -44,6 +49,7 @@ generalLogger.transports.console = (message) => {
     case 'info':
       functions.info(prefix, text);
       break;
+    // @ts-ignore
     case 'log':
       functions.log(prefix, text);
       break;
@@ -56,6 +62,7 @@ generalLogger.transports.console = (message) => {
     case 'warn':
       functions.warn(prefix, text);
       break;
+    // @ts-ignore
     case 'announce':
       functions.announce(prefix, text);
       break;
@@ -66,12 +73,15 @@ generalLogger.transports.console = (message) => {
 };
 generalLogger.transports.console.useStyles = true;
 
+/**
+ * **backgroundLogger** logs about the things happening in the background, like autoUpdate.
+ */
+
 const backgroundLogger = log.create('background-log');
 backgroundLogger.variables.label = 'background';
 backgroundLogger.transports.file.level = 'info';
 backgroundLogger.transports.file.fileName = 'background.log';
 backgroundLogger.transports.file.format = format;
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 backgroundLogger.transports.console = (message) => {
   const text = util.format(...message.data);
@@ -88,6 +98,7 @@ backgroundLogger.transports.console = (message) => {
     case 'info':
       functions.info(prefix, text);
       break;
+    // @ts-ignore
     case 'log':
       functions.log(prefix, text);
       break;
@@ -106,6 +117,10 @@ backgroundLogger.transports.console = (message) => {
   }
 };
 backgroundLogger.transports.console.useStyles = true;
+
+/**
+ * **juliaLogger** logs the julia and pluto console.
+ */
 
 const juliaLogger = log.create('julia-log');
 juliaLogger.variables.label = 'julia';
@@ -127,6 +142,7 @@ juliaLogger.transports.console = (message) => {
     case 'info':
       functions.info(prefix, text);
       break;
+    // @ts-ignore
     case 'log':
       functions.log(prefix, text);
       break;
