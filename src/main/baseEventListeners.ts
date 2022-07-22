@@ -1,5 +1,4 @@
-import { app, ipcMain } from 'electron';
-import log from 'electron-log';
+import { ipcMain } from 'electron';
 import { PlutoExport } from '../../types/enums';
 import {
   exportNotebook,
@@ -7,10 +6,6 @@ import {
   openNotebook,
   shutdownNotebook,
 } from './pluto';
-
-app.on('open-url', (_, url) => {
-  log.info(`Url changed to ${url}`);
-});
 
 ipcMain.on(
   'PLUTO-OPEN-NOTEBOOK',

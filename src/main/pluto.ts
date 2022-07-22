@@ -1,5 +1,4 @@
 import { app, BrowserWindow, dialog } from 'electron';
-import log from 'electron-log';
 import { spawn, exec } from 'node:child_process';
 import chalk from 'chalk';
 import axios from 'axios';
@@ -7,6 +6,7 @@ import fs from 'node:fs';
 import unzip from 'extract-zip';
 import { join } from 'node:path';
 import isDev from 'electron-is-dev';
+import { generalLogger, juliaLogger } from './logger';
 import { PlutoExport } from '../../types/enums';
 import { store, userStore } from './store';
 import { isExtMatch, Loader, PLUTO_FILE_EXTENSIONS } from './util';
@@ -53,7 +53,10 @@ const extractJulia = async (
             'ADMIN PERMISSIONS NOT AVAILABLE',
             'Julia is not installed, to install it the application needs admin privileges. Please close the app and run again using right clicking and using "Run as administrator".'
           );
-          log.error("Can't install Julia, permissions not granted.");
+          generalLogger.error(
+            'PERMISSION-NOT-GRANTED',
+            "Can't install Julia, permissions not granted."
+          );
           app.quit();
         }
       });
@@ -64,7 +67,7 @@ const extractJulia = async (
       (v) => v.startsWith('julia-') && v.endsWith('zip')
     );
     if (idx === -1) {
-      log.error('JULIA-INSTALL-ERROR', "Can't find Julia zip");
+      generalLogger.error('JULIA-INSTALL-ERROR', "Can't find Julia zip");
       return;
     }
     let zip = files[idx];
@@ -103,7 +106,7 @@ const extractJulia = async (
     console.log(chalk.yellow(`Julia installed at: ${finalPath}`));
     loading.webContents.send('pluto-url', 'Julia Successfully Installed.');
   } catch (error) {
-    log.error(chalk.red('JULIA-INSTALL-ERROR', error));
+    generalLogger.error('JULIA-INSTALL-ERROR', error);
   }
 };
 
@@ -184,7 +187,7 @@ const openNotebook = async (
       'Please wait for pluto to initialize.'
     );
   } catch (error) {
-    log.error(chalk.red('PLUTO-NOTEBOOK-OPEN-ERROR', error));
+    generalLogger.error('PLUTO-NOTEBOOK-OPEN-ERROR', error);
   }
 };
 
@@ -196,7 +199,7 @@ const precompilePluto = (
   precompileScriptLocation: string
 ) => {
   if (process.env.DEBUG_PROJECT_PATH) {
-    log.silly(
+    generalLogger.silly(
       'Not precompiling because currently using',
       process.env.DEBUG_PROJECT_PATH
     );
@@ -207,7 +210,7 @@ const precompilePluto = (
     store.has('PLUTO-PRECOMPILED') &&
     fs.existsSync(store.get('PLUTO-PRECOMPILED'))
   ) {
-    log.silly('Already precompiled, so not precompiling.');
+    generalLogger.silly('Already precompiled, so not precompiling.');
     return;
   }
 
@@ -217,7 +220,7 @@ const precompilePluto = (
       : store.get('JULIA-PATH');
 
   try {
-    log.verbose(chalk.yellow.bold('Trying to precompile Pluto.'));
+    generalLogger.info(chalk.yellow.bold('Trying to precompile Pluto.'));
     dialog.showMessageBox(win, {
       title: 'Precompiling Pluto',
       message:
@@ -229,7 +232,7 @@ const precompilePluto = (
       precompileSharedObjectLocation,
       precompileScriptLocation,
     ]);
-    log.verbose(
+    generalLogger.verbose(
       'Executing Command:',
       julia,
       `--project=${projectPath}`,
@@ -240,16 +243,14 @@ const precompilePluto = (
 
     res.stderr.on('data', (data: { toString: () => any }) => {
       const plutoLog = data.toString();
-      log.info(chalk.yellow(plutoLog));
+      juliaLogger.log(plutoLog);
     });
 
     res.once('close', (code) => {
       if (code === 0) {
-        log.verbose(
-          chalk.green(
-            'Pluto has been precompiled to',
-            precompileSharedObjectLocation
-          )
+        generalLogger.info(
+          'Pluto has been precompiled to',
+          precompileSharedObjectLocation
         );
         store.set('PLUTO-PRECOMPILED', precompileSharedObjectLocation);
         dialog.showMessageBox(win, {
@@ -257,8 +258,8 @@ const precompilePluto = (
           message: 'Pluto has been precompiled successfully.',
         });
       } else {
-        log.error(
-          chalk.bgRed('PLUTO-PRECOMPILE-ERROR'),
+        generalLogger.error(
+          'PLUTO-PRECOMPILE-ERROR',
           'Failed with error code',
           code
         );
@@ -269,7 +270,7 @@ const precompilePluto = (
       }
     });
   } catch (error) {
-    log.error(chalk.red('PLUTO-PRECOMPLIE-ERROR', error));
+    generalLogger.error('PLUTO-PRECOMPLIE-ERROR', error);
   }
 };
 
@@ -294,7 +295,13 @@ const runPluto = async (
   notebook?: string
 ) => {
   if (plutoURL) {
-    log.info('LAUNCHING\n', 'project:', project, '\nnotebook:', notebook);
+    generalLogger.info(
+      'LAUNCHING\n',
+      'project:',
+      project,
+      '\nnotebook:',
+      notebook
+    );
     await openNotebook('path', notebook);
     return;
   }
@@ -310,7 +317,7 @@ const runPluto = async (
 
   const loc = project ?? process.env.DEBUG_PROJECT_PATH ?? p;
 
-  log.info('LAUNCHING\n', 'project:', loc, '\nnotebook:', notebook);
+  generalLogger.info('LAUNCHING\n', 'project:', loc, '\nnotebook:', notebook);
 
   if (!store.has('JULIA-PATH')) {
     dialog.showErrorBox(
@@ -324,7 +331,7 @@ const runPluto = async (
     ? userStore.get('CUSTOM-JULIA-PATH')
     : store.get('JULIA-PATH');
 
-  log.verbose(chalk.bgBlueBright(`Julia found at: ${julia}`));
+  generalLogger.log(`Julia found at: ${julia}`);
 
   const options = [`--project=${loc}`];
   if (
@@ -334,14 +341,18 @@ const runPluto = async (
   )
     options.push(`--sysimage=${store.get('PLUTO-PRECOMPILED')}`);
   else options.push(`--trace-compile=${getAssetPath('pluto_precompile.jl')}`);
-  if (process.env.DEBUG_PROJECT_PATH)
+  if (
+    process.env.DEBUG_PROJECT_PATH ||
+    (store.has('PLUTO-PRECOMPILED') &&
+      fs.existsSync(store.get('PLUTO-PRECOMPILED')))
+  )
     options.push(getAssetPath('pluto_no_update.jl'));
   else options.push(getAssetPath('script.jl'));
   if (notebook) options.push(notebook);
 
   try {
     const res = spawn(julia, options);
-    log.verbose(
+    generalLogger.verbose(
       'Executing',
       chalk.bold(julia),
       'with options',
@@ -378,15 +389,11 @@ const runPluto = async (
           );
         }
       }
-      log.info(chalk.blue(plutoLog));
+      juliaLogger.log(plutoLog);
     });
 
     res.stderr.on('data', (data: any) => {
       const dataString = data.toString();
-      const error: Error = {
-        name: 'pluto-launch-error',
-        message: dataString,
-      };
 
       if (dataString.includes('Updating'))
         loading.webContents.send('pluto-url', 'updating');
@@ -410,13 +417,16 @@ const runPluto = async (
           loading.webContents.send('pluto-url', 'loaded');
           win.loadURL(entryUrl);
 
-          log.verbose('Entry url found:', plutoURL);
+          generalLogger.verbose('Entry url found:', plutoURL);
         } else if (
           plutoLog.includes(
             'failed to send request: The server name or address could not be resolved'
           )
         ) {
-          log.error('Pluto install failed, no internet connection.');
+          generalLogger.error(
+            'INTERNET-CONNECTION-ERROR',
+            'Pluto install failed, no internet connection.'
+          );
           dialog.showErrorBox(
             'CANNOT-INSTALL-PLUTO',
             'Please check your internet connection!'
@@ -425,28 +435,28 @@ const runPluto = async (
         }
       }
 
-      log.error(chalk.bgRed(error.name), error.message);
+      juliaLogger.log(dataString);
     });
 
     res.on('close', (code: any) => {
       if (code !== 0) {
         dialog.showErrorBox(code, 'Pluto crashed');
       }
-      log.error(`child process exited with code ${code}`);
+      juliaLogger.error(`child process exited with code ${code}`);
     });
 
     res.on('exit', (code: any) => {
-      log.error(`child process exited with code ${code}`);
+      juliaLogger.error(`child process exited with code ${code}`);
     });
 
     closePluto = () => {
       if (res) {
-        log.verbose('Killing Pluto process.');
+        juliaLogger.verbose('Killing Pluto process.');
         res?.kill();
       }
     };
   } catch (e) {
-    log.error(chalk.red('PLUTO-RUN-ERROR', e));
+    generalLogger.error('PLUTO-RUN-ERROR', e);
   }
 };
 
@@ -508,14 +518,14 @@ const shutdownNotebook = async (_id?: string) => {
     );
 
     if (res.status === 200) {
-      log.info(chalk.blue(`File ${id} has been shutdown.`));
+      generalLogger.info(`File ${id} has been shutdown.`);
       window.loadURL(plutoURL.url);
     } else {
       dialog.showErrorBox(res.statusText, res.data);
     }
   } catch (error) {
     // dialog.showErrorBox('Cannot shutdown file', 'We are logging this error');
-    log.error(chalk.red(error));
+    generalLogger.error(error);
   }
 };
 
@@ -550,7 +560,7 @@ const moveNotebook = async (_id?: string) => {
     );
 
     if (res.status === 200) {
-      log.info(chalk.blue(`File ${id} has been moved to ${filePath}.`));
+      generalLogger.info(`File ${id} has been moved to ${filePath}.`);
       return filePath;
     }
     dialog.showErrorBox(res.statusText, res.data);
@@ -559,7 +569,7 @@ const moveNotebook = async (_id?: string) => {
       'Cannot move file',
       'Please check if you are using a valid file name.'
     );
-    log.error(chalk.red(error));
+    generalLogger.error(error);
   }
 
   return undefined;

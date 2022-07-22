@@ -12,9 +12,9 @@
 import path from 'path';
 import { app, BrowserWindow, shell, ipcMain, session } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import log from 'electron-log';
 import { release } from 'os';
 import chalk from 'chalk';
+import { generalLogger, backgroundLogger } from './logger';
 import { isExtMatch, resolveHtmlPath } from './util';
 import {
   closePluto,
@@ -27,15 +27,14 @@ import './baseEventListeners';
 import MenuBuilder from './menu';
 import { store, userStore } from './store';
 
-log.verbose(chalk.grey('---------- BEGIN ----------'));
-log.verbose(chalk.grey('Application Version:', app.getVersion()));
-log.verbose(chalk.green('CONFIG STORE:'), store.store);
-log.verbose(chalk.green('USER STORE:'), userStore.store);
+generalLogger.verbose('---------- BEGIN ----------');
+generalLogger.verbose('Application Version:', app.getVersion());
+generalLogger.verbose(chalk.green('CONFIG STORE:'), store.store);
+generalLogger.verbose(chalk.green('USER STORE:'), userStore.store);
 
 export default class AppUpdater {
   constructor() {
-    log.transports.file.level = 'info';
-    autoUpdater.logger = log;
+    autoUpdater.logger = backgroundLogger;
     autoUpdater.checkForUpdatesAndNotify();
   }
 }
@@ -81,7 +80,7 @@ const installExtensions = async () => {
       extensions.map((name) => installer[name]),
       forceDownload
     )
-    .catch(console.log);
+    .catch(generalLogger.error);
 };
 
 /**
@@ -133,13 +132,13 @@ const createWindow = async (
           : undefined;
     }
 
-    log.info('CLI received:', arg);
+    generalLogger.info('CLI received:', arg);
 
     if (isDebug) {
       await installExtensions();
     }
 
-    console.log(chalk.bgGreenBright('Creating a new window.'));
+    generalLogger.announce('Creating a new window.');
 
     const loading = new BrowserWindow({
       frame: false,
@@ -211,8 +210,11 @@ const createWindow = async (
 
       let showExport = false;
       mainWindow.on('page-title-updated', (_e, title) => {
-        log.verbose(
-          chalk.grey('Window', mainWindow!.id / 2, 'moved to page:', title)
+        generalLogger.verbose(
+          'Window',
+          mainWindow!.id / 2,
+          'moved to page:',
+          title
         );
         const pageUrl = new URL(mainWindow!.webContents.getURL());
         const hasId = pageUrl.searchParams.has('id');
@@ -237,7 +239,7 @@ const createWindow = async (
     // eslint-disable-next-line
     new AppUpdater();
   } catch (e) {
-    log.error(chalk.red(e));
+    generalLogger.error('CREATE-WINDOW-ERROR', e);
   }
 };
 
@@ -272,26 +274,22 @@ app
     session.defaultSession.on('will-download', (_event, item) => {
       item.once('done', (_e, state) => {
         if (state === 'completed')
-          log.verbose(
-            chalk.gray(
-              'Successfully downloaded',
-              item.getFilename(),
-              'to',
-              item.getSavePath()
-            )
+          generalLogger.verbose(
+            'Successfully downloaded',
+            item.getFilename(),
+            'to',
+            item.getSavePath()
           );
         else
-          log.verbose(
-            chalk.gray(
-              'Download failed',
-              item.getFilename(),
-              'because of',
-              chalk.underline(state)
-            )
+          generalLogger.verbose(
+            'Download failed',
+            item.getFilename(),
+            'because of',
+            chalk.underline(state)
           );
       });
     });
   })
-  .catch(log.error);
+  .catch(generalLogger.error);
 
 export { createWindow };

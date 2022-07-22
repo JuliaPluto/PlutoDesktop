@@ -1,4 +1,16 @@
+import 'electron-log';
+
+declare module 'electron-log' {
+  export interface LogFunctions {
+    announce(...params: any[]): void;
+    log(...params: any[]): void;
+    error(code: string, ...params: any[]): void;
+  }
+}
+
 declare global {
+  type Modify<T, R> = Omit<T, keyof R> & R;
+
   type PlutoURL = {
     url: string;
     port: string;
