@@ -27,7 +27,7 @@ import './baseEventListeners';
 import MenuBuilder from './menu';
 import { store, userStore } from './store';
 
-generalLogger.verbose('---------- BEGIN ----------');
+generalLogger.verbose('---------- NEW LAUNCH ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
 generalLogger.verbose(chalk.green('CONFIG STORE:'), store.store);
 generalLogger.verbose(chalk.green('USER STORE:'), userStore.store);

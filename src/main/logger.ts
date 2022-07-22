@@ -5,20 +5,20 @@ import util from 'util';
 const functions = {
   debug: (prefix: string, ...params: any[]) =>
     console.debug(prefix, '>', chalk.white(params)),
-  error: (prefix: string, code: string, ...params: any[]) =>
-    console.error(prefix, '>', chalk.red(chalk.underline.bold(code), params)),
+  error: (prefix: string, ...params: any[]) =>
+    console.error(prefix, '>', chalk.red(params)),
   info: (prefix: string, ...params: any[]) =>
-    console.info(prefix, '>', chalk.blue(params)),
+    console.info(prefix, '>', chalk.blueBright(params)),
   log: (prefix: string, ...params: any[]) =>
     console.log(prefix, '>', chalk.grey(params)),
   silly: (prefix: string, ...params: any[]) =>
-    console.log(prefix, '>', chalk.magenta(params)),
+    console.log(prefix, '>', chalk.magentaBright(params)),
   verbose: (prefix: string, ...params: any[]) =>
     console.log(prefix, '>', chalk.grey(params)),
   warn: (prefix: string, ...params: any[]) =>
     console.warn(prefix, '>', chalk.yellow(params)),
   announce: (prefix: string, ...params: any[]) =>
-    console.warn(prefix, '>', chalk.bgGreen.white(params)),
+    console.warn(prefix, '>', chalk.bgGreen.black(params)),
 };
 
 const format = '{y}-{m}-{d} {h}:{i}:{s}.{ms} {level} {label} > {text}';

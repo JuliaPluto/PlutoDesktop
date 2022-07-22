@@ -523,9 +523,9 @@ const shutdownNotebook = async (_id?: string) => {
     } else {
       dialog.showErrorBox(res.statusText, res.data);
     }
-  } catch (error) {
+  } catch (error: { message: string } | any) {
     // dialog.showErrorBox('Cannot shutdown file', 'We are logging this error');
-    generalLogger.error(error);
+    generalLogger.error('PLUTO-FILE-SHUTDOWN-ERROR', error.message);
   }
 };
 
