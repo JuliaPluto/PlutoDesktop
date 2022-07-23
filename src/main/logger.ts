@@ -20,7 +20,7 @@ const functions = {
   warn: (prefix: string, ...params: any[]) =>
     console.warn(prefix, '>', chalk.yellow(params)),
   announce: (prefix: string, ...params: any[]) =>
-    console.warn(prefix, '>', chalk.bgGreen.black(params)),
+    console.warn(prefix, '>', chalk.bgYellow.black(params)),
 };
 
 const format = '{y}-{m}-{d} {h}:{i}:{s}.{ms} {level} {label} > {text}';

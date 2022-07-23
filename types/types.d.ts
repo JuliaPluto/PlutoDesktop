@@ -1,7 +1,7 @@
 import 'electron-log';
 
 declare module 'electron-log' {
-  export interface LogFunctions {
+  interface LogFunctions {
     announce(...params: any[]): void;
     log(...params: any[]): void;
     error(code: string, ...params: any[]): void;
@@ -20,6 +20,7 @@ declare global {
   type RunPlutoResponse = 'loading' | 'updating' | 'no_update' | PlutoURL;
 
   type SettingsStore = {
+    readonly 'IMPORTANT-NOTE': string;
     'JULIA-PATH': string;
     'PLUTO-PRECOMPILED': string;
   };

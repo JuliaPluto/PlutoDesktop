@@ -292,7 +292,8 @@ const runPluto = async (
   win: BrowserWindow,
   getAssetPath: (...paths: string[]) => string,
   project?: string,
-  notebook?: string
+  notebook?: string,
+  url?: string
 ) => {
   if (plutoURL) {
     generalLogger.info(
@@ -302,7 +303,8 @@ const runPluto = async (
       '\nnotebook:',
       notebook
     );
-    await openNotebook('path', notebook);
+    if (notebook) await openNotebook('path', notebook);
+    else if (url) await openNotebook('url', url);
     return;
   }
 
@@ -334,13 +336,14 @@ const runPluto = async (
   generalLogger.log(`Julia found at: ${julia}`);
 
   const options = [`--project=${loc}`];
-  if (
-    store.has('PLUTO-PRECOMPILED') &&
-    fs.existsSync(store.get('PLUTO-PRECOMPILED')) &&
-    !process.env.DEBUG_PROJECT_PATH
-  )
-    options.push(`--sysimage=${store.get('PLUTO-PRECOMPILED')}`);
-  else options.push(`--trace-compile=${getAssetPath('pluto_precompile.jl')}`);
+  if (!process.env.DEBUG_PROJECT_PATH) {
+    if (
+      store.has('PLUTO-PRECOMPILED') &&
+      fs.existsSync(store.get('PLUTO-PRECOMPILED'))
+    )
+      options.push(`--sysimage=${store.get('PLUTO-PRECOMPILED')}`);
+    else options.push(`--trace-compile=${getAssetPath('pluto_precompile.jl')}`);
+  }
   if (
     process.env.DEBUG_PROJECT_PATH ||
     (store.has('PLUTO-PRECOMPILED') &&
@@ -356,7 +359,7 @@ const runPluto = async (
       'Executing',
       chalk.bold(julia),
       'with options',
-      chalk.bold(options)
+      chalk.bold(options.toLocaleString().replace(',', ' '))
     );
 
     res.stdout.on('data', (data: { toString: () => any }) => {
@@ -369,17 +372,18 @@ const runPluto = async (
           const urlMatch = plutoLog.match(/http\S+/g);
           const entryUrl = urlMatch[0];
 
-          const url = new URL(entryUrl);
+          const tempURL = new URL(entryUrl);
           plutoURL = {
             url: entryUrl,
-            port: url.port,
-            secret: url.searchParams.get('secret')!,
+            port: tempURL.port,
+            secret: tempURL.searchParams.get('secret')!,
           };
 
           loading.webContents.send('pluto-url', 'loaded');
           win.loadURL(entryUrl);
 
-          console.log('Entry url found:', plutoURL);
+          generalLogger.announce('Entry url found:', plutoURL);
+
           precompilePluto(
             win,
             loc,
@@ -407,11 +411,11 @@ const runPluto = async (
           const urlMatch = plutoLog.match(/http\S+/g);
           const entryUrl = urlMatch[0];
 
-          const url = new URL(entryUrl);
+          const tempURL = new URL(entryUrl);
           plutoURL = {
             url: entryUrl,
-            port: url.port,
-            secret: url.searchParams.get('secret')!,
+            port: tempURL.port,
+            secret: tempURL.searchParams.get('secret')!,
           };
 
           loading.webContents.send('pluto-url', 'loaded');
@@ -438,15 +442,15 @@ const runPluto = async (
       juliaLogger.log(dataString);
     });
 
-    res.on('close', (code: any) => {
+    res.once('close', (code: any) => {
       if (code !== 0) {
         dialog.showErrorBox(code, 'Pluto crashed');
       }
-      juliaLogger.error(`child process exited with code ${code}`);
+      juliaLogger.info(`child process exited with code ${code}`);
     });
 
-    res.on('exit', (code: any) => {
-      juliaLogger.error(`child process exited with code ${code}`);
+    res.once('exit', (code: any) => {
+      juliaLogger.info(`child process exited with code ${code}`);
     });
 
     closePluto = () => {

@@ -5,6 +5,7 @@
 
 import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
+import { openUserStoreInEditor } from './store';
 
 const arg = yargs(hideBin(process.argv))
   .option('project', {
@@ -22,6 +23,12 @@ const arg = yargs(hideBin(process.argv))
     type: 'string',
     description: 'Open a .pluto.jl notebook in Pluto Desktop',
   })
+  .command(
+    'config',
+    'Open user config file',
+    () => {},
+    () => openUserStoreInEditor()
+  )
   .help()
   .parseSync();
 

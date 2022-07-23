@@ -19,6 +19,7 @@ import { isExtMatch, resolveHtmlPath } from './util';
 import {
   closePluto,
   isPlutoRunning,
+  openNotebook,
   runPluto,
   shutdownNotebook,
 } from './pluto';
@@ -29,6 +30,7 @@ import { store, userStore } from './store';
 
 generalLogger.verbose('---------- NEW LAUNCH ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
+generalLogger.verbose('Julia Version:', '1.7.3');
 generalLogger.verbose(chalk.green('CONFIG STORE:'), store.store);
 generalLogger.verbose(chalk.green('USER STORE:'), userStore.store);
 
@@ -119,6 +121,10 @@ const createWindow = async (
     if (!store.has('PLUTO-PRECOMPILED')) {
       store.set('PLUTO-PRECOMPILED', getAssetPath('pluto-sysimage.so'));
     }
+    store.set(
+      'IMPORTANT-NOTE',
+      'This file is used for internal configuration. Please refrain from editing or deleting this file.'
+    );
 
     if (checkIfCalledViaCLI(process.argv)) {
       url ??= arg.url;
@@ -173,7 +179,17 @@ const createWindow = async (
       });
 
       if (!isPlutoRunning()) {
-        await runPluto(loading, mainWindow, getAssetPath, project, notebook);
+        await runPluto(
+          loading,
+          mainWindow,
+          getAssetPath,
+          project,
+          notebook,
+          url
+        );
+      } else if (url) {
+        mainWindow?.focus();
+        await openNotebook('url', url);
       }
 
       mainWindow.webContents.once('dom-ready', () => {
@@ -181,10 +197,6 @@ const createWindow = async (
         loading.hide();
         loading.close();
       });
-
-      if (url) {
-        mainWindow.loadURL(url);
-      }
 
       mainWindow.on('ready-to-show', () => {
         if (!mainWindow) {
@@ -291,5 +303,3 @@ app
     });
   })
   .catch(generalLogger.error);
-
-export { createWindow };

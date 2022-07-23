@@ -1,7 +1,7 @@
 import Store from 'electron-store';
 import fs from 'fs';
 
-const store = new Store<SettingsStore>({});
+const store = new Store<SettingsStore>();
 
 const userStore = new Store<UserSettingsStore>({ name: 'user-config' });
 
