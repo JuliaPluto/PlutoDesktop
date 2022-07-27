@@ -16,17 +16,11 @@ import { release } from 'os';
 import chalk from 'chalk';
 import { generalLogger, backgroundLogger } from './logger';
 import { isExtMatch, resolveHtmlPath } from './util';
-import {
-  closePluto,
-  isPlutoRunning,
-  openNotebook,
-  runPluto,
-  shutdownNotebook,
-} from './pluto';
 import { arg, checkIfCalledViaCLI } from './cli';
 import './baseEventListeners';
 import MenuBuilder from './menu';
 import { store, userStore } from './store';
+import Pluto from './pluto';
 
 generalLogger.verbose('---------- NEW LAUNCH ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
@@ -178,18 +172,15 @@ const createWindow = async (
         },
       });
 
-      if (!isPlutoRunning()) {
-        await runPluto(
-          loading,
-          mainWindow,
-          getAssetPath,
+      if (!Pluto.isRunning) {
+        await new Pluto(loading, mainWindow, getAssetPath).run(
           project,
           notebook,
           url
         );
       } else if (url) {
         mainWindow?.focus();
-        await openNotebook('url', url);
+        await Pluto.openNotebook('url', url);
       }
 
       mainWindow.webContents.once('dom-ready', () => {
@@ -209,8 +200,8 @@ const createWindow = async (
         }
       });
 
-      mainWindow.on('close', () => {
-        shutdownNotebook();
+      mainWindow.on('close', async () => {
+        await Pluto.shutdownNotebook();
       });
 
       mainWindow.on('closed', () => {
@@ -281,7 +272,7 @@ app
       if (mainWindow === null) createWindow();
     });
     app.on('will-quit', () => {
-      if (closePluto) closePluto();
+      Pluto.close();
     });
     session.defaultSession.on('will-download', (_event, item) => {
       item.once('done', (_e, state) => {
