@@ -312,7 +312,7 @@ class Pluto {
 
         if (plutoLog.includes('Loading') || plutoLog.includes('loading'))
           this.loading.webContents.send('pluto-url', 'loading');
-        if (Pluto.julia === null) {
+        if (Pluto.url === null) {
           if (plutoLog.includes('?secret=')) {
             const urlMatch = plutoLog.match(/http\S+/g);
             const entryUrl = urlMatch[0];
@@ -360,7 +360,7 @@ class Pluto {
             this.loading.webContents.send('pluto-url', 'loaded');
             this.win.loadURL(entryUrl);
 
-            generalLogger.verbose('Entry url found:', Pluto.url);
+            generalLogger.announce('Entry url found:', Pluto.url);
           } else if (
             plutoLog.includes(
               'failed to send request: The server name or address could not be resolved'
@@ -378,7 +378,7 @@ class Pluto {
           }
         }
 
-        juliaLogger.log(dataString);
+        juliaLogger.error(dataString);
       });
 
       res.once('close', (code: any) => {
@@ -544,7 +544,6 @@ class Pluto {
         dialog.showErrorBox(res.statusText, res.data);
       }
     } catch (error: { message: string } | any) {
-      // dialog.showErrorBox('Cannot shutdown file', 'We are logging this error');
       generalLogger.error('PLUTO-FILE-SHUTDOWN-ERROR', error.message);
     }
   };
