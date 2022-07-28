@@ -22,7 +22,7 @@ import MenuBuilder from './menu';
 import { store, userStore } from './store';
 import Pluto from './pluto';
 
-generalLogger.verbose('---------- NEW LAUNCH ----------');
+generalLogger.verbose('---------- NEW SESSION ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
 generalLogger.verbose('Julia Version:', '1.7.3');
 generalLogger.verbose('Pluto Version:', '0.19.11');
