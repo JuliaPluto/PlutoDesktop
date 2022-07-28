@@ -1,4 +1,3 @@
-/* eslint-disable no-underscore-dangle */
 import {
   app,
   Menu,
@@ -10,7 +9,7 @@ import {
 } from 'electron';
 import { URL } from 'node:url';
 import { PlutoExport } from '../../types/enums';
-import { exportNotebook, isPlutoRunning, openNotebook } from './pluto';
+import Pluto from './pluto';
 import { openUserStoreInEditor } from './store';
 import { PLUTO_FILE_EXTENSIONS } from './util';
 
@@ -202,7 +201,7 @@ export default class MenuBuilder {
             label: '&Open',
             accelerator: 'Ctrl+O',
             click: async () => {
-              await openNotebook('path');
+              await Pluto.notebook.open('path');
             },
           },
           {
@@ -230,7 +229,7 @@ export default class MenuBuilder {
             label: '&New',
             accelerator: 'Ctrl+N',
             click: async () => {
-              await openNotebook();
+              await Pluto.notebook.open();
             },
           },
           {
@@ -238,7 +237,7 @@ export default class MenuBuilder {
             click: async () => {
               let url = this.mainWindow.webContents.getURL();
               if (!url.includes('secret'))
-                url += `&secret=${isPlutoRunning()?.secret}`;
+                url += `&secret=${Pluto.runningInfo?.secret}`;
               clipboard.writeText(url);
             },
           },
@@ -247,7 +246,7 @@ export default class MenuBuilder {
             click: async () => {
               let url = this.mainWindow.webContents.getURL();
               if (!url.includes('secret'))
-                url += `&secret=${isPlutoRunning()?.secret}`;
+                url += `&secret=${Pluto.runningInfo?.secret}`;
               shell.openExternal(url);
             },
           },
@@ -322,25 +321,25 @@ export default class MenuBuilder {
           {
             label: 'Pluto Notebook',
             click: async () => {
-              await this.executeIfID(exportNotebook, PlutoExport.FILE);
+              await this.executeIfID(Pluto.notebook.export, PlutoExport.FILE);
             },
           },
           {
             label: 'HTML File',
             click: async () => {
-              await this.executeIfID(exportNotebook, PlutoExport.HTML);
+              await this.executeIfID(Pluto.notebook.export, PlutoExport.HTML);
             },
           },
           {
             label: 'Pluto Statefile',
             click: async () => {
-              await this.executeIfID(exportNotebook, PlutoExport.STATE);
+              await this.executeIfID(Pluto.notebook.export, PlutoExport.STATE);
             },
           },
           {
             label: 'PDF File',
             click: async () => {
-              await this.executeIfID(exportNotebook, PlutoExport.PDF);
+              await this.executeIfID(Pluto.notebook.export, PlutoExport.PDF);
             },
           },
         ],

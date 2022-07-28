@@ -15,7 +15,7 @@ import { autoUpdater } from 'electron-updater';
 import { release } from 'os';
 import chalk from 'chalk';
 import { generalLogger, backgroundLogger } from './logger';
-import { isExtMatch, resolveHtmlPath } from './util';
+import { isUrlOrPath, resolveHtmlPath } from './util';
 import { arg, checkIfCalledViaCLI } from './cli';
 import './baseEventListeners';
 import MenuBuilder from './menu';
@@ -25,6 +25,7 @@ import Pluto from './pluto';
 generalLogger.verbose('---------- NEW LAUNCH ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
 generalLogger.verbose('Julia Version:', '1.7.3');
+generalLogger.verbose('Pluto Version:', '0.19.11');
 generalLogger.verbose(chalk.green('CONFIG STORE:'), store.store);
 generalLogger.verbose(chalk.green('USER STORE:'), userStore.store);
 
@@ -115,21 +116,17 @@ const createWindow = async (
     if (!store.has('PLUTO-PRECOMPILED')) {
       store.set('PLUTO-PRECOMPILED', getAssetPath('pluto-sysimage.so'));
     }
-    store.set(
-      'IMPORTANT-NOTE',
-      'This file is used for internal configuration. Please refrain from editing or deleting this file.'
-    );
 
     if (checkIfCalledViaCLI(process.argv)) {
+      const loc = arg._.length > 0 ? (arg._[0] as string) : undefined;
+      const isPathOrURL = loc ? isUrlOrPath(loc) : 'none';
       url ??= arg.url;
+      if (isPathOrURL === 'url') url ??= loc;
       project ??= arg.project;
-      notebook ??=
-        arg.notebook ??
-        (arg._.length > 0 &&
-          typeof arg._[0] === 'string' &&
-          isExtMatch(arg._[0]))
-          ? (arg._[0] as string)
-          : undefined;
+      notebook ??= arg.notebook;
+      if (isPathOrURL === 'path') {
+        notebook ??= loc;
+      }
     }
 
     generalLogger.info('CLI received:', arg);
@@ -172,7 +169,7 @@ const createWindow = async (
         },
       });
 
-      if (!Pluto.isRunning) {
+      if (!Pluto.runningInfo) {
         await new Pluto(loading, mainWindow, getAssetPath).run(
           project,
           notebook,
@@ -180,7 +177,7 @@ const createWindow = async (
         );
       } else if (url) {
         mainWindow?.focus();
-        await Pluto.openNotebook('url', url);
+        await Pluto.notebook.open('url', url);
       }
 
       mainWindow.webContents.once('dom-ready', () => {
@@ -201,7 +198,7 @@ const createWindow = async (
       });
 
       mainWindow.on('close', async () => {
-        await Pluto.shutdownNotebook();
+        await Pluto.notebook.shutdown();
       });
 
       mainWindow.on('closed', () => {
@@ -265,6 +262,10 @@ app.on('open-file', async (_event, file) => {
 app
   .whenReady()
   .then(() => {
+    store.set(
+      'IMPORTANT-NOTE',
+      'This file is used for internal configuration. Please refrain from editing or deleting this file.'
+    );
     createWindow();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the
@@ -284,7 +285,7 @@ app
             item.getSavePath()
           );
         else
-          generalLogger.verbose(
+          generalLogger.error(
             'Download failed',
             item.getFilename(),
             'because of',

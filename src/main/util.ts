@@ -1,4 +1,3 @@
-/* eslint-disable no-underscore-dangle */
 /* eslint import/prefer-default-export: off, import/no-mutable-exports: off */
 import { URL } from 'url';
 import path from 'path';
@@ -65,14 +64,20 @@ class Loader {
 }
 
 const tryCatch = async (
-  exec: (...args: any[]) => Promise<void>,
+  executable: (...args: any[]) => Promise<void>,
   catchExec?: (...args: any[]) => Promise<void>
 ) => {
   try {
-    await exec();
+    await executable();
   } catch (error) {
     if (catchExec) await catchExec();
   }
 };
 
-export { isExtMatch, PLUTO_FILE_EXTENSIONS, Loader, tryCatch };
+const isUrlOrPath = (text: string) => {
+  if (text.startsWith('http')) return 'url';
+  if (isExtMatch(text)) return 'path';
+  return 'none';
+};
+
+export { isExtMatch, PLUTO_FILE_EXTENSIONS, Loader, tryCatch, isUrlOrPath };

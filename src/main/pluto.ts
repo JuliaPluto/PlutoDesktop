@@ -139,7 +139,7 @@ class Pluto {
      * Prefer to use extracted folder
      */
 
-    console.log(chalk.yellow('Starting Julia installation'));
+    generalLogger.announce('Starting Julia installation');
 
     try {
       // ask for permissions
@@ -147,7 +147,7 @@ class Pluto {
         exec('NET SESSION', (_error, _so, se) => {
           if (se.length === 0) {
             // admin
-            console.log('Admin permissions granted.');
+            generalLogger.log('Admin permissions granted.');
           } else {
             // no admin
             dialog.showErrorBox(
@@ -174,7 +174,7 @@ class Pluto {
       let zip = files[idx];
       const nameInitial = zip.replace('-win64.zip', '');
       this.loading.webContents.send('pluto-url', `File found: ${zip}`);
-      console.log('File found:', zip);
+      generalLogger.log('File found:', zip);
       zip = this.getAssetPath(zip);
       const name = this.getAssetPath(nameInitial);
       if (fs.existsSync(name)) {
@@ -182,30 +182,30 @@ class Pluto {
           'pluto-url',
           'Deleting already existing directory'
         );
-        console.log('Deleting already existing directory');
+        generalLogger.log('Deleting already existing directory');
         fs.rmSync(name, { recursive: true, force: true });
       }
 
       this.loading.webContents.send('pluto-url', 'Unzipping');
-      console.log('Unzipping');
+      generalLogger.log('Unzipping');
       await unzip(zip, { dir: this.getAssetPath('.') });
       this.loading.webContents.send('pluto-url', 'Unzipped');
-      console.log('Unzipped');
+      generalLogger.log('Unzipped');
       if (!isDev) {
         this.loading.webContents.send('pluto-url', 'Removing zip');
-        console.log('Removing zip');
+        generalLogger.log('Removing zip');
         fs.rm(zip, (e) => {
           if (e) {
-            console.log(e);
+            generalLogger.error(e);
           }
         });
         this.loading.webContents.send('pluto-url', 'Zip removed');
-        console.log('Zip removed');
+        generalLogger.log('Zip removed');
       }
       const finalPath = this.getAssetPath(join(nameInitial, '/bin/julia.exe'));
       store.set('JULIA-PATH', finalPath);
       Pluto.julia = finalPath;
-      console.log(chalk.yellow(`Julia installed at: ${finalPath}`));
+      generalLogger.announce(`Julia installed at: ${finalPath}`);
       this.loading.webContents.send(
         'pluto-url',
         'Julia Successfully Installed.'
@@ -225,6 +225,7 @@ class Pluto {
     this.win = win;
     this.getAssetPath = getAssetPath;
     this.project = Pluto.getProjectPath(project);
+    Pluto.url ??= null;
   }
 
   /**
@@ -312,6 +313,7 @@ class Pluto {
 
         if (plutoLog.includes('Loading') || plutoLog.includes('loading'))
           this.loading.webContents.send('pluto-url', 'loading');
+
         if (Pluto.url === null) {
           if (plutoLog.includes('?secret=')) {
             const urlMatch = plutoLog.match(/http\S+/g);
@@ -410,7 +412,7 @@ class Pluto {
    * opens that notebook. If false and no path is there, opens the file selector.
    * If true, opens a new blank notebook.
    */
-  public static openNotebook = async (
+  private static openNotebook = async (
     type: 'url' | 'path' | 'new' = 'new',
     pathOrURL?: string
   ) => {
@@ -482,7 +484,7 @@ class Pluto {
     }
   };
 
-  public static exportNotebook = async (id: string, type: PlutoExport) => {
+  private static exportNotebook = async (id: string, type: PlutoExport) => {
     if (!this.url) {
       dialog.showErrorBox(
         'Pluto not intialized',
@@ -520,7 +522,7 @@ class Pluto {
     window.webContents.downloadURL(url);
   };
 
-  public static shutdownNotebook = async (_id?: string) => {
+  private static shutdownNotebook = async (_id?: string) => {
     try {
       if (!this.url) {
         dialog.showErrorBox(
@@ -548,7 +550,7 @@ class Pluto {
     }
   };
 
-  public static moveNotebook = async (_id?: string) => {
+  private static moveNotebook = async (_id?: string) => {
     try {
       if (!this.url) {
         dialog.showErrorBox(
@@ -594,12 +596,19 @@ class Pluto {
     return undefined;
   };
 
+  public static notebook = {
+    open: this.openNotebook,
+    export: this.exportNotebook,
+    move: this.moveNotebook,
+    shutdown: this.shutdownNotebook,
+  };
+
   public static close = () => {
     Pluto.closePlutoFunction?.();
   };
 
-  public static get isRunning() {
-    return Pluto.url !== undefined;
+  public static get runningInfo() {
+    return Pluto.url;
   }
 }
 
