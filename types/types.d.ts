@@ -21,6 +21,7 @@ declare global {
 
   type SettingsStore = {
     readonly 'IMPORTANT-NOTE': string;
+    'JULIA-VERSION': string;
     'JULIA-PATH': string;
     'PLUTO-PRECOMPILED': string;
   };

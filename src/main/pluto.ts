@@ -173,6 +173,7 @@ class Pluto {
       }
       let zip = files[idx];
       const nameInitial = zip.replace('-win64.zip', '');
+      store.set('JULIA-VERSION', nameInitial.replace('julia-', ''));
       this.loading.webContents.send('pluto-url', `File found: ${zip}`);
       generalLogger.log('File found:', zip);
       zip = this.getAssetPath(zip);
@@ -210,6 +211,13 @@ class Pluto {
         'pluto-url',
         'Julia Successfully Installed.'
       );
+
+      // delete old manifest
+      const p = join(app.getPath('userData'), '/project/');
+      if (fs.existsSync(p)) {
+        fs.rmdirSync(p);
+      }
+      generalLogger.info('Removed old manifest');
     } catch (error) {
       generalLogger.error('JULIA-INSTALL-ERROR', error);
     }

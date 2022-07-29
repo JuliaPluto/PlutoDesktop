@@ -1,8 +1,11 @@
-import Logging, Pkg;
+import Logging, Pkg, Base;
 
 Logging.global_logger(Logging.ConsoleLogger(stdout));
 
-using Pluto;
+Pkg.activate(Base.active_project());
+Pkg.instantiate();
+
+import Pluto;
 
 if isempty(ARGS)
     Pluto.run(; launch_browser=false)

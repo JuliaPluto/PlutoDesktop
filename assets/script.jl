@@ -1,6 +1,9 @@
-import Logging, Pkg;
+import Logging, Pkg, Base;
 
 Logging.global_logger(Logging.ConsoleLogger(stdout));
+
+Pkg.activate(Base.active_project());
+Pkg.instantiate();
 
 # if haskey(Pkg.dependencies(), "Pluto")
 #     Pkg.update("Pluto")

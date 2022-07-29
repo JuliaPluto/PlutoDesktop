@@ -24,7 +24,6 @@ import Pluto from './pluto';
 
 generalLogger.verbose('---------- NEW SESSION ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
-generalLogger.verbose('Julia Version:', '1.7.3');
 generalLogger.verbose('Pluto Version:', '0.19.11');
 generalLogger.verbose(chalk.green('CONFIG STORE:'), store.store);
 generalLogger.verbose(chalk.green('USER STORE:'), userStore.store);
