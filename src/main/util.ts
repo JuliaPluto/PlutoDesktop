@@ -2,6 +2,8 @@
 import { URL } from 'url';
 import path from 'path';
 import { BrowserWindow } from 'electron';
+import axios from 'axios';
+import { generalLogger } from './logger';
 
 export let resolveHtmlPath: (htmlFileName: string) => string;
 
@@ -80,4 +82,16 @@ const isUrlOrPath = (text: string) => {
   return 'none';
 };
 
-export { isExtMatch, PLUTO_FILE_EXTENSIONS, Loader, tryCatch, isUrlOrPath };
+const setAxiosDefaults = (url: PlutoURL) => {
+  axios.defaults.baseURL = new URL(url.url).origin;
+  generalLogger.verbose('Base URL set to', axios.defaults.baseURL);
+};
+
+export {
+  isExtMatch,
+  PLUTO_FILE_EXTENSIONS,
+  Loader,
+  tryCatch,
+  isUrlOrPath,
+  setAxiosDefaults,
+};

@@ -4,6 +4,8 @@ declare module 'electron-log' {
   interface LogFunctions {
     announce(...params: any[]): void;
     log(...params: any[]): void;
+    request(...params: any[]): void;
+    response(...params: any[]): void;
     error(code: string, ...params: any[]): void;
   }
 }
