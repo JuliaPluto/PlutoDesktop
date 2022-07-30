@@ -3,7 +3,6 @@ import Logging, Pkg, Base;
 Logging.global_logger(Logging.ConsoleLogger(stdout));
 
 Pkg.activate(Base.active_project());
-Pkg.instantiate();
 
 import Pluto;
 

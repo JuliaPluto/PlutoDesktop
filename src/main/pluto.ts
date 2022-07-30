@@ -211,13 +211,6 @@ class Pluto {
         'pluto-url',
         'Julia Successfully Installed.'
       );
-
-      // delete old manifest
-      const p = join(app.getPath('userData'), '/project/');
-      if (fs.existsSync(p)) {
-        fs.rmdirSync(p);
-      }
-      generalLogger.info('Removed old manifest');
     } catch (error) {
       generalLogger.error('JULIA-INSTALL-ERROR', error);
     }

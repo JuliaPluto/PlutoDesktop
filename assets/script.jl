@@ -3,7 +3,6 @@ import Logging, Pkg, Base;
 Logging.global_logger(Logging.ConsoleLogger(stdout));
 
 Pkg.activate(Base.active_project());
-Pkg.instantiate();
 
 # if haskey(Pkg.dependencies(), "Pluto")
 #     Pkg.update("Pluto")
@@ -16,6 +15,8 @@ if haskey(Pkg.dependencies(), "Pluto")
 else
     Pkg.add(url="https://github.com/Illusion47586/Pluto.jl", rev="desktop-support")
 end
+
+Pkg.resolve();
 
 using Pluto;
 
