@@ -13,7 +13,7 @@ const Loading = () => {
   });
 
   return (
-    <div>
+    <div className="container">
       <TailSpin
         ariaLabel="loading-indicator"
         color="#e6e6e6"

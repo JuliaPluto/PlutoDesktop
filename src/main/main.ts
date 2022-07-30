@@ -136,14 +136,13 @@ const createWindow = async (
 
     generalLogger.announce('Creating a new window.');
 
-    const loading = new BrowserWindow({
-      frame: false,
-      height: 200,
-      width: 200,
-      resizable: false,
-      fullscreenable: false,
-      title: 'Loading',
-      show: false,
+    mainWindow = new BrowserWindow({
+      title: '⚡ Pluto ⚡',
+      height: 600,
+      width: 800,
+      resizable: true,
+      darkTheme: true,
+      show: true,
       icon: getAssetPath('icon.png'),
       webPreferences: {
         preload: app.isPackaged
@@ -152,87 +151,57 @@ const createWindow = async (
       },
     });
 
-    loading.once('show', async () => {
-      mainWindow = new BrowserWindow({
-        title: '⚡ Pluto ⚡',
-        height: 600,
-        width: 800,
-        resizable: true,
-        darkTheme: true,
-        show: false,
-        icon: getAssetPath('icon.png'),
-        webPreferences: {
-          preload: app.isPackaged
-            ? path.join(__dirname, 'preload.js')
-            : path.join(__dirname, '../../.erb/dll/preload.js'),
-        },
-      });
+    await mainWindow.loadURL(resolveHtmlPath('index.html'));
 
-      if (!Pluto.runningInfo) {
-        await new Pluto(loading, mainWindow, getAssetPath).run(
-          project,
-          notebook,
-          url
-        );
-      } else if (url) {
-        mainWindow?.focus();
-        await Pluto.notebook.open('url', url);
+    if (!Pluto.runningInfo) {
+      await new Pluto(mainWindow, getAssetPath).run(project, notebook, url);
+    } else if (url) {
+      mainWindow.focus();
+      await Pluto.notebook.open('url', url);
+    }
+
+    mainWindow.on('ready-to-show', () => {
+      if (!mainWindow) {
+        throw new Error('"mainWindow" is not defined');
       }
-
-      mainWindow.webContents.once('dom-ready', () => {
-        mainWindow?.show();
-        loading.hide();
-        loading.close();
-      });
-
-      mainWindow.on('ready-to-show', () => {
-        if (!mainWindow) {
-          throw new Error('"mainWindow" is not defined');
-        }
-        if (process.env.START_MINIMIZED) {
-          mainWindow.minimize();
-        } else {
-          mainWindow.show();
-        }
-      });
-
-      mainWindow.on('close', async () => {
-        await Pluto.notebook.shutdown();
-      });
-
-      mainWindow.on('closed', () => {
-        mainWindow = null;
-      });
-
-      const menuBuilder = new MenuBuilder(mainWindow, createWindow);
-      menuBuilder.buildMenu();
-
-      let showExport = false;
-      mainWindow.on('page-title-updated', (_e, title) => {
-        generalLogger.verbose(
-          'Window',
-          mainWindow!.id / 2,
-          'moved to page:',
-          title
-        );
-        const pageUrl = new URL(mainWindow!.webContents.getURL());
-        const hasId = pageUrl.searchParams.has('id');
-        const shouldChange = (!showExport && hasId) || (showExport && !hasId);
-        if (shouldChange) {
-          menuBuilder.buildMenu();
-          showExport = !showExport;
-        }
-      });
-
-      // Open urls in the user's browser
-      mainWindow.webContents.setWindowOpenHandler((edata) => {
-        shell.openExternal(edata.url);
-        return { action: 'deny' };
-      });
+      if (process.env.START_MINIMIZED) {
+        mainWindow.minimize();
+      } else {
+        mainWindow.show();
+      }
     });
 
-    await loading.loadURL(resolveHtmlPath('index.html'));
-    loading.show();
+    mainWindow.once('close', async () => {
+      await Pluto.notebook.shutdown();
+      mainWindow = null;
+    });
+
+    mainWindow.setMenuBarVisibility(false);
+
+    const menuBuilder = new MenuBuilder(mainWindow, createWindow);
+
+    let showExport = false;
+    let first = true;
+    mainWindow.on('page-title-updated', (_e, title) => {
+      generalLogger.verbose('Window', mainWindow!.id, 'moved to page:', title);
+      if (mainWindow?.webContents.getTitle().includes('index.html')) return;
+      const pageUrl = new URL(mainWindow!.webContents.getURL());
+      const hasId = pageUrl.searchParams.has('id');
+      const shouldChange =
+        (!showExport && hasId) || (showExport && !hasId) || first;
+      if (shouldChange) {
+        first = false;
+        mainWindow?.setMenuBarVisibility(true);
+        menuBuilder.buildMenu();
+        showExport = !showExport;
+      }
+    });
+
+    // Open urls in the user's browser
+    mainWindow.webContents.setWindowOpenHandler((edata) => {
+      shell.openExternal(edata.url);
+      return { action: 'deny' };
+    });
 
     // Remove this if your app does not use auto updates
     // eslint-disable-next-line

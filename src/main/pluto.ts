@@ -9,12 +9,15 @@ import isDev from 'electron-is-dev';
 import { generalLogger, juliaLogger } from './logger';
 import { PlutoExport } from '../../types/enums';
 import { store, userStore } from './store';
-import { isExtMatch, Loader, PLUTO_FILE_EXTENSIONS } from './util';
+import {
+  isExtMatch,
+  Loader,
+  PLUTO_FILE_EXTENSIONS,
+  setAxiosDefaults,
+} from './util';
 
 class Pluto {
   private project: string;
-
-  private loading: BrowserWindow;
 
   private win: BrowserWindow;
 
@@ -162,7 +165,7 @@ class Pluto {
           }
         });
 
-      this.loading.webContents.send('pluto-url', 'Installing Julia');
+      this.win.webContents.send('pluto-url', 'Installing Julia');
       const files = fs.readdirSync(this.getAssetPath('.'));
       const idx = files.findIndex(
         (v) => v.startsWith('julia-') && v.endsWith('zip')
@@ -174,12 +177,12 @@ class Pluto {
       let zip = files[idx];
       const nameInitial = zip.replace('-win64.zip', '');
       store.set('JULIA-VERSION', nameInitial.replace('julia-', ''));
-      this.loading.webContents.send('pluto-url', `File found: ${zip}`);
+      this.win.webContents.send('pluto-url', `File found: ${zip}`);
       generalLogger.log('File found:', zip);
       zip = this.getAssetPath(zip);
       const name = this.getAssetPath(nameInitial);
       if (fs.existsSync(name)) {
-        this.loading.webContents.send(
+        this.win.webContents.send(
           'pluto-url',
           'Deleting already existing directory'
         );
@@ -187,42 +190,37 @@ class Pluto {
         fs.rmSync(name, { recursive: true, force: true });
       }
 
-      this.loading.webContents.send('pluto-url', 'Unzipping');
+      this.win.webContents.send('pluto-url', 'Unzipping');
       generalLogger.log('Unzipping');
       await unzip(zip, { dir: this.getAssetPath('.') });
-      this.loading.webContents.send('pluto-url', 'Unzipped');
+      this.win.webContents.send('pluto-url', 'Unzipped');
       generalLogger.log('Unzipped');
       if (!isDev) {
-        this.loading.webContents.send('pluto-url', 'Removing zip');
+        this.win.webContents.send('pluto-url', 'Removing zip');
         generalLogger.log('Removing zip');
         fs.rm(zip, (e) => {
           if (e) {
             generalLogger.error(e);
           }
         });
-        this.loading.webContents.send('pluto-url', 'Zip removed');
+        this.win.webContents.send('pluto-url', 'Zip removed');
         generalLogger.log('Zip removed');
       }
       const finalPath = this.getAssetPath(join(nameInitial, '/bin/julia.exe'));
       store.set('JULIA-PATH', finalPath);
       Pluto.julia = finalPath;
       generalLogger.announce(`Julia installed at: ${finalPath}`);
-      this.loading.webContents.send(
-        'pluto-url',
-        'Julia Successfully Installed.'
-      );
+      this.win.webContents.send('pluto-url', 'Julia Successfully Installed.');
     } catch (error) {
       generalLogger.error('JULIA-INSTALL-ERROR', error);
     }
   };
 
   constructor(
-    loading: BrowserWindow,
     win: BrowserWindow,
     getAssetPath: (...paths: string[]) => string,
     project?: string
   ) {
-    this.loading = loading;
     this.win = win;
     this.getAssetPath = getAssetPath;
     this.project = Pluto.getProjectPath(project);
@@ -256,7 +254,7 @@ class Pluto {
 
     generalLogger.log(`Julia found at: ${Pluto.julia}`);
 
-    this.loading.webContents.send('pluto-url', 'loading');
+    this.win.webContents.send('pluto-url', 'loading');
 
     const p = join(app.getPath('userData'), '/project/');
     if (!fs.existsSync(p)) {
@@ -313,7 +311,7 @@ class Pluto {
         const plutoLog = data.toString();
 
         if (plutoLog.includes('Loading') || plutoLog.includes('loading'))
-          this.loading.webContents.send('pluto-url', 'loading');
+          this.win.webContents.send('pluto-url', 'loading');
 
         if (Pluto.url === null) {
           if (plutoLog.includes('?secret=')) {
@@ -327,7 +325,8 @@ class Pluto {
               secret: tempURL.searchParams.get('secret')!,
             };
 
-            this.loading.webContents.send('pluto-url', 'loaded');
+            this.win.webContents.send('pluto-url', 'loaded');
+            setAxiosDefaults(Pluto.url);
             this.win.loadURL(entryUrl);
 
             generalLogger.announce('Entry url found:', Pluto.url);
@@ -342,10 +341,10 @@ class Pluto {
         const dataString = data.toString();
 
         if (dataString.includes('Updating'))
-          this.loading.webContents.send('pluto-url', 'updating');
+          this.win.webContents.send('pluto-url', 'updating');
 
         if (dataString.includes('Loading') || dataString.includes('loading'))
-          this.loading.webContents.send('pluto-url', 'loading');
+          this.win.webContents.send('pluto-url', 'loading');
 
         if (Pluto.url === null) {
           const plutoLog = dataString;
@@ -360,7 +359,8 @@ class Pluto {
               secret: tempURL.searchParams.get('secret')!,
             };
 
-            this.loading.webContents.send('pluto-url', 'loaded');
+            this.win.webContents.send('pluto-url', 'loaded');
+            setAxiosDefaults(Pluto.url);
             this.win.loadURL(entryUrl);
 
             generalLogger.announce('Entry url found:', Pluto.url);
@@ -420,6 +420,16 @@ class Pluto {
     try {
       const window = BrowserWindow.getFocusedWindow()!;
 
+      if (
+        type === 'url' &&
+        pathOrURL &&
+        pathOrURL.includes('?secret=') &&
+        pathOrURL.includes('id=')
+      ) {
+        window.loadURL(pathOrURL);
+        return;
+      }
+
       if (type === 'path' && pathOrURL && !isExtMatch(pathOrURL)) {
         dialog.showErrorBox(
           'PLUTO-CANNOT-OPEN-NOTEBOOK',
@@ -451,15 +461,37 @@ class Pluto {
       const loader = new Loader(window);
 
       if (this.url) {
-        let query = '';
+        let params = {};
         if (pathOrURL) {
-          if (type === 'path') query = `&path=${pathOrURL}`;
-          else if (type === 'url') query = `&url=${pathOrURL}`;
+          if (type === 'path') {
+            window.webContents.send('pluto-url', `Trying to open ${pathOrURL}`);
+            params = { secret: Pluto.url?.secret, path: pathOrURL };
+          } else if (type === 'url') {
+            const newURL = new URL(pathOrURL);
+            if (newURL.searchParams.has('path')) {
+              window.webContents.send(
+                'pluto-url',
+                `Trying to open ${newURL.searchParams.get('path')}`
+              );
+              params = {
+                secret: Pluto.url?.secret,
+                path: newURL.searchParams.get('path'),
+              };
+            } else {
+              window.webContents.send(
+                'pluto-url',
+                `Trying to open ${pathOrURL}`
+              );
+              params = { secret: Pluto.url?.secret, url: pathOrURL };
+            }
+          }
         }
         const res = await axios.post(
-          `http://localhost:${this.url.port}/${
-            type === 'new' ? 'new' : 'open'
-          }?secret=${this.url.secret}${query}`
+          type === 'new' ? 'new' : 'open',
+          {},
+          {
+            params,
+          }
         );
         if (res.status === 200) {
           await window.loadURL(
@@ -536,13 +568,17 @@ class Pluto {
       const window = BrowserWindow.getFocusedWindow()!;
       const id =
         _id ?? new URL(window.webContents.getURL()).searchParams.get('id');
-      const res = await axios.get(
-        `http://localhost:${this.url.port}/shutdown?secret=${this.url.secret}&id=${id}`
-      );
+
+      const res = await axios.get('shutdown', {
+        params: {
+          secret: Pluto.url?.secret,
+          id,
+        },
+      });
 
       if (res.status === 200) {
         generalLogger.info(`File ${id} has been shutdown.`);
-        window.loadURL(this.url.url);
+        window.loadURL(Pluto.url!.url);
       } else {
         dialog.showErrorBox(res.statusText, res.data);
       }
@@ -577,8 +613,16 @@ class Pluto {
 
       if (canceled) return undefined;
 
-      const res = await axios.get(
-        `http://localhost:${this.url.port}/move?secret=${this.url.secret}&id=${id}&newpath=${filePath}`
+      const res = await axios.post(
+        'move',
+        {},
+        {
+          params: {
+            secret: Pluto.url?.secret,
+            id,
+            newpath: filePath,
+          },
+        }
       );
 
       if (res.status === 200) {
@@ -587,11 +631,11 @@ class Pluto {
       }
       dialog.showErrorBox(res.statusText, res.data);
     } catch (error) {
+      generalLogger.error(error);
       dialog.showErrorBox(
         'Cannot move file',
         'Please check if you are using a valid file name.'
       );
-      generalLogger.error(error);
     }
 
     return undefined;
@@ -612,5 +656,4 @@ class Pluto {
     return Pluto.url;
   }
 }
-
 export default Pluto;
