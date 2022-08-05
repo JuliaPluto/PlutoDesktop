@@ -8,18 +8,18 @@ ipcMain.on(
     _event,
     type: 'path' | 'url' | 'new' = 'new',
     pathOrURL?: string
-  ): Promise<void> => Pluto.openNotebook(type, pathOrURL)
+  ): Promise<void> => Pluto.notebook.open(type, pathOrURL)
 );
 
 ipcMain.on(
   'PLUTO-SHUTDOWN-NOTEBOOK',
-  async (_event, id?: string): Promise<void> => Pluto.shutdownNotebook(id)
+  async (_event, id?: string): Promise<void> => Pluto.notebook.shutdown(id)
 );
 
 ipcMain.on(
   'PLUTO-MOVE-NOTEBOOK',
   async (_event, id?: string): Promise<void> => {
-    const loc = await Pluto.moveNotebook(id);
+    const loc = await Pluto.notebook.move(id);
     _event.sender.send('PLUTO-MOVE-NOTEBOOK', loc);
   }
 );
@@ -27,6 +27,6 @@ ipcMain.on(
 ipcMain.on(
   'PLUTO-EXPORT-NOTEBOOK',
   async (_event, id: string, type: PlutoExport): Promise<void> => {
-    await Pluto.exportNotebook(id, type);
+    await Pluto.notebook.export(id, type);
   }
 );

@@ -21,10 +21,10 @@ import './baseEventListeners';
 import MenuBuilder from './menu';
 import { store, userStore } from './store';
 import Pluto from './pluto';
+// import installExtensionsAndOpenDevtools from './devtools';
 
 generalLogger.verbose('---------- NEW SESSION ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
-generalLogger.verbose('Pluto Version:', '0.19.11');
 generalLogger.verbose(chalk.green('CONFIG STORE:'), store.store);
 generalLogger.verbose(chalk.green('USER STORE:'), userStore.store);
 
@@ -53,31 +53,6 @@ ipcMain.on('ipc-example', async (event, args) => {
   console.log(msgTemplate(args));
   event.reply('ipc-example', msgTemplate('pong'));
 });
-
-if (process.env.NODE_ENV === 'production') {
-  const sourceMapSupport = require('source-map-support');
-  sourceMapSupport.install();
-}
-
-const isDebug =
-  process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
-
-if (isDebug) {
-  require('electron-debug')();
-}
-
-const installExtensions = async () => {
-  const installer = require('electron-devtools-installer');
-  const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
-  const extensions = ['REACT_DEVELOPER_TOOLS'];
-
-  return installer
-    .default(
-      extensions.map((name) => installer[name]),
-      forceDownload
-    )
-    .catch(generalLogger.error);
-};
 
 /**
  * - A function to create a pluto window.
@@ -130,13 +105,16 @@ const createWindow = async (
 
     generalLogger.info('CLI received:', arg);
 
-    if (isDebug) {
-      await installExtensions();
-    }
+    /**
+     * Uncomment the next LoC and the relevant `import` line
+     * if you want devtools to open with every new window,
+     * it is very annoying for me.
+     */
+    // await installExtensionsAndOpenDevtools();
 
     generalLogger.announce('Creating a new window.');
 
-    mainWindow = new BrowserWindow({
+    const currWindow = new BrowserWindow({
       title: '⚡ Pluto ⚡',
       height: 600,
       width: 800,
@@ -151,54 +129,59 @@ const createWindow = async (
       },
     });
 
-    await mainWindow.loadURL(resolveHtmlPath('index.html'));
+    mainWindow ??= currWindow;
+
+    await currWindow.loadURL(resolveHtmlPath('index.html'));
 
     if (!Pluto.runningInfo) {
-      await new Pluto(mainWindow, getAssetPath).run(project, notebook, url);
+      await new Pluto(currWindow, getAssetPath).run(project, notebook, url);
     } else if (url) {
-      mainWindow.focus();
+      currWindow.focus();
       await Pluto.notebook.open('url', url);
+    } else if (notebook) {
+      currWindow.focus();
+      await Pluto.notebook.open('path', notebook);
     }
 
-    mainWindow.on('ready-to-show', () => {
-      if (!mainWindow) {
-        throw new Error('"mainWindow" is not defined');
+    currWindow.on('ready-to-show', () => {
+      if (!currWindow) {
+        throw new Error('"currWindow" is not defined');
       }
       if (process.env.START_MINIMIZED) {
-        mainWindow.minimize();
+        currWindow.minimize();
       } else {
-        mainWindow.show();
+        currWindow.show();
       }
     });
 
-    mainWindow.once('close', async () => {
+    currWindow.once('close', async () => {
       await Pluto.notebook.shutdown();
       mainWindow = null;
     });
 
-    mainWindow.setMenuBarVisibility(false);
+    currWindow.setMenuBarVisibility(false);
 
-    const menuBuilder = new MenuBuilder(mainWindow, createWindow);
+    const menuBuilder = new MenuBuilder(currWindow, createWindow);
 
     let showExport = false;
     let first = true;
-    mainWindow.on('page-title-updated', (_e, title) => {
-      generalLogger.verbose('Window', mainWindow!.id, 'moved to page:', title);
-      if (mainWindow?.webContents.getTitle().includes('index.html')) return;
-      const pageUrl = new URL(mainWindow!.webContents.getURL());
+    currWindow.on('page-title-updated', (_e, title) => {
+      generalLogger.verbose('Window', currWindow.id, 'moved to page:', title);
+      if (currWindow?.webContents.getTitle().includes('index.html')) return;
+      const pageUrl = new URL(currWindow!.webContents.getURL());
       const hasId = pageUrl.searchParams.has('id');
       const shouldChange =
         (!showExport && hasId) || (showExport && !hasId) || first;
       if (shouldChange) {
         first = false;
-        mainWindow?.setMenuBarVisibility(true);
+        currWindow?.setMenuBarVisibility(true);
         menuBuilder.buildMenu();
         showExport = !showExport;
       }
     });
 
     // Open urls in the user's browser
-    mainWindow.webContents.setWindowOpenHandler((edata) => {
+    currWindow.webContents.setWindowOpenHandler((edata) => {
       shell.openExternal(edata.url);
       return { action: 'deny' };
     });

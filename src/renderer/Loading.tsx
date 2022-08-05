@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { TailSpin } from 'react-loader-spinner';
 import useElectron from './useElectron';
 
