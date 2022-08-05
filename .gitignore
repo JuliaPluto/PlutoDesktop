@@ -15,8 +15,6 @@ coverage
 # https://www.npmjs.org/doc/misc/npm-faq.html#should-i-check-my-node_modules-folder-into-git
 node_modules
 
-package-lock.json
-
 # OSX
 .DS_Store
 
@@ -34,6 +32,9 @@ npm-debug.log.*
 *.toml
 project
 assets/julia*
+assets/pluto-sysimage.so
+assets/pluto_precompile.jl
 
 # ENV
 .env.local
+temp.txt

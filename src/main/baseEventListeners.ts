@@ -1,32 +1,25 @@
-import { app, ipcMain } from 'electron';
-import log from 'electron-log';
+import { ipcMain } from 'electron';
 import { PlutoExport } from '../../types/enums';
-import {
-  exportNotebook,
-  moveNotebook,
-  openNotebook,
-  shutdownNotebook,
-} from './pluto';
-
-app.on('open-url', (_, url) => {
-  log.info(`Url changed to ${url}`);
-});
+import Pluto from './pluto';
 
 ipcMain.on(
   'PLUTO-OPEN-NOTEBOOK',
-  async (_event, path?: string, forceNew?: boolean): Promise<void> =>
-    openNotebook(path, forceNew)
+  async (
+    _event,
+    type: 'path' | 'url' | 'new' = 'new',
+    pathOrURL?: string
+  ): Promise<void> => Pluto.notebook.open(type, pathOrURL)
 );
 
 ipcMain.on(
   'PLUTO-SHUTDOWN-NOTEBOOK',
-  async (_event, id?: string): Promise<void> => shutdownNotebook(id)
+  async (_event, id?: string): Promise<void> => Pluto.notebook.shutdown(id)
 );
 
 ipcMain.on(
   'PLUTO-MOVE-NOTEBOOK',
   async (_event, id?: string): Promise<void> => {
-    const loc = await moveNotebook(id);
+    const loc = await Pluto.notebook.move(id);
     _event.sender.send('PLUTO-MOVE-NOTEBOOK', loc);
   }
 );
@@ -34,6 +27,6 @@ ipcMain.on(
 ipcMain.on(
   'PLUTO-EXPORT-NOTEBOOK',
   async (_event, id: string, type: PlutoExport): Promise<void> => {
-    await exportNotebook(id, type);
+    await Pluto.notebook.export(id, type);
   }
 );

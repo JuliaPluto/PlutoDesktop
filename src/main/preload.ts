@@ -20,8 +20,8 @@ contextBridge.exposeInMainWorld('plutoDesktop', {
     },
   },
   fileSystem: {
-    openNotebook(path?: string, forceNew?: boolean) {
-      ipcRenderer.send('PLUTO-OPEN-NOTEBOOK', path, forceNew);
+    openNotebook(type?: 'url' | 'path' | 'new', pathOrURL?: string) {
+      ipcRenderer.send('PLUTO-OPEN-NOTEBOOK', type, pathOrURL);
     },
     shutdownNotebook(id?: string) {
       ipcRenderer.send('PLUTO-SHUTDOWN-NOTEBOOK', id);

@@ -1,8 +1,10 @@
-/* eslint-disable no-underscore-dangle */
 /* eslint import/prefer-default-export: off, import/no-mutable-exports: off */
 import { URL } from 'url';
 import path from 'path';
 import { BrowserWindow } from 'electron';
+import axios from 'axios';
+import msgpack from 'msgpack-lite';
+import { generalLogger } from './logger';
 
 export let resolveHtmlPath: (htmlFileName: string) => string;
 
@@ -64,4 +66,40 @@ class Loader {
   };
 }
 
-export { isExtMatch, PLUTO_FILE_EXTENSIONS, Loader };
+const tryCatch = async (
+  executable: (...args: any[]) => Promise<void>,
+  catchExec?: (...args: any[]) => Promise<void>
+) => {
+  try {
+    await executable();
+  } catch (error) {
+    if (catchExec) await catchExec();
+  }
+};
+
+const isUrlOrPath = (text: string) => {
+  if (text.startsWith('http')) return 'url';
+  if (isExtMatch(text)) return 'path';
+  return 'none';
+};
+
+const setAxiosDefaults = (url: PlutoURL) => {
+  axios.defaults.baseURL = new URL(url.url).origin;
+  axios.defaults.headers.common.Connection = 'keep-alive';
+  generalLogger.verbose('Base URL set to', axios.defaults.baseURL);
+};
+
+const decodeMapFromBuffer = (data: Buffer) => {
+  const decodedData = msgpack.decode(data);
+  return decodedData;
+};
+
+export {
+  isExtMatch,
+  PLUTO_FILE_EXTENSIONS,
+  Loader,
+  tryCatch,
+  isUrlOrPath,
+  setAxiosDefaults,
+  decodeMapFromBuffer,
+};

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { TailSpin } from 'react-loader-spinner';
 import useElectron from './useElectron';
 
@@ -13,7 +13,7 @@ const Loading = () => {
   });
 
   return (
-    <div>
+    <div className="container">
       <TailSpin
         ariaLabel="loading-indicator"
         color="#e6e6e6"

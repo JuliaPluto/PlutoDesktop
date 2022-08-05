@@ -1,4 +1,3 @@
-/* eslint-disable no-underscore-dangle */
 import {
   app,
   Menu,
@@ -10,7 +9,8 @@ import {
 } from 'electron';
 import { URL } from 'node:url';
 import { PlutoExport } from '../../types/enums';
-import { exportNotebook, isPlutoRunning, openNotebook } from './pluto';
+import Pluto from './pluto';
+import { openUserStoreInEditor } from './store';
 import { PLUTO_FILE_EXTENSIONS } from './util';
 
 interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
@@ -182,37 +182,6 @@ export default class MenuBuilder {
         { label: 'Bring All to Front', selector: 'arrangeInFront:' },
       ],
     };
-    const subMenuHelp: MenuItemConstructorOptions = {
-      label: 'Help',
-      submenu: [
-        {
-          label: 'Learn More',
-          click() {
-            shell.openExternal('https://electronjs.org');
-          },
-        },
-        {
-          label: 'Documentation',
-          click() {
-            shell.openExternal(
-              'https://github.com/electron/electron/tree/main/docs#readme'
-            );
-          },
-        },
-        {
-          label: 'Community Discussions',
-          click() {
-            shell.openExternal('https://www.electronjs.org/community');
-          },
-        },
-        {
-          label: 'Search Issues',
-          click() {
-            shell.openExternal('https://github.com/electron/electron/issues');
-          },
-        },
-      ],
-    };
 
     const subMenuView =
       process.env.NODE_ENV === 'development' ||
@@ -220,7 +189,7 @@ export default class MenuBuilder {
         ? subMenuViewDev
         : subMenuViewProd;
 
-    return [subMenuAbout, subMenuEdit, subMenuView, subMenuWindow, subMenuHelp];
+    return [subMenuAbout, subMenuEdit, subMenuView, subMenuWindow];
   }
 
   buildDefaultTemplate() {
@@ -232,7 +201,7 @@ export default class MenuBuilder {
             label: '&Open',
             accelerator: 'Ctrl+O',
             click: async () => {
-              await openNotebook();
+              await Pluto.notebook.open('path');
             },
           },
           {
@@ -260,7 +229,7 @@ export default class MenuBuilder {
             label: '&New',
             accelerator: 'Ctrl+N',
             click: async () => {
-              await openNotebook(undefined, true);
+              await Pluto.notebook.open();
             },
           },
           {
@@ -268,7 +237,7 @@ export default class MenuBuilder {
             click: async () => {
               let url = this.mainWindow.webContents.getURL();
               if (!url.includes('secret'))
-                url += `&secret=${isPlutoRunning()?.secret}`;
+                url += `&secret=${Pluto.runningInfo?.secret}`;
               clipboard.writeText(url);
             },
           },
@@ -277,7 +246,7 @@ export default class MenuBuilder {
             click: async () => {
               let url = this.mainWindow.webContents.getURL();
               if (!url.includes('secret'))
-                url += `&secret=${isPlutoRunning()?.secret}`;
+                url += `&secret=${Pluto.runningInfo?.secret}`;
               shell.openExternal(url);
             },
           },
@@ -286,6 +255,17 @@ export default class MenuBuilder {
             accelerator: 'Ctrl+W',
             click: () => {
               this.mainWindow.close();
+            },
+          },
+        ],
+      },
+      {
+        label: `&Edit`,
+        submenu: [
+          {
+            label: 'Open Config file',
+            click: () => {
+              openUserStoreInEditor();
             },
           },
         ],
@@ -332,37 +312,6 @@ export default class MenuBuilder {
                 },
               ],
       },
-      {
-        label: 'Help',
-        submenu: [
-          {
-            label: 'Learn More',
-            click() {
-              shell.openExternal('https://electronjs.org');
-            },
-          },
-          {
-            label: 'Documentation',
-            click() {
-              shell.openExternal(
-                'https://github.com/electron/electron/tree/main/docs#readme'
-              );
-            },
-          },
-          {
-            label: 'Community Discussions',
-            click() {
-              shell.openExternal('https://www.electronjs.org/community');
-            },
-          },
-          {
-            label: 'Search Issues',
-            click() {
-              shell.openExternal('https://github.com/electron/electron/issues');
-            },
-          },
-        ],
-      },
     ];
 
     if (this.showExport()) {
@@ -372,25 +321,25 @@ export default class MenuBuilder {
           {
             label: 'Pluto Notebook',
             click: async () => {
-              await this.executeIfID(exportNotebook, PlutoExport.FILE);
+              await this.executeIfID(Pluto.notebook.export, PlutoExport.FILE);
             },
           },
           {
             label: 'HTML File',
             click: async () => {
-              await this.executeIfID(exportNotebook, PlutoExport.HTML);
+              await this.executeIfID(Pluto.notebook.export, PlutoExport.HTML);
             },
           },
           {
             label: 'Pluto Statefile',
             click: async () => {
-              await this.executeIfID(exportNotebook, PlutoExport.STATE);
+              await this.executeIfID(Pluto.notebook.export, PlutoExport.STATE);
             },
           },
           {
             label: 'PDF File',
             click: async () => {
-              await this.executeIfID(exportNotebook, PlutoExport.PDF);
+              await this.executeIfID(Pluto.notebook.export, PlutoExport.PDF);
             },
           },
         ],

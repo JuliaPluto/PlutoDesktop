@@ -10,26 +10,27 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, session } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import log from 'electron-log';
 import { release } from 'os';
 import chalk from 'chalk';
-import { isExtMatch, resolveHtmlPath } from './util';
-import {
-  closePluto,
-  isPlutoRunning,
-  runPluto,
-  shutdownNotebook,
-} from './pluto';
+import { generalLogger, backgroundLogger } from './logger';
+import { isUrlOrPath, resolveHtmlPath } from './util';
 import { arg, checkIfCalledViaCLI } from './cli';
 import './baseEventListeners';
 import MenuBuilder from './menu';
+import { store, userStore } from './store';
+import Pluto from './pluto';
+// import installExtensionsAndOpenDevtools from './devtools';
+
+generalLogger.verbose('---------- NEW SESSION ----------');
+generalLogger.verbose('Application Version:', app.getVersion());
+generalLogger.verbose(chalk.green('CONFIG STORE:'), store.store);
+generalLogger.verbose(chalk.green('USER STORE:'), userStore.store);
 
 export default class AppUpdater {
   constructor() {
-    log.transports.file.level = 'info';
-    autoUpdater.logger = log;
+    autoUpdater.logger = backgroundLogger;
     autoUpdater.checkForUpdatesAndNotify();
   }
 }
@@ -52,31 +53,6 @@ ipcMain.on('ipc-example', async (event, args) => {
   console.log(msgTemplate(args));
   event.reply('ipc-example', msgTemplate('pong'));
 });
-
-if (process.env.NODE_ENV === 'production') {
-  const sourceMapSupport = require('source-map-support');
-  sourceMapSupport.install();
-}
-
-const isDebug =
-  process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
-
-if (isDebug) {
-  require('electron-debug')();
-}
-
-const installExtensions = async () => {
-  const installer = require('electron-devtools-installer');
-  const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
-  const extensions = ['REACT_DEVELOPER_TOOLS'];
-
-  return installer
-    .default(
-      extensions.map((name) => installer[name]),
-      forceDownload
-    )
-    .catch(console.log);
-};
 
 /**
  * - A function to create a pluto window.
@@ -108,34 +84,43 @@ const createWindow = async (
       return path.join(RESOURCES_PATH, ...paths);
     };
 
+    if (!store.has('JULIA-PATH')) {
+      store.set('JULIA-PATH', getAssetPath('julia-1.7.3\\bin\\julia.exe'));
+    }
+    if (!store.has('PLUTO-PRECOMPILED')) {
+      store.set('PLUTO-PRECOMPILED', getAssetPath('pluto-sysimage.so'));
+    }
+
     if (checkIfCalledViaCLI(process.argv)) {
+      const loc = arg._.length > 0 ? (arg._[0] as string) : undefined;
+      const isPathOrURL = loc ? isUrlOrPath(loc) : 'none';
       url ??= arg.url;
+      if (isPathOrURL === 'url') url ??= loc;
       project ??= arg.project;
-      notebook ??=
-        arg.notebook ??
-        (arg._.length > 0 &&
-          typeof arg._[0] === 'string' &&
-          isExtMatch(arg._[0]))
-          ? (arg._[0] as string)
-          : undefined;
+      notebook ??= arg.notebook;
+      if (isPathOrURL === 'path') {
+        notebook ??= loc;
+      }
     }
 
-    log.info('CLI received:', arg);
+    generalLogger.info('CLI received:', arg);
 
-    if (isDebug) {
-      await installExtensions();
-    }
+    /**
+     * Uncomment the next LoC and the relevant `import` line
+     * if you want devtools to open with every new window,
+     * it is very annoying for me.
+     */
+    // await installExtensionsAndOpenDevtools();
 
-    console.log(chalk.bgGreenBright('Creating a new window.'));
+    generalLogger.announce('Creating a new window.');
 
-    const loading = new BrowserWindow({
-      frame: false,
-      height: 200,
-      width: 200,
-      resizable: false,
-      fullscreenable: false,
-      title: 'Loading',
-      show: false,
+    const currWindow = new BrowserWindow({
+      title: '⚡ Pluto ⚡',
+      height: 600,
+      width: 800,
+      resizable: true,
+      darkTheme: true,
+      show: true,
       icon: getAssetPath('icon.png'),
       webPreferences: {
         preload: app.isPackaged
@@ -144,88 +129,68 @@ const createWindow = async (
       },
     });
 
-    loading.once('show', async () => {
-      mainWindow = new BrowserWindow({
-        title: '⚡ Pluto ⚡',
-        height: 600,
-        width: 800,
-        resizable: true,
-        darkTheme: true,
-        show: false,
-        icon: getAssetPath('icon.png'),
-        webPreferences: {
-          preload: app.isPackaged
-            ? path.join(__dirname, 'preload.js')
-            : path.join(__dirname, '../../.erb/dll/preload.js'),
-        },
-      });
+    mainWindow ??= currWindow;
 
-      if (!isPlutoRunning()) {
-        await runPluto(loading, mainWindow, getAssetPath, project, notebook);
+    await currWindow.loadURL(resolveHtmlPath('index.html'));
+
+    if (!Pluto.runningInfo) {
+      await new Pluto(currWindow, getAssetPath).run(project, notebook, url);
+    } else if (url) {
+      currWindow.focus();
+      await Pluto.notebook.open('url', url);
+    } else if (notebook) {
+      currWindow.focus();
+      await Pluto.notebook.open('path', notebook);
+    }
+
+    currWindow.on('ready-to-show', () => {
+      if (!currWindow) {
+        throw new Error('"currWindow" is not defined');
       }
-
-      mainWindow.webContents.once('dom-ready', () => {
-        mainWindow?.show();
-        loading.hide();
-        loading.close();
-      });
-
-      if (url) {
-        mainWindow.loadURL(url);
+      if (process.env.START_MINIMIZED) {
+        currWindow.minimize();
+      } else {
+        currWindow.show();
       }
-
-      mainWindow.on('ready-to-show', () => {
-        if (!mainWindow) {
-          throw new Error('"mainWindow" is not defined');
-        }
-        if (process.env.START_MINIMIZED) {
-          mainWindow.minimize();
-        } else {
-          mainWindow.show();
-        }
-      });
-
-      mainWindow.on('close', () => {
-        shutdownNotebook();
-      });
-
-      mainWindow.on('closed', () => {
-        mainWindow = null;
-      });
-
-      const menuBuilder = new MenuBuilder(mainWindow, createWindow);
-      menuBuilder.buildMenu();
-
-      let showExport = false;
-      mainWindow.on('page-title-updated', (_e, title) => {
-        log.verbose(
-          chalk.grey('Window', mainWindow!.id / 2, 'moved to page:', title)
-        );
-        const pageUrl = new URL(mainWindow!.webContents.getURL());
-        const hasId = pageUrl.searchParams.has('id');
-        const shouldChange = (!showExport && hasId) || (showExport && !hasId);
-        if (shouldChange) {
-          menuBuilder.buildMenu();
-          showExport = !showExport;
-        }
-      });
-
-      // Open urls in the user's browser
-      mainWindow.webContents.setWindowOpenHandler((edata) => {
-        shell.openExternal(edata.url);
-        return { action: 'deny' };
-      });
     });
 
-    await loading.loadURL(resolveHtmlPath('index.html'));
-    loading.webContents.send('CHANGE_PAGE', '/loading');
-    loading.show();
+    currWindow.once('close', async () => {
+      await Pluto.notebook.shutdown();
+      mainWindow = null;
+    });
+
+    currWindow.setMenuBarVisibility(false);
+
+    const menuBuilder = new MenuBuilder(currWindow, createWindow);
+
+    let showExport = false;
+    let first = true;
+    currWindow.on('page-title-updated', (_e, title) => {
+      generalLogger.verbose('Window', currWindow.id, 'moved to page:', title);
+      if (currWindow?.webContents.getTitle().includes('index.html')) return;
+      const pageUrl = new URL(currWindow!.webContents.getURL());
+      const hasId = pageUrl.searchParams.has('id');
+      const shouldChange =
+        (!showExport && hasId) || (showExport && !hasId) || first;
+      if (shouldChange) {
+        first = false;
+        currWindow?.setMenuBarVisibility(true);
+        menuBuilder.buildMenu();
+        showExport = !showExport;
+      }
+    });
+
+    // Open urls in the user's browser
+    currWindow.webContents.setWindowOpenHandler((edata) => {
+      shell.openExternal(edata.url);
+      return { action: 'deny' };
+    });
 
     // Remove this if your app does not use auto updates
     // eslint-disable-next-line
     new AppUpdater();
   } catch (e) {
-    log.error(chalk.red(e));
+    generalLogger.error('CREATE-WINDOW-ERROR', e);
   }
 };
 
@@ -248,7 +213,10 @@ app.on('open-file', async (_event, file) => {
 app
   .whenReady()
   .then(() => {
-    log.verbose(chalk.grey('---------- BEGIN ----------'));
+    store.set(
+      'IMPORTANT-NOTE',
+      'This file is used for internal configuration. Please refrain from editing or deleting this file.'
+    );
     createWindow();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the
@@ -256,9 +224,25 @@ app
       if (mainWindow === null) createWindow();
     });
     app.on('will-quit', () => {
-      if (closePluto) closePluto();
+      Pluto.close();
+    });
+    session.defaultSession.on('will-download', (_event, item) => {
+      item.once('done', (_e, state) => {
+        if (state === 'completed')
+          generalLogger.verbose(
+            'Successfully downloaded',
+            item.getFilename(),
+            'to',
+            item.getSavePath()
+          );
+        else
+          generalLogger.error(
+            'Download failed',
+            item.getFilename(),
+            'because of',
+            chalk.underline(state)
+          );
+      });
     });
   })
-  .catch(log.error);
-
-export { createWindow };
+  .catch(generalLogger.error);

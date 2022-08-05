@@ -39,7 +39,7 @@
     "start": "ts-node ./.erb/scripts/check-port-in-use.js && npm run start:renderer",
     "start:main": "cross-env NODE_ENV=development electronmon -r ts-node/register/transpile-only .",
     "start:preload": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.preload.dev.ts",
-    "start:renderer": "cross-env NODE_ENV=development DEBUG_PROJECT_PATH=D:/gsoc/Pluto.jl TS_NODE_TRANSPILE_ONLY=true webpack serve --config ./.erb/configs/webpack.config.renderer.dev.ts",
+    "start:renderer": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack serve --config ./.erb/configs/webpack.config.renderer.dev.ts",
     "test": "jest"
   },
   "lint-staged": {
@@ -102,16 +102,18 @@
     }
   },
   "dependencies": {
+    "@types/msgpack-lite": "^0.1.8",
     "axios": "^0.27.2",
     "electron-debug": "^3.2.0",
-    "electron-dl": "^3.3.1",
     "electron-log": "^4.4.7",
     "electron-store": "^8.0.2",
     "electron-updater": "^5.0.1",
     "extract-zip": "^2.0.1",
+    "msgpack-lite": "^0.1.26",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
     "react-loader-spinner": "^5.1.5",
+    "util": "^0.12.4",
     "yargs": "^17.5.1"
   },
   "devDependencies": {
@@ -129,6 +131,7 @@
     "@types/webpack-bundle-analyzer": "^4.4.1",
     "@typescript-eslint/eslint-plugin": "^5.23.0",
     "@typescript-eslint/parser": "^5.23.0",
+    "axios-logger": "^2.6.1",
     "browserslist-config-erb": "^0.0.3",
     "chalk": "^4.1.2",
     "concurrently": "^7.1.0",
@@ -264,7 +267,8 @@
     },
     "extraResources": [
       "./assets/**",
-      "./!assets/*.zip"
+      "./!assets/*.zip",
+      "./!assets/pluto_precompile.jl"
     ],
     "publish": {
       "provider": "github",
