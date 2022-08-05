@@ -102,12 +102,14 @@
     }
   },
   "dependencies": {
+    "@types/msgpack-lite": "^0.1.8",
     "axios": "^0.27.2",
     "electron-debug": "^3.2.0",
     "electron-log": "^4.4.7",
     "electron-store": "^8.0.2",
     "electron-updater": "^5.0.1",
     "extract-zip": "^2.0.1",
+    "msgpack-lite": "^0.1.26",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
     "react-loader-spinner": "^5.1.5",

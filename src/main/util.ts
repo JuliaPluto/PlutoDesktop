@@ -3,6 +3,7 @@ import { URL } from 'url';
 import path from 'path';
 import { BrowserWindow } from 'electron';
 import axios from 'axios';
+import msgpack from 'msgpack-lite';
 import { generalLogger } from './logger';
 
 export let resolveHtmlPath: (htmlFileName: string) => string;
@@ -84,7 +85,13 @@ const isUrlOrPath = (text: string) => {
 
 const setAxiosDefaults = (url: PlutoURL) => {
   axios.defaults.baseURL = new URL(url.url).origin;
+  axios.defaults.headers.common.Connection = 'keep-alive';
   generalLogger.verbose('Base URL set to', axios.defaults.baseURL);
+};
+
+const decodeMapFromBuffer = (data: Buffer) => {
+  const decodedData = msgpack.decode(data);
+  return decodedData;
 };
 
 export {
@@ -94,4 +101,5 @@ export {
   tryCatch,
   isUrlOrPath,
   setAxiosDefaults,
+  decodeMapFromBuffer,
 };

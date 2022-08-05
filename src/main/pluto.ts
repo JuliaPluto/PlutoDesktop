@@ -14,7 +14,9 @@ import {
   Loader,
   PLUTO_FILE_EXTENSIONS,
   setAxiosDefaults,
+  decodeMapFromBuffer,
 } from './util';
+import NotebookManager from './notebookManager';
 
 class Pluto {
   private project: string;
@@ -463,6 +465,7 @@ class Pluto {
       if (this.url) {
         let params = {};
         if (pathOrURL) {
+          generalLogger.log(`Trying to open ${pathOrURL}`);
           if (type === 'path') {
             window.webContents.send('pluto-url', `Trying to open ${pathOrURL}`);
             params = { secret: Pluto.url?.secret, path: pathOrURL };
@@ -486,13 +489,18 @@ class Pluto {
             }
           }
         }
-        const res = await axios.post(
-          type === 'new' ? 'new' : 'open',
-          {},
-          {
-            params,
-          }
-        );
+
+        const id = pathOrURL ? await this.checkNotebook(pathOrURL) : undefined;
+        const res = id
+          ? { status: 200, data: id }
+          : await axios.post(
+              type === 'new' ? 'new' : 'open',
+              {},
+              {
+                params,
+              }
+            );
+
         if (res.status === 200) {
           await window.loadURL(
             `http://localhost:${this.url.port}/edit?secret=${this.url.secret}&id=${res.data}`
@@ -583,7 +591,7 @@ class Pluto {
         dialog.showErrorBox(res.statusText, res.data);
       }
     } catch (error: { message: string } | any) {
-      generalLogger.error('PLUTO-FILE-SHUTDOWN-ERROR', error.message);
+      generalLogger.error('PLUTO-FILE-SHUTDOWN-ERROR', error);
     }
   };
 
@@ -639,6 +647,41 @@ class Pluto {
     }
 
     return undefined;
+  };
+
+  private static checkNotebook = async (key: string) => {
+    let result;
+
+    try {
+      if (!this.url) {
+        dialog.showErrorBox(
+          'Pluto not intialized',
+          'Please wait for pluto to initialize first'
+        );
+        return;
+      }
+
+      const res = await axios.get('notebooklist', {
+        responseType: 'arraybuffer',
+        params: {
+          secret: Pluto.url?.secret,
+        },
+      });
+
+      if (res.status === 200) {
+        const notebookManager = new NotebookManager(
+          decodeMapFromBuffer(res.data)
+        );
+        if (notebookManager.hasFile(key)) result = notebookManager.getId(key);
+      } else {
+        dialog.showErrorBox(res.statusText, res.data);
+      }
+    } catch (error: { message: string } | any) {
+      generalLogger.error('PLUTO-CHECK-NOTEBOOK-ERROR', error);
+    }
+
+    // eslint-disable-next-line consistent-return
+    return result;
   };
 
   public static notebook = {

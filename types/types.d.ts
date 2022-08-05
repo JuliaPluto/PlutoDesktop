@@ -13,6 +13,11 @@ declare module 'electron-log' {
 declare global {
   type Modify<T, R> = Omit<T, keyof R> & R;
 
+  type TableRow = {
+    key: string;
+    value: string;
+  };
+
   type PlutoURL = {
     url: string;
     port: string;
