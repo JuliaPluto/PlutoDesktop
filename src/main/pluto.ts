@@ -589,13 +589,13 @@ class Pluto {
 
         if (res.status === 200) {
           generalLogger.info(`File ${id} has been shutdown.`);
-          window.loadURL(Pluto.url!.url);
+          if (!window.isDestroyed) window.loadURL(Pluto.url!.url);
         } else {
           dialog.showErrorBox(res.statusText, res.data);
         }
       }
     } catch (error: { message: string } | any) {
-      generalLogger.error('PLUTO-FILE-SHUTDOWN-ERROR', error.message);
+      generalLogger.error('PLUTO-FILE-SHUTDOWN-ERROR', error);
     }
   };
 
