@@ -1,5 +1,4 @@
-/* eslint-disable no-param-reassign */
-/* eslint global-require: off, no-console: off, promise/always-return: off */
+/* eslint global-require: off */
 
 import { generalLogger } from './logger';
 

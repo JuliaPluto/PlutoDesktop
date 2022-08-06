@@ -1,4 +1,5 @@
-/* eslint import/prefer-default-export: off, import/no-mutable-exports: off */
+/* eslint import/no-mutable-exports: off */
+
 import { URL } from 'url';
 import path from 'path';
 import { BrowserWindow } from 'electron';
