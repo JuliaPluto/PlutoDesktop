@@ -14,6 +14,7 @@ import { app, BrowserWindow, shell, ipcMain, session } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { release } from 'os';
 import chalk from 'chalk';
+import fs from 'fs';
 import { generalLogger, backgroundLogger } from './logger';
 import { isUrlOrPath, resolveHtmlPath } from './util';
 import { arg, checkIfCalledViaCLI } from './cli';
@@ -85,10 +86,14 @@ const createWindow = async (
     };
 
     if (!store.has('JULIA-PATH')) {
-      store.set('JULIA-PATH', getAssetPath('julia-1.7.3\\bin\\julia.exe'));
+      const juliaPath = getAssetPath('julia-1.7.3\\bin\\julia.exe');
+      if (fs.existsSync(juliaPath))
+        store.set('JULIA-PATH', getAssetPath('julia-1.7.3\\bin\\julia.exe'));
     }
     if (!store.has('PLUTO-PRECOMPILED')) {
-      store.set('PLUTO-PRECOMPILED', getAssetPath('pluto-sysimage.so'));
+      const imagePath = getAssetPath('pluto-sysimage.so');
+      if (fs.existsSync(imagePath))
+        store.set('PLUTO-PRECOMPILED', getAssetPath('pluto-sysimage.so'));
     }
 
     if (checkIfCalledViaCLI(process.argv)) {

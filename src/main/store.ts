@@ -2,7 +2,13 @@ import { app, BrowserWindow, dialog } from 'electron';
 import Store from 'electron-store';
 import fs from 'fs';
 
-const store = new Store<SettingsStore>();
+const store = new Store<SettingsStore>({
+  migrations: {
+    '0.0.2-alpha': (s) => {
+      s.clear();
+    },
+  },
+});
 
 const userStore = new Store<UserSettingsStore>({ name: 'user-config' });
 
