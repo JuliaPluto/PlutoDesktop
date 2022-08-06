@@ -106,6 +106,8 @@ class Pluto {
 
   private static julia: string;
 
+  private static notebookManager: NotebookManager;
+
   private static closePlutoFunction: (() => void) | undefined;
 
   private static getProjectPath(project?: string): string {
@@ -671,10 +673,11 @@ class Pluto {
       });
 
       if (res.status === 200) {
-        const notebookManager = new NotebookManager(
+        this.notebookManager = new NotebookManager(
           decodeMapFromBuffer(res.data)
         );
-        if (notebookManager.hasFile(key)) result = notebookManager.getId(key);
+        if (this.notebookManager.hasFile(key))
+          result = this.notebookManager.getId(key);
       } else {
         dialog.showErrorBox(res.statusText, res.data);
       }
@@ -686,11 +689,17 @@ class Pluto {
     return result;
   };
 
+  private static getId = (file: string) =>
+    this.notebookManager && this.notebookManager.hasFile(file)
+      ? this.notebookManager.getId(file)
+      : undefined;
+
   public static notebook = {
     open: this.openNotebook,
     export: this.exportNotebook,
     move: this.moveNotebook,
     shutdown: this.shutdownNotebook,
+    getId: this.getId,
   };
 
   public static close = () => {

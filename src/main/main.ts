@@ -87,13 +87,11 @@ const createWindow = async (
 
     if (!store.has('JULIA-PATH')) {
       const juliaPath = getAssetPath('julia-1.7.3\\bin\\julia.exe');
-      if (fs.existsSync(juliaPath))
-        store.set('JULIA-PATH', getAssetPath('julia-1.7.3\\bin\\julia.exe'));
+      if (fs.existsSync(juliaPath)) store.set('JULIA-PATH', juliaPath);
     }
     if (!store.has('PLUTO-PRECOMPILED')) {
       const imagePath = getAssetPath('pluto-sysimage.so');
-      if (fs.existsSync(imagePath))
-        store.set('PLUTO-PRECOMPILED', getAssetPath('pluto-sysimage.so'));
+      if (fs.existsSync(imagePath)) store.set('PLUTO-PRECOMPILED', imagePath);
     }
 
     if (checkIfCalledViaCLI(process.argv)) {
@@ -212,7 +210,24 @@ app.on('window-all-closed', () => {
 });
 
 app.on('open-file', async (_event, file) => {
-  await createWindow(undefined, undefined, file);
+  const id = Pluto.notebook.getId(file);
+  let opened = false;
+  if (id) {
+    // find window and focus
+    const windows = BrowserWindow.getAllWindows();
+    for (let index = 0; index < windows.length; index += 1) {
+      const window = windows[index];
+      if (window.webContents.getURL().includes(id)) {
+        window.focus();
+        opened = true;
+        break;
+      }
+    }
+  }
+  if (!opened) {
+    generalLogger.log(`Opening ${file} in new window.`);
+    await createWindow(undefined, undefined, file);
+  }
 });
 
 app
