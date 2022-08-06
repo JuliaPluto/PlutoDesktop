@@ -74,7 +74,8 @@ ipcMain.on('ipc-example', async (event, args) => {
 const createWindow = async (
   url?: string,
   project?: string,
-  notebook?: string
+  notebook?: string,
+  forceNew = true
 ) => {
   try {
     const RESOURCES_PATH = app.isPackaged
@@ -98,15 +99,35 @@ const createWindow = async (
       const loc = arg._.length > 0 ? (arg._[0] as string) : undefined;
       const isPathOrURL = loc ? isUrlOrPath(loc) : 'none';
       url ??= arg.url;
-      if (isPathOrURL === 'url') url ??= loc;
-      project ??= arg.project;
       notebook ??= arg.notebook;
-      if (isPathOrURL === 'path') {
-        notebook ??= loc;
-      }
+      project ??= arg.project;
+      if (isPathOrURL === 'url') url ??= loc;
+      else if (isPathOrURL === 'path') notebook ??= loc;
     }
 
-    generalLogger.info('CLI received:', arg);
+    generalLogger.info('Arguments received:', arg);
+
+    const pathOrURL = notebook ?? url;
+
+    /**
+     * If window with {pathOrURL} is already open, focus on it
+     * else open a new one
+     */
+    if (!forceNew && pathOrURL) {
+      const id = Pluto.notebook.getId(pathOrURL);
+      if (id) {
+        const windows = BrowserWindow.getAllWindows();
+        const windowId = windows.findIndex((window) =>
+          window.webContents.getURL().includes(id)
+        );
+        if (windowId !== -1) {
+          windows[windowId].focus();
+          return;
+        }
+      } else {
+        generalLogger.log(`Opening ${pathOrURL} in new window.`);
+      }
+    }
 
     /**
      * Uncomment the next LoC and the relevant `import` line
@@ -210,24 +231,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('open-file', async (_event, file) => {
-  const id = Pluto.notebook.getId(file);
-  let opened = false;
-  if (id) {
-    // find window and focus
-    const windows = BrowserWindow.getAllWindows();
-    for (let index = 0; index < windows.length; index += 1) {
-      const window = windows[index];
-      if (window.webContents.getURL().includes(id)) {
-        window.focus();
-        opened = true;
-        break;
-      }
-    }
-  }
-  if (!opened) {
-    generalLogger.log(`Opening ${file} in new window.`);
-    await createWindow(undefined, undefined, file);
-  }
+  await createWindow(undefined, undefined, file, false);
 });
 
 app

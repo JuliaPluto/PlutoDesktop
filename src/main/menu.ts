@@ -24,7 +24,8 @@ export default class MenuBuilder {
   private _createWindow: (
     url?: string,
     project?: string,
-    notebook?: string
+    notebook?: string,
+    forceNew?: boolean
   ) => Promise<void>;
 
   constructor(
@@ -32,7 +33,8 @@ export default class MenuBuilder {
     createWindow: (
       url?: string,
       project?: string,
-      notebook?: string
+      notebook?: string,
+      forceNew?: boolean
     ) => Promise<void>
   ) {
     this.mainWindow = mainWindow;
