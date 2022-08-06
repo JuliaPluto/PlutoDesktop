@@ -591,7 +591,7 @@ class Pluto {
         dialog.showErrorBox(res.statusText, res.data);
       }
     } catch (error: { message: string } | any) {
-      generalLogger.error('PLUTO-FILE-SHUTDOWN-ERROR', error);
+      generalLogger.error('PLUTO-FILE-SHUTDOWN-ERROR', error.message);
     }
   };
 
