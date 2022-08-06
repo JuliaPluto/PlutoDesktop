@@ -25,6 +25,36 @@ class Pluto {
 
   private getAssetPath: (...paths: string[]) => string;
 
+  private static url: PlutoURL | null;
+
+  private static julia: string;
+
+  private static notebookManager: NotebookManager;
+
+  private static closePlutoFunction: (() => void) | undefined;
+
+  private static getProjectPath(project?: string): string {
+    if (project) return project;
+    if (process.env.DEBUG_PROJECT_PATH) return process.env.DEBUG_PROJECT_PATH;
+
+    const p = join(app.getPath('userData'), '/project/');
+    if (!fs.existsSync(p)) {
+      fs.mkdirSync(p);
+    }
+    return p;
+  }
+
+  constructor(
+    win: BrowserWindow,
+    getAssetPath: (...paths: string[]) => string,
+    project?: string
+  ) {
+    this.win = win;
+    this.getAssetPath = getAssetPath;
+    this.project = Pluto.getProjectPath(project);
+    Pluto.url ??= null;
+  }
+
   private precompilePluto = async () => {
     if (process.env.DEBUG_PROJECT_PATH) {
       generalLogger.silly(
@@ -43,6 +73,24 @@ class Pluto {
     }
 
     try {
+      if (!isDev)
+        exec('NET SESSION', (_error, _so, se) => {
+          if (se.length === 0) {
+            // admin
+          } else {
+            // no admin
+            dialog.showErrorBox(
+              'ADMIN PERMISSIONS NOT AVAILABLE',
+              'System image not available, to create it the application needs admin privileges. Please close the app and run again using right clicking and using "Run as administrator".'
+            );
+            generalLogger.error(
+              'PERMISSION-NOT-GRANTED',
+              "Can't create system image, permissions not granted."
+            );
+            app.quit();
+          }
+        });
+
       const PRECOMPILE_SCRIPT_LOCATION = this.getAssetPath('precompile.jl');
       const SYSTIMAGE_LOCATION = this.getAssetPath('pluto-sysimage.so');
       const PRECOMPILED_PLUTO_OUTPUT_LOCATION = this.getAssetPath(
@@ -102,25 +150,6 @@ class Pluto {
     }
   };
 
-  private static url: PlutoURL | null;
-
-  private static julia: string;
-
-  private static notebookManager: NotebookManager;
-
-  private static closePlutoFunction: (() => void) | undefined;
-
-  private static getProjectPath(project?: string): string {
-    if (project) return project;
-    if (process.env.DEBUG_PROJECT_PATH) return process.env.DEBUG_PROJECT_PATH;
-
-    const p = join(app.getPath('userData'), '/project/');
-    if (!fs.existsSync(p)) {
-      fs.mkdirSync(p);
-    }
-    return p;
-  }
-
   /**
    * * Checks for CUSTOM-JULIA-PATH, if not found then JULIA-PATH
    * else looks for a zip to extract Julia
@@ -129,6 +158,10 @@ class Pluto {
    * @returns nothing
    */
   private extractJulia = async () => {
+    /**
+     * Prefer to use extracted folder
+     */
+
     if (
       userStore.has('CUSTOM-JULIA-PATH') &&
       fs.existsSync(userStore.get('CUSTOM-JULIA-PATH'))
@@ -143,7 +176,7 @@ class Pluto {
     }
 
     /**
-     * Prefer to use extracted folder
+     * New Extraction
      */
 
     generalLogger.announce('Starting Julia installation');
@@ -219,17 +252,6 @@ class Pluto {
       generalLogger.error('JULIA-INSTALL-ERROR', error);
     }
   };
-
-  constructor(
-    win: BrowserWindow,
-    getAssetPath: (...paths: string[]) => string,
-    project?: string
-  ) {
-    this.win = win;
-    this.getAssetPath = getAssetPath;
-    this.project = Pluto.getProjectPath(project);
-    Pluto.url ??= null;
-  }
 
   /**
    * The main function the actually runs a `julia` script that
