@@ -21,7 +21,6 @@ import './baseEventListeners';
 import MenuBuilder from './menu';
 import { store, userStore } from './store';
 import Pluto from './pluto';
-// import installExtensionsAndOpenDevtools from './devtools';
 
 generalLogger.verbose('---------- NEW SESSION ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
@@ -129,11 +128,10 @@ const createWindow = async (
     }
 
     /**
-     * Uncomment the next LoC and the relevant `import` line
-     * if you want devtools to open with every new window,
-     * it is very annoying for me.
+     * Uncomment the next LoC if you want devtools to open with
+     * every new window, please comment it again when you commit.
      */
-    // await installExtensionsAndOpenDevtools();
+    // await (await import('./devtools')).default();
 
     generalLogger.announce('Creating a new window.');
 
