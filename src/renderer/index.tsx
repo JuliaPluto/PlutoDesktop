@@ -1,5 +1,7 @@
-import { createRoot } from 'react-dom/client';
 import './App.css';
+
+import { createRoot } from 'react-dom/client';
+
 import Loading from './Loading';
 
 const container = document.getElementById('root')!;

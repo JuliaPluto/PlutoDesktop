@@ -1,5 +1,12 @@
 /* eslint-disable no-param-reassign */
 
+import './baseEventListeners';
+
+import chalk from 'chalk';
+import { app, BrowserWindow, ipcMain, session, shell } from 'electron';
+import { autoUpdater } from 'electron-updater';
+import fs from 'fs';
+import { release } from 'os';
 /**
  * This module executes inside of electron's main process. You can start
  * electron renderer process from here and communicate with the other processes
@@ -9,18 +16,13 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain, session } from 'electron';
-import { autoUpdater } from 'electron-updater';
-import { release } from 'os';
-import chalk from 'chalk';
-import fs from 'fs';
-import { generalLogger, backgroundLogger } from './logger';
-import { isUrlOrPath, resolveHtmlPath } from './util';
+
 import { arg, checkIfCalledViaCLI } from './cli';
-import './baseEventListeners';
+import { backgroundLogger, generalLogger } from './logger';
 import MenuBuilder from './menu';
-import { store, userStore } from './store';
 import Pluto from './pluto';
+import { store, userStore } from './store';
+import { isUrlOrPath, resolveHtmlPath } from './util';
 
 generalLogger.verbose('---------- NEW SESSION ----------');
 generalLogger.verbose('Application Version:', app.getVersion());

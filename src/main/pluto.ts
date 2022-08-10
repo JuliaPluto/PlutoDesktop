@@ -1,22 +1,23 @@
-import { app, BrowserWindow, dialog } from 'electron';
-import { spawn, exec } from 'node:child_process';
-import chalk from 'chalk';
 import axios from 'axios';
-import fs from 'node:fs';
-import unzip from 'extract-zip';
-import { join } from 'node:path';
+import chalk from 'chalk';
+import { app, BrowserWindow, dialog } from 'electron';
 import isDev from 'electron-is-dev';
-import { generalLogger, juliaLogger } from './logger';
+import unzip from 'extract-zip';
+import { exec, spawn } from 'node:child_process';
+import fs from 'node:fs';
+import { join } from 'node:path';
+
 import { PlutoExport } from '../../types/enums';
+import { generalLogger, juliaLogger } from './logger';
+import NotebookManager from './notebookManager';
 import { store, userStore } from './store';
 import {
+  decodeMapFromBuffer,
   isExtMatch,
   Loader,
   PLUTO_FILE_EXTENSIONS,
   setAxiosDefaults,
-  decodeMapFromBuffer,
 } from './util';
-import NotebookManager from './notebookManager';
 
 class Pluto {
   private project: string;
@@ -611,7 +612,7 @@ class Pluto {
 
         if (res.status === 200) {
           generalLogger.info(`File ${id} has been shutdown.`);
-          if (!window.isDestroyed) window.loadURL(Pluto.url!.url);
+          if (!window.isDestroyed()) window.loadURL(Pluto.url!.url);
         } else {
           dialog.showErrorBox(res.statusText, res.data);
         }

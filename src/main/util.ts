@@ -1,10 +1,11 @@
 /* eslint import/no-mutable-exports: off */
 
-import { URL } from 'url';
-import path from 'path';
-import { BrowserWindow } from 'electron';
 import axios from 'axios';
+import { BrowserWindow } from 'electron';
 import msgpack from 'msgpack-lite';
+import path from 'path';
+import { URL } from 'url';
+
 import { generalLogger } from './logger';
 
 export let resolveHtmlPath: (htmlFileName: string) => string;

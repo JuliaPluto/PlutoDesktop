@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { TailSpin } from 'react-loader-spinner';
+
 import useElectron from './useElectron';
 
 const Loading = () => {
