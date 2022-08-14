@@ -23,6 +23,9 @@ if (process.env.NODE_ENV === 'development') {
   };
 }
 
+/**
+ * These are the extensions supported by Pluto.jl
+ */
 const PLUTO_FILE_EXTENSIONS = [
   '.pluto.jl',
   '.Pluto.jl',
@@ -36,6 +39,10 @@ const PLUTO_FILE_EXTENSIONS = [
   '.jl.txt',
 ];
 
+/**
+ * @param file location
+ * @returns whether the current file is a supported file or not
+ */
 const isExtMatch = (file: string) => {
   for (let index = 0; index < PLUTO_FILE_EXTENSIONS.length; index += 1) {
     const ext = PLUTO_FILE_EXTENSIONS[index];
@@ -44,6 +51,10 @@ const isExtMatch = (file: string) => {
   return false;
 };
 
+/**
+ * This is a loader, it simply inserts custom cursor
+ * loading css into the window, and can also remove it.
+ */
 class Loader {
   private _window: BrowserWindow;
 
@@ -79,6 +90,10 @@ const tryCatch = async (
   }
 };
 
+/**
+ * @param text location of the file
+ * @returns type of location
+ */
 const isUrlOrPath = (text: string) => {
   if (text.startsWith('http')) return 'url';
   if (isExtMatch(text)) return 'path';
@@ -91,6 +106,11 @@ const setAxiosDefaults = (url: PlutoURL) => {
   generalLogger.verbose('Base URL set to', axios.defaults.baseURL);
 };
 
+/**
+ * Decodes data received from Pluto.jl shutdown query
+ * @param data Buffer
+ * @returns map of id -> location
+ */
 const decodeMapFromBuffer = (data: Buffer) => {
   const decodedData = msgpack.decode(data);
   return decodedData;

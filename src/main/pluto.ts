@@ -20,14 +20,26 @@ import {
 } from './util';
 
 class Pluto {
+  /**
+   * project folder location
+   */
   private project: string;
 
+  /**
+   * window related to this Pluto instance
+   */
   private win: BrowserWindow;
 
+  /**
+   * self-explanatory
+   */
   private getAssetPath: (...paths: string[]) => string;
 
   private static url: PlutoURL | null;
 
+  /**
+   * location of the julia executable
+   */
   private static julia: string;
 
   private static notebookManager: NotebookManager;
@@ -56,6 +68,11 @@ class Pluto {
     Pluto.url ??= null;
   }
 
+  /**
+   * if Pluto.jl hasn't been precompiled already, it precompiles
+   * it and also checks for admin rights before doing that.
+   * @returns nothing
+   */
   private precompilePluto = async () => {
     if (process.env.DEBUG_PROJECT_PATH) {
       generalLogger.silly(
@@ -550,6 +567,11 @@ class Pluto {
     }
   };
 
+  /**
+   * @param id id of notebook to be exported
+   * @param type type of export, see type declarations
+   * @returns nothing
+   */
   private static exportNotebook = async (id: string, type: PlutoExport) => {
     if (!this.url) {
       dialog.showErrorBox(
@@ -588,6 +610,13 @@ class Pluto {
     window.webContents.downloadURL(url);
   };
 
+  /**
+   * shuts down the notebook of given id, and if the
+   * window is still open after the shutdown, it changes
+   * its url to home URL.
+   * @param _id id of notebook to be shutdown
+   * @returns nothing
+   */
   private static shutdownNotebook = async (_id?: string) => {
     try {
       if (!this.url) {
@@ -622,6 +651,12 @@ class Pluto {
     }
   };
 
+  /**
+   * opens a location selection dialog and if a location
+   * is selected the file is moved to that location
+   * @param _id id of notebook to be moved
+   * @returns nothing
+   */
   private static moveNotebook = async (_id?: string) => {
     try {
       if (!this.url) {
@@ -676,6 +711,13 @@ class Pluto {
     return undefined;
   };
 
+  /**
+   * Communicates with the pluto process and gets the
+   * currently open notebooks. It also creates the
+   * `notebookManager` that stores this data
+   * @param key location/url of the notebook to be checked
+   * @returns id of the notebook if it is currently open
+   */
   private static checkNotebook = async (key: string) => {
     let result;
 
@@ -712,11 +754,20 @@ class Pluto {
     return result;
   };
 
+  /**
+   * @param file location/url of the file
+   * @returns id of the file if notebookManager is there
+   * and has the file in its data
+   */
   private static getId = (file: string) =>
     this.notebookManager && this.notebookManager.hasFile(file)
       ? this.notebookManager.getId(file)
       : undefined;
 
+  /**
+   * Does nothing in particular but it just exposes the
+   * FileSystem functions publically in a ⚡ Pretty ⚡ way.
+   */
   public static notebook = {
     open: this.openNotebook,
     export: this.exportNotebook,
@@ -725,12 +776,19 @@ class Pluto {
     getId: this.getId,
   };
 
+  /**
+   * Closes the pluto instance if possible.
+   */
   public static close = () => {
     Pluto.closePlutoFunction?.();
   };
 
+  /**
+   * Gets the current running info if it is running.
+   */
   public static get runningInfo() {
     return Pluto.url;
   }
 }
+
 export default Pluto;

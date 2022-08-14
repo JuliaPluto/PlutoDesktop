@@ -1,3 +1,8 @@
+/**
+ * This files contains receivers for ipc commands
+ * comming from preload process
+ */
+
 import { ipcMain } from 'electron';
 
 import { PlutoExport } from '../../types/enums';
