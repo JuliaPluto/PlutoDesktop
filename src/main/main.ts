@@ -1,6 +1,4 @@
 /* eslint-disable no-param-reassign */
-/* eslint global-require: off, no-console: off, promise/always-return: off */
-
 /**
  * This module executes inside of electron's main process. You can start
  * electron renderer process from here and communicate with the other processes
@@ -9,19 +7,22 @@
  * When running `npm run build` or `npm run build:main`, this file is compiled to
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
-import path from 'path';
-import { app, BrowserWindow, shell, ipcMain, session } from 'electron';
-import { autoUpdater } from 'electron-updater';
-import { release } from 'os';
-import chalk from 'chalk';
-import { generalLogger, backgroundLogger } from './logger';
-import { isUrlOrPath, resolveHtmlPath } from './util';
-import { arg, checkIfCalledViaCLI } from './cli';
+
 import './baseEventListeners';
+
+import chalk from 'chalk';
+import { app, BrowserWindow, ipcMain, session, shell } from 'electron';
+import { autoUpdater } from 'electron-updater';
+import fs from 'fs';
+import { release } from 'os';
+import path from 'path';
+
+import { arg, checkIfCalledViaCLI } from './cli';
+import { backgroundLogger, generalLogger } from './logger';
 import MenuBuilder from './menu';
-import { store, userStore } from './store';
 import Pluto from './pluto';
-// import installExtensionsAndOpenDevtools from './devtools';
+import { store, userStore } from './store';
+import { isUrlOrPath, resolveHtmlPath } from './util';
 
 generalLogger.verbose('---------- NEW SESSION ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
@@ -73,7 +74,8 @@ ipcMain.on('ipc-example', async (event, args) => {
 const createWindow = async (
   url?: string,
   project?: string,
-  notebook?: string
+  notebook?: string,
+  forceNew = true
 ) => {
   try {
     const RESOURCES_PATH = app.isPackaged
@@ -85,32 +87,53 @@ const createWindow = async (
     };
 
     if (!store.has('JULIA-PATH')) {
-      store.set('JULIA-PATH', getAssetPath('julia-1.7.3\\bin\\julia.exe'));
+      const juliaPath = getAssetPath('julia-1.7.3\\bin\\julia.exe');
+      if (fs.existsSync(juliaPath)) store.set('JULIA-PATH', juliaPath);
     }
     if (!store.has('PLUTO-PRECOMPILED')) {
-      store.set('PLUTO-PRECOMPILED', getAssetPath('pluto-sysimage.so'));
+      const imagePath = getAssetPath('pluto-sysimage.so');
+      if (fs.existsSync(imagePath)) store.set('PLUTO-PRECOMPILED', imagePath);
     }
 
     if (checkIfCalledViaCLI(process.argv)) {
       const loc = arg._.length > 0 ? (arg._[0] as string) : undefined;
       const isPathOrURL = loc ? isUrlOrPath(loc) : 'none';
       url ??= arg.url;
-      if (isPathOrURL === 'url') url ??= loc;
-      project ??= arg.project;
       notebook ??= arg.notebook;
-      if (isPathOrURL === 'path') {
-        notebook ??= loc;
+      project ??= arg.project;
+      if (isPathOrURL === 'url') url ??= loc;
+      else if (isPathOrURL === 'path') notebook ??= loc;
+    }
+
+    generalLogger.info('Arguments received:', arg);
+
+    const pathOrURL = notebook ?? url;
+
+    /**
+     * If window with {pathOrURL} is already open, focus on it
+     * else open a new one
+     */
+    if (!forceNew && pathOrURL) {
+      const id = Pluto.notebook.getId(pathOrURL);
+      if (id) {
+        const windows = BrowserWindow.getAllWindows();
+        const windowId = windows.findIndex((window) =>
+          window.webContents.getURL().includes(id)
+        );
+        if (windowId !== -1) {
+          windows[windowId].focus();
+          return;
+        }
+      } else {
+        generalLogger.log(`Opening ${pathOrURL} in new window.`);
       }
     }
 
-    generalLogger.info('CLI received:', arg);
-
     /**
-     * Uncomment the next LoC and the relevant `import` line
-     * if you want devtools to open with every new window,
-     * it is very annoying for me.
+     * Uncomment the next LoC if you want devtools to open with
+     * every new window, please comment it again when you commit.
      */
-    // await installExtensionsAndOpenDevtools();
+    // await (await import('./devtools')).default();
 
     generalLogger.announce('Creating a new window.');
 
@@ -207,11 +230,12 @@ app.on('window-all-closed', () => {
 });
 
 app.on('open-file', async (_event, file) => {
-  await createWindow(undefined, undefined, file);
+  await createWindow(undefined, undefined, file, false);
 });
 
 app
   .whenReady()
+  // eslint-disable-next-line promise/always-return
   .then(() => {
     store.set(
       'IMPORTANT-NOTE',

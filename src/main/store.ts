@@ -2,8 +2,23 @@ import { app, BrowserWindow, dialog } from 'electron';
 import Store from 'electron-store';
 import fs from 'fs';
 
-const store = new Store<SettingsStore>();
+/**
+ * This store contains all the internal config data.
+ * This is **not** meant to be overwritten manually.
+ * Please provide migrations if needed.
+ */
+const store = new Store<SettingsStore>({
+  migrations: {
+    '0.0.2-alpha': (s) => {
+      s.clear();
+    },
+  },
+});
 
+/**
+ * This store is for the user config.
+ * These can be overwritten manually.
+ */
 const userStore = new Store<UserSettingsStore>({ name: 'user-config' });
 
 userStore.onDidAnyChange(async () => {

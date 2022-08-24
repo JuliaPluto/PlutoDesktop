@@ -1,30 +1,78 @@
-import { app, BrowserWindow, dialog } from 'electron';
-import { spawn, exec } from 'node:child_process';
-import chalk from 'chalk';
 import axios from 'axios';
-import fs from 'node:fs';
-import unzip from 'extract-zip';
-import { join } from 'node:path';
+import chalk from 'chalk';
+import { app, BrowserWindow, dialog } from 'electron';
 import isDev from 'electron-is-dev';
-import { generalLogger, juliaLogger } from './logger';
+import unzip from 'extract-zip';
+import { exec, spawn } from 'node:child_process';
+import fs from 'node:fs';
+import { join } from 'node:path';
+
 import { PlutoExport } from '../../types/enums';
+import { generalLogger, juliaLogger } from './logger';
+import NotebookManager from './notebookManager';
 import { store, userStore } from './store';
 import {
+  decodeMapFromBuffer,
   isExtMatch,
   Loader,
   PLUTO_FILE_EXTENSIONS,
   setAxiosDefaults,
-  decodeMapFromBuffer,
 } from './util';
-import NotebookManager from './notebookManager';
 
 class Pluto {
+  /**
+   * project folder location
+   */
   private project: string;
 
+  /**
+   * window related to this Pluto instance
+   */
   private win: BrowserWindow;
 
+  /**
+   * self-explanatory
+   */
   private getAssetPath: (...paths: string[]) => string;
 
+  private static url: PlutoURL | null;
+
+  /**
+   * location of the julia executable
+   */
+  private static julia: string;
+
+  private static notebookManager: NotebookManager;
+
+  private static closePlutoFunction: (() => void) | undefined;
+
+  private static getProjectPath(project?: string): string {
+    if (project) return project;
+    if (process.env.DEBUG_PROJECT_PATH) return process.env.DEBUG_PROJECT_PATH;
+
+    const p = join(app.getPath('userData'), '/project/');
+    if (!fs.existsSync(p)) {
+      fs.mkdirSync(p);
+    }
+    return p;
+  }
+
+  constructor(
+    win: BrowserWindow,
+    getAssetPath: (...paths: string[]) => string,
+    project?: string
+  ) {
+    this.win = win;
+    this.getAssetPath = getAssetPath;
+    this.project = Pluto.getProjectPath(project);
+    Pluto.url ??= null;
+  }
+
+  /**
+   * if Pluto.jl hasn't been precompiled already, it precompiles
+   * it and also checks for admin rights before doing that.
+   * @returns nothing
+   */
   private precompilePluto = async () => {
     if (process.env.DEBUG_PROJECT_PATH) {
       generalLogger.silly(
@@ -43,6 +91,24 @@ class Pluto {
     }
 
     try {
+      if (!isDev)
+        exec('NET SESSION', (_error, _so, se) => {
+          if (se.length === 0) {
+            // admin
+          } else {
+            // no admin
+            dialog.showErrorBox(
+              'ADMIN PERMISSIONS NOT AVAILABLE',
+              'System image not available, to create it the application needs admin privileges. Please close the app and run again using right clicking and using "Run as administrator".'
+            );
+            generalLogger.error(
+              'PERMISSION-NOT-GRANTED',
+              "Can't create system image, permissions not granted."
+            );
+            app.quit();
+          }
+        });
+
       const PRECOMPILE_SCRIPT_LOCATION = this.getAssetPath('precompile.jl');
       const SYSTIMAGE_LOCATION = this.getAssetPath('pluto-sysimage.so');
       const PRECOMPILED_PLUTO_OUTPUT_LOCATION = this.getAssetPath(
@@ -102,23 +168,6 @@ class Pluto {
     }
   };
 
-  private static url: PlutoURL | null;
-
-  private static julia: string;
-
-  private static closePlutoFunction: (() => void) | undefined;
-
-  private static getProjectPath(project?: string): string {
-    if (project) return project;
-    if (process.env.DEBUG_PROJECT_PATH) return process.env.DEBUG_PROJECT_PATH;
-
-    const p = join(app.getPath('userData'), '/project/');
-    if (!fs.existsSync(p)) {
-      fs.mkdirSync(p);
-    }
-    return p;
-  }
-
   /**
    * * Checks for CUSTOM-JULIA-PATH, if not found then JULIA-PATH
    * else looks for a zip to extract Julia
@@ -127,6 +176,10 @@ class Pluto {
    * @returns nothing
    */
   private extractJulia = async () => {
+    /**
+     * Prefer to use extracted folder
+     */
+
     if (
       userStore.has('CUSTOM-JULIA-PATH') &&
       fs.existsSync(userStore.get('CUSTOM-JULIA-PATH'))
@@ -141,7 +194,7 @@ class Pluto {
     }
 
     /**
-     * Prefer to use extracted folder
+     * New Extraction
      */
 
     generalLogger.announce('Starting Julia installation');
@@ -217,17 +270,6 @@ class Pluto {
       generalLogger.error('JULIA-INSTALL-ERROR', error);
     }
   };
-
-  constructor(
-    win: BrowserWindow,
-    getAssetPath: (...paths: string[]) => string,
-    project?: string
-  ) {
-    this.win = win;
-    this.getAssetPath = getAssetPath;
-    this.project = Pluto.getProjectPath(project);
-    Pluto.url ??= null;
-  }
 
   /**
    * The main function the actually runs a `julia` script that
@@ -421,16 +463,7 @@ class Pluto {
   ) => {
     try {
       const window = BrowserWindow.getFocusedWindow()!;
-
-      if (
-        type === 'url' &&
-        pathOrURL &&
-        pathOrURL.includes('?secret=') &&
-        pathOrURL.includes('id=')
-      ) {
-        window.loadURL(pathOrURL);
-        return;
-      }
+      console.log(pathOrURL);
 
       if (type === 'path' && pathOrURL && !isExtMatch(pathOrURL)) {
         dialog.showErrorBox(
@@ -457,6 +490,12 @@ class Pluto {
 
           // eslint-disable-next-line no-param-reassign
           [pathOrURL] = r.filePaths;
+        } else if (type !== 'url') {
+          dialog.showErrorBox(
+            'PLUTO-CANNOT-OPEN-NOTEBOOK',
+            'Empty URL Passed.'
+          );
+          return;
         }
       }
 
@@ -485,7 +524,10 @@ class Pluto {
                 'pluto-url',
                 `Trying to open ${pathOrURL}`
               );
-              params = { secret: Pluto.url?.secret, url: pathOrURL };
+              params = {
+                secret: Pluto.url?.secret,
+                url: pathOrURL,
+              };
             }
           }
         }
@@ -522,9 +564,18 @@ class Pluto {
       );
     } catch (error) {
       generalLogger.error('PLUTO-NOTEBOOK-OPEN-ERROR', error);
+      dialog.showErrorBox(
+        'PLUTO-NOTEBOOK-OPEN-ERROR',
+        'Cannot open this notebook found on this path/url.'
+      );
     }
   };
 
+  /**
+   * @param id id of notebook to be exported
+   * @param type type of export, see type declarations
+   * @returns nothing
+   */
   private static exportNotebook = async (id: string, type: PlutoExport) => {
     if (!this.url) {
       dialog.showErrorBox(
@@ -563,6 +614,13 @@ class Pluto {
     window.webContents.downloadURL(url);
   };
 
+  /**
+   * shuts down the notebook of given id, and if the
+   * window is still open after the shutdown, it changes
+   * its url to home URL.
+   * @param _id id of notebook to be shutdown
+   * @returns nothing
+   */
   private static shutdownNotebook = async (_id?: string) => {
     try {
       if (!this.url) {
@@ -573,28 +631,36 @@ class Pluto {
         return;
       }
 
-      const window = BrowserWindow.getFocusedWindow()!;
-      const id =
-        _id ?? new URL(window.webContents.getURL()).searchParams.get('id');
+      const window = BrowserWindow.getFocusedWindow();
+      if (window) {
+        const id =
+          _id ?? new URL(window.webContents.getURL()).searchParams.get('id');
 
-      const res = await axios.get('shutdown', {
-        params: {
-          secret: Pluto.url?.secret,
-          id,
-        },
-      });
+        const res = await axios.get('shutdown', {
+          params: {
+            secret: Pluto.url?.secret,
+            id,
+          },
+        });
 
-      if (res.status === 200) {
-        generalLogger.info(`File ${id} has been shutdown.`);
-        window.loadURL(Pluto.url!.url);
-      } else {
-        dialog.showErrorBox(res.statusText, res.data);
+        if (res.status === 200) {
+          generalLogger.info(`File ${id} has been shutdown.`);
+          if (!window.isDestroyed()) window.loadURL(Pluto.url!.url);
+        } else {
+          dialog.showErrorBox(res.statusText, res.data);
+        }
       }
     } catch (error: { message: string } | any) {
       generalLogger.error('PLUTO-FILE-SHUTDOWN-ERROR', error);
     }
   };
 
+  /**
+   * opens a location selection dialog and if a location
+   * is selected the file is moved to that location
+   * @param _id id of notebook to be moved
+   * @returns nothing
+   */
   private static moveNotebook = async (_id?: string) => {
     try {
       if (!this.url) {
@@ -649,6 +715,13 @@ class Pluto {
     return undefined;
   };
 
+  /**
+   * Communicates with the pluto process and gets the
+   * currently open notebooks. It also creates the
+   * `notebookManager` that stores this data
+   * @param key location/url of the notebook to be checked
+   * @returns id of the notebook if it is currently open
+   */
   private static checkNotebook = async (key: string) => {
     let result;
 
@@ -669,10 +742,11 @@ class Pluto {
       });
 
       if (res.status === 200) {
-        const notebookManager = new NotebookManager(
+        this.notebookManager = new NotebookManager(
           decodeMapFromBuffer(res.data)
         );
-        if (notebookManager.hasFile(key)) result = notebookManager.getId(key);
+        if (this.notebookManager.hasFile(key))
+          result = this.notebookManager.getId(key);
       } else {
         dialog.showErrorBox(res.statusText, res.data);
       }
@@ -684,19 +758,41 @@ class Pluto {
     return result;
   };
 
+  /**
+   * @param file location/url of the file
+   * @returns id of the file if notebookManager is there
+   * and has the file in its data
+   */
+  private static getId = (file: string) =>
+    this.notebookManager && this.notebookManager.hasFile(file)
+      ? this.notebookManager.getId(file)
+      : undefined;
+
+  /**
+   * Does nothing in particular but it just exposes the
+   * FileSystem functions publically in a ⚡ Pretty ⚡ way.
+   */
   public static notebook = {
     open: this.openNotebook,
     export: this.exportNotebook,
     move: this.moveNotebook,
     shutdown: this.shutdownNotebook,
+    getId: this.getId,
   };
 
+  /**
+   * Closes the pluto instance if possible.
+   */
   public static close = () => {
     Pluto.closePlutoFunction?.();
   };
 
+  /**
+   * Gets the current running info if it is running.
+   */
   public static get runningInfo() {
     return Pluto.url;
   }
 }
+
 export default Pluto;

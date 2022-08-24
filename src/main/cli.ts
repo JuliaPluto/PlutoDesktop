@@ -3,8 +3,9 @@
  * You can call something like "pluto -n="test.pluto.jl""
  */
 
-import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
+import yargs from 'yargs/yargs';
+
 import { openUserStoreInEditor, store } from './store';
 
 const arg = yargs(hideBin(process.argv))

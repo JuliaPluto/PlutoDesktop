@@ -1,13 +1,14 @@
 import {
   app,
-  Menu,
-  shell,
   BrowserWindow,
-  MenuItemConstructorOptions,
-  dialog,
   clipboard,
+  dialog,
+  Menu,
+  MenuItemConstructorOptions,
+  shell,
 } from 'electron';
 import { URL } from 'node:url';
+
 import { PlutoExport } from '../../types/enums';
 import Pluto from './pluto';
 import { openUserStoreInEditor } from './store';
@@ -24,7 +25,8 @@ export default class MenuBuilder {
   private _createWindow: (
     url?: string,
     project?: string,
-    notebook?: string
+    notebook?: string,
+    forceNew?: boolean
   ) => Promise<void>;
 
   constructor(
@@ -32,7 +34,8 @@ export default class MenuBuilder {
     createWindow: (
       url?: string,
       project?: string,
-      notebook?: string
+      notebook?: string,
+      forceNew?: boolean
     ) => Promise<void>
   ) {
     this.mainWindow = mainWindow;
@@ -321,25 +324,37 @@ export default class MenuBuilder {
           {
             label: 'Pluto Notebook',
             click: async () => {
-              await this.executeIfID(Pluto.notebook.export, PlutoExport.FILE);
+              await MenuBuilder.executeIfID(
+                Pluto.notebook.export,
+                PlutoExport.FILE
+              );
             },
           },
           {
             label: 'HTML File',
             click: async () => {
-              await this.executeIfID(Pluto.notebook.export, PlutoExport.HTML);
+              await MenuBuilder.executeIfID(
+                Pluto.notebook.export,
+                PlutoExport.HTML
+              );
             },
           },
           {
             label: 'Pluto Statefile',
             click: async () => {
-              await this.executeIfID(Pluto.notebook.export, PlutoExport.STATE);
+              await MenuBuilder.executeIfID(
+                Pluto.notebook.export,
+                PlutoExport.STATE
+              );
             },
           },
           {
             label: 'PDF File',
             click: async () => {
-              await this.executeIfID(Pluto.notebook.export, PlutoExport.PDF);
+              await MenuBuilder.executeIfID(
+                Pluto.notebook.export,
+                PlutoExport.PDF
+              );
             },
           },
         ],
@@ -358,11 +373,12 @@ export default class MenuBuilder {
     }
   }
 
-  async executeIfID(
+  private static async executeIfID(
     callback: (id: string, ...extra: any[]) => Promise<void> | void,
     ...extraArgs: any[]
   ) {
-    const url = new URL(this.mainWindow.webContents.getURL());
+    const window = BrowserWindow.getFocusedWindow()!;
+    const url = new URL(window.webContents.getURL());
     const id = url.searchParams.get('id');
     if (id) {
       await callback(id, ...extraArgs);
