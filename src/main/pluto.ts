@@ -463,16 +463,7 @@ class Pluto {
   ) => {
     try {
       const window = BrowserWindow.getFocusedWindow()!;
-
-      if (
-        type === 'url' &&
-        pathOrURL &&
-        pathOrURL.includes('?secret=') &&
-        pathOrURL.includes('id=')
-      ) {
-        window.loadURL(pathOrURL);
-        return;
-      }
+      console.log(pathOrURL);
 
       if (type === 'path' && pathOrURL && !isExtMatch(pathOrURL)) {
         dialog.showErrorBox(
@@ -499,6 +490,12 @@ class Pluto {
 
           // eslint-disable-next-line no-param-reassign
           [pathOrURL] = r.filePaths;
+        } else if (type !== 'url') {
+          dialog.showErrorBox(
+            'PLUTO-CANNOT-OPEN-NOTEBOOK',
+            'Empty URL Passed.'
+          );
+          return;
         }
       }
 
@@ -564,6 +561,10 @@ class Pluto {
       );
     } catch (error) {
       generalLogger.error('PLUTO-NOTEBOOK-OPEN-ERROR', error);
+      dialog.showErrorBox(
+        'PLUTO-NOTEBOOK-OPEN-ERROR',
+        'Cannot open this notebook found on this path/url.'
+      );
     }
   };
 
