@@ -524,7 +524,10 @@ class Pluto {
                 'pluto-url',
                 `Trying to open ${pathOrURL}`
               );
-              params = { secret: Pluto.url?.secret, url: pathOrURL };
+              params = {
+                secret: Pluto.url?.secret,
+                url: pathOrURL,
+              };
             }
           }
         }
