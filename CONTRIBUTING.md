@@ -15,4 +15,4 @@ A few things to consider:
 - There should be a julia-{some version}.zip file in the assets folder when you try to build it
 - As of now, generating a system image is not a part of the build process, so you need to run the application once so it can generate one
 - Building without a system image would work perfectly fine, only difference is that now the image would be generated on the system of the installer
-There is just one command: `npm run build` and it should create a build in the release/build folder.
+There is just one command: `npm run package` and it should create a build in the release/build folder.
