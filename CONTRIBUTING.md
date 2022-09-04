@@ -16,3 +16,6 @@ A few things to consider:
 - As of now, generating a system image is not a part of the build process, so you need to run the application once so it can generate one
 - Building without a system image would work perfectly fine, only difference is that now the image would be generated on the system of the installer
 There is just one command: `npm run package` and it should create a build in the release/build folder.
+
+## Contributing
+See if there already exists and issue or an open PR against the issue you are trying to solve. If there isn't any, create a new issue.
