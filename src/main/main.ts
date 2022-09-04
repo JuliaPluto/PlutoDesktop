@@ -151,6 +151,7 @@ const createWindow = async (
           : path.join(__dirname, '../../.erb/dll/preload.js'),
       },
     });
+    currWindow.setMenuBarVisibility(false);
 
     mainWindow ??= currWindow;
 
@@ -182,24 +183,18 @@ const createWindow = async (
       mainWindow = null;
     });
 
-    currWindow.setMenuBarVisibility(false);
-
     const menuBuilder = new MenuBuilder(currWindow, createWindow);
 
-    let showExport = false;
     let first = true;
     currWindow.on('page-title-updated', (_e, title) => {
       generalLogger.verbose('Window', currWindow.id, 'moved to page:', title);
       if (currWindow?.webContents.getTitle().includes('index.html')) return;
       const pageUrl = new URL(currWindow!.webContents.getURL());
       const hasId = pageUrl.searchParams.has('id');
-      const shouldChange =
-        (!showExport && hasId) || (showExport && !hasId) || first;
-      if (shouldChange) {
+      if (first || hasId) {
         first = false;
         currWindow?.setMenuBarVisibility(true);
         menuBuilder.buildMenu();
-        showExport = !showExport;
       }
     });
 
@@ -251,18 +246,28 @@ app
       Pluto.close();
     });
     session.defaultSession.on('will-download', (_event, item) => {
+      const fileName = item.getFilename();
+      const ext = fileName.split('.')[fileName.split('.').length - 1];
+      let fileType = 'Pluto Statefile';
+      if (ext.endsWith('html')) fileType = 'HTML file';
+      else if (ext.endsWith('jl')) fileType = 'Pluto Notebook';
+
+      item.setSaveDialogOptions({
+        message: 'Select location to export file',
+        filters: [{ extensions: [ext], name: fileType }],
+      });
       item.once('done', (_e, state) => {
         if (state === 'completed')
           generalLogger.verbose(
             'Successfully downloaded',
-            item.getFilename(),
+            fileName,
             'to',
             item.getSavePath()
           );
         else
           generalLogger.error(
             'Download failed',
-            item.getFilename(),
+            fileName,
             'because of',
             chalk.underline(state)
           );
