@@ -12,6 +12,9 @@ const store = new Store<SettingsStore>({
     '0.0.2-alpha': (s) => {
       s.clear();
     },
+    '0.0.2': (s) => {
+      s.clear();
+    },
   },
 });
 

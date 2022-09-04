@@ -20,7 +20,9 @@ interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
 }
 
 export default class MenuBuilder {
-  mainWindow: BrowserWindow;
+  private mainWindow: BrowserWindow;
+
+  private _hasbuilt: boolean;
 
   private _createWindow: (
     url?: string,
@@ -39,10 +41,11 @@ export default class MenuBuilder {
     ) => Promise<void>
   ) {
     this.mainWindow = mainWindow;
+    this._hasbuilt = false;
     this._createWindow = createWindow;
   }
 
-  buildMenu(): Menu {
+  buildMenu = () => {
     this.setupContextMenu(
       process.env.NODE_ENV === 'development' ||
         process.env.DEBUG_PROD === 'true'
@@ -54,10 +57,10 @@ export default class MenuBuilder {
         : this.buildDefaultTemplate();
 
     const menu = Menu.buildFromTemplate(template);
-    Menu.setApplicationMenu(menu);
+    this.mainWindow.setMenu(menu);
 
-    return menu;
-  }
+    this._hasbuilt = true;
+  };
 
   setupContextMenu(isDebug = false): void {
     this.mainWindow.webContents.on('context-menu', (_, props) => {
@@ -324,37 +327,25 @@ export default class MenuBuilder {
           {
             label: 'Pluto Notebook',
             click: async () => {
-              await MenuBuilder.executeIfID(
-                Pluto.notebook.export,
-                PlutoExport.FILE
-              );
+              await this.executeIfID(Pluto.notebook.export, PlutoExport.FILE);
             },
           },
           {
             label: 'HTML File',
             click: async () => {
-              await MenuBuilder.executeIfID(
-                Pluto.notebook.export,
-                PlutoExport.HTML
-              );
+              await this.executeIfID(Pluto.notebook.export, PlutoExport.HTML);
             },
           },
           {
             label: 'Pluto Statefile',
             click: async () => {
-              await MenuBuilder.executeIfID(
-                Pluto.notebook.export,
-                PlutoExport.STATE
-              );
+              await this.executeIfID(Pluto.notebook.export, PlutoExport.STATE);
             },
           },
           {
             label: 'PDF File',
             click: async () => {
-              await MenuBuilder.executeIfID(
-                Pluto.notebook.export,
-                PlutoExport.PDF
-              );
+              await this.executeIfID(Pluto.notebook.export, PlutoExport.PDF);
             },
           },
         ],
@@ -373,12 +364,11 @@ export default class MenuBuilder {
     }
   }
 
-  private static async executeIfID(
+  private async executeIfID(
     callback: (id: string, ...extra: any[]) => Promise<void> | void,
     ...extraArgs: any[]
   ) {
-    const window = BrowserWindow.getFocusedWindow()!;
-    const url = new URL(window.webContents.getURL());
+    const url = new URL(this.mainWindow.webContents.getURL());
     const id = url.searchParams.get('id');
     if (id) {
       await callback(id, ...extraArgs);
@@ -388,5 +378,13 @@ export default class MenuBuilder {
         'Invalid ID in the url, cannot export.'
       );
     }
+  }
+
+  public get hasbuilt(): boolean {
+    return this._hasbuilt;
+  }
+
+  public set hasbuilt(value: boolean) {
+    this._hasbuilt = value;
   }
 }
