@@ -1,13 +1,16 @@
 # Pluto Desktop
+All included one stop solution to run [Pluto](https://github.com/fonsp/Pluto.jl) notebooks. Just install this and get going!
+Abstracts and automates the following processes:
+- Installing Julia (comes with its own binary)
+- Installing Pluto
+- Running Pluto
+- Creating a system image for better performance (comes with its own system image)
 
-Basically tries to be a one stop solution for running pluto, no requirements. Install and run.
-This is a GSoC project. More details [here](https://summerofcode.withgoogle.com/programs/2022/projects/w10mCFle).
+![image](https://user-images.githubusercontent.com/51574716/188322175-1e04ec0e-b18c-4745-a2e8-4c3abaecbc79.png)
 
-## NOTE
+## Features
+- Double click to open files
+- No path entering in that input box to move/save a notebook, it happens via a dialog box.
+- Multi-window support
 
-> Please download latest julia win64 portable zip from [here](https://julialang.org/downloads/) and save it to the assets folder.
-
-# Commands
-
-- run [dev] - `npm run start`
-- package [build for install] - `npm run package`
+... among others.
