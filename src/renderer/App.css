@@ -4,10 +4,10 @@
  */
 body {
   position: relative;
-  color: white;
+  color: var(--text-color);
   height: 100vh;
   width: 100vw;
-  background-color: #1f1f1f;
+  background-color: var(--bg-color);
   font-family: sans-serif;
   overflow-y: hidden;
   display: flex;
@@ -22,4 +22,12 @@ body {
   justify-content: center;
   align-items: center;
   margin: 20px 0;
+}
+
+.spinner {
+  color: var(--text-color);
+}
+
+h4 {
+  color: var(--text-highlight-color);
 }
