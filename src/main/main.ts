@@ -190,8 +190,8 @@ const createWindow = async (
       generalLogger.verbose('Window', currWindow.id, 'moved to page:', title);
       if (currWindow?.webContents.getTitle().includes('index.html')) return;
       const pageUrl = new URL(currWindow!.webContents.getURL());
-      const hasId = pageUrl.searchParams.has('id');
-      if (first || hasId) {
+      const isPluto = pageUrl.href.includes('localhost:');
+      if (first || isPluto) {
         first = false;
         currWindow?.setMenuBarVisibility(true);
         menuBuilder.buildMenu();
