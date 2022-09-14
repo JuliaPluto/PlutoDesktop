@@ -530,9 +530,21 @@ class Pluto {
               };
             }
           }
+        } else {
+          params = {
+            secret: Pluto.url?.secret,
+          };
         }
 
-        const id = pathOrURL ? await this.checkNotebook(pathOrURL) : undefined;
+        let id;
+        if (pathOrURL) {
+          if (pathOrURL.includes('localhost') && pathOrURL.includes('edit')) {
+            // is a local url
+            id = new URL(pathOrURL).searchParams.get('id');
+          } else {
+            id = await this.checkNotebook(pathOrURL);
+          }
+        }
         const res = id
           ? { status: 200, data: id }
           : await axios.post(
