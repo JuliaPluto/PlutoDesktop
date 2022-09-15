@@ -7,6 +7,27 @@
       content="script-src 'self' 'unsafe-inline'"
     />
     <title>Pluto</title>
+    <style>
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-color: #1f1f1f;
+          --text-color: white;
+          --text-highlight-color: #c4c4c4;
+        }
+      }
+
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg-color: white;
+          --text-color: black;
+          --text-highlight-color: #1e1e1e;
+        }
+      }
+
+      body {
+        background: var(--bg-color);
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

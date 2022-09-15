@@ -11,12 +11,21 @@
 import './baseEventListeners';
 
 import chalk from 'chalk';
-import { app, BrowserWindow, ipcMain, session, shell } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  nativeTheme,
+  session,
+  shell,
+} from 'electron';
 import { autoUpdater } from 'electron-updater';
 import fs from 'fs';
 import { release } from 'os';
 import path from 'path';
 
+// import { Deeplink } from 'electron-deeplink';
+// import * as isDev from 'electron-is-dev';
 import { arg, checkIfCalledViaCLI } from './cli';
 import { backgroundLogger, generalLogger } from './logger';
 import MenuBuilder from './menu';
@@ -87,7 +96,7 @@ const createWindow = async (
     };
 
     if (!store.has('JULIA-PATH')) {
-      const juliaPath = getAssetPath('julia-1.7.3\\bin\\julia.exe');
+      const juliaPath = getAssetPath('julia-1.8.1\\bin\\julia.exe');
       if (fs.existsSync(juliaPath)) store.set('JULIA-PATH', juliaPath);
     }
     if (!store.has('PLUTO-PRECOMPILED')) {
@@ -142,8 +151,8 @@ const createWindow = async (
       height: 600,
       width: 800,
       resizable: true,
-      darkTheme: true,
       show: true,
+      backgroundColor: nativeTheme.shouldUseDarkColors ? '#1F1F1F' : 'white',
       icon: getAssetPath('icon.png'),
       webPreferences: {
         preload: app.isPackaged
@@ -190,8 +199,8 @@ const createWindow = async (
       generalLogger.verbose('Window', currWindow.id, 'moved to page:', title);
       if (currWindow?.webContents.getTitle().includes('index.html')) return;
       const pageUrl = new URL(currWindow!.webContents.getURL());
-      const hasId = pageUrl.searchParams.has('id');
-      if (first || hasId) {
+      const isPluto = pageUrl.href.includes('localhost:');
+      if (first || isPluto) {
         first = false;
         currWindow?.setMenuBarVisibility(true);
         menuBuilder.buildMenu();
@@ -225,6 +234,8 @@ app.on('window-all-closed', () => {
 });
 
 app.on('open-file', async (_event, file) => {
+  _event.preventDefault();
+  console.log(file);
   await createWindow(undefined, undefined, file, false);
 });
 
@@ -240,7 +251,7 @@ app
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the
       // dock icon is clicked and there are no other windows open.
-      if (mainWindow === null) createWindow();
+      if (!mainWindow) createWindow();
     });
     app.on('will-quit', () => {
       Pluto.close();

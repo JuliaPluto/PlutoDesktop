@@ -17,7 +17,7 @@ const Loading = () => {
     <div className="container">
       <TailSpin
         ariaLabel="loading-indicator"
-        color="#e6e6e6"
+        wrapperClass="spinner"
         wrapperStyle={{ marginTop: message.length > 0 ? '1.5em' : '0' }}
       />
       {message.length > 0 && (
@@ -28,7 +28,6 @@ const Loading = () => {
             marginTop: '1.5em',
             textAlign: 'center',
             width: '100%',
-            color: '#c4c4c4',
           }}
         >
           {message}

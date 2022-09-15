@@ -10,13 +10,11 @@ Pkg.activate(Base.active_project());
 #     Pkg.add("Pluto")
 # end
 
-if haskey(Pkg.dependencies(), "Pluto")
-    Pkg.update(url="https://github.com/Illusion47586/Pluto.jl", rev="desktop-support")
-else
-    Pkg.add(url="https://github.com/Illusion47586/Pluto.jl", rev="desktop-support")
-end
+# if !haskey(Pkg.dependencies(), "Pluto")
+#     Pkg.add(url="https://github.com/Illusion47586/Pluto.jl", rev="desktop-support")
+# end
 
-Pkg.resolve();
+# Pkg.resolve();
 
 using Pluto;
 

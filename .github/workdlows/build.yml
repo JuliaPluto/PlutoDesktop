@@ -1,6 +1,11 @@
-name: Build/release
+name: Build/Release
 
-on: push
+on:
+  push:
+    branches:
+      - 'main'
+    tags:
+      - v.**
 
 jobs:
   release:
@@ -20,16 +25,17 @@ jobs:
           node-version: 16
 
       - uses: suisei-cn/actions-download-file@v1.0.1
-        id: downloadfile # Remember to give an ID if you need the output
-        name: Download the file
+        id: downloadFileWin64
+        name: Download the file for Win 64 build
         with:
-          url: 'The vendor we are using is [this](https://cdn.jsdelivr.net/npm/workbox-sw@5.1.3/build/workbox-sw.min.js)!'
+          url: 'The vendor we are using is [this](https://julialang-s3.julialang.org/bin/winnt/x64/1.8/julia-1.8.1-win64.zip)!'
           target: assets/
           auto-match: true
 
       - name: Build/release Electron app
         uses: samuelmeuli/action-electron-builder@v1
         with:
+          build_script_name: 'npm run package'
           # GitHub token, automatically provided to the action
           # (No need to define this secret in the repo settings)
           github_token: ${{ secrets.github_token }}
