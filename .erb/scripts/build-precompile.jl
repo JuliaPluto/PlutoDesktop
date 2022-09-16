@@ -1,6 +1,5 @@
 import Pkg;
 
-Pkg.add(url="https://github.com/Illusion47586/Pluto.jl", rev="desktop-support")
 Pkg.add("PackageCompiler")
 
 using PackageCompiler;
