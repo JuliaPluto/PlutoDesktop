@@ -28,11 +28,11 @@ jobs:
         id: downloadFileWin64
         name: Download the Julia portable zip for Win 64 build
         with:
-          url: 'The vendor we are using is [this](https://julialang-s3.julialang.org/bin/winnt/x64/1.8/julia-1.8.1-win64.zip)!'
+          url: 'Downloading Julia from [here](https://julialang-s3.julialang.org/bin/winnt/x64/1.8/julia-1.8.1-win64.zip)!'
           target: assets/
           auto-match: true
 
-      - name: Build/release Electron app
+      - name: Build/Release PlutoDesktop
         uses: samuelmeuli/action-electron-builder@v1
         with:
           build_script_name: 'npm run package'

@@ -31,19 +31,31 @@ exports.default = async (context) => {
   await unzip(zip, { dir: assetPath });
   spinner1.stop();
   console.log();
+
   console.log(chalk.grey('\tDeleting old image'));
   const IMAGE_PATH = path.join(assetPath, 'pluto-sysimage.so');
-  const STATEMENT_FILE = path.join(assetPath, 'pluto_precompile.jl');
-  const SCRIPT_FILE = path.join(__dirname, 'build-precompile.jl');
   rimraf.sync(IMAGE_PATH, {
     recursive: true,
     force: true,
   });
+
+  const STATEMENT_FILE = path.join(assetPath, 'pluto_precompile.jl');
+  const SCRIPT_FILE = path.join(__dirname, 'build-precompile.jl');
+  const TRACE_FILE_CREATER = path.join(__dirname, 'create-tracefile.jl');
+
+  console.log(chalk.grey('\tGenerating trace file...'));
+  const CREATE_TRACEFILE = `${path.join(
+    assetPath,
+    'julia-1.8.1\\bin\\julia.exe'
+  )} ${TRACE_FILE_CREATER} --trace-compile=${STATEMENT_FILE}`;
+  execSync(CREATE_TRACEFILE);
+
   console.log(chalk.grey('\tPrecompiling...'));
   const cmd = `${path.join(
     assetPath,
     'julia-1.8.1\\bin\\julia.exe'
   )} ${SCRIPT_FILE} ${IMAGE_PATH} ${STATEMENT_FILE}`;
   execSync(cmd);
+
   console.log(chalk.green('\tPrecompilation successful.'));
 };
