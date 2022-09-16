@@ -26,7 +26,7 @@ jobs:
 
       - uses: suisei-cn/actions-download-file@v1.0.1
         id: downloadFileWin64
-        name: Download the file for Win 64 build
+        name: Download the Julia portable zip for Win 64 build
         with:
           url: 'The vendor we are using is [this](https://julialang-s3.julialang.org/bin/winnt/x64/1.8/julia-1.8.1-win64.zip)!'
           target: assets/
