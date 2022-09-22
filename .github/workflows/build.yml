@@ -22,15 +22,7 @@ jobs:
       - name: Install Node.js, NPM and Yarn
         uses: actions/setup-node@v1
         with:
-          node-version: 16
-
-      - uses: suisei-cn/actions-download-file@v1.0.1
-        id: downloadFileWin64
-        name: Download the Julia portable zip for Win 64 build
-        with:
-          url: 'Downloading Julia from [here](https://julialang-s3.julialang.org/bin/winnt/x64/1.8/julia-1.8.1-win64.zip)!'
-          target: assets/
-          auto-match: true
+          node-version: 18
 
       - name: Build/Release PlutoDesktop
         uses: samuelmeuli/action-electron-builder@v1

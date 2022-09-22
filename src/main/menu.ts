@@ -256,13 +256,6 @@ export default class MenuBuilder {
               shell.openExternal(url);
             },
           },
-          {
-            label: '&Close',
-            accelerator: 'Ctrl+W',
-            click: () => {
-              this.mainWindow.close();
-            },
-          },
         ],
       },
       {
@@ -321,6 +314,21 @@ export default class MenuBuilder {
     ];
 
     if (this.showExport()) {
+      templateDefault[0].submenu.push({
+        label: 'Reveal in File Explorer',
+        accelerator: 'Shift+Alt+R',
+        click: async () => {
+          this.executeIfID(async (id) => {
+            const res = await Pluto.notebook.getFile(id);
+            if (res) shell.showItemInFolder(res);
+            else
+              dialog.showErrorBox(
+                'FILE NOT FOUND',
+                'The file you are looking for was not found on local system.'
+              );
+          });
+        },
+      });
       templateDefault.push({
         label: 'Export',
         submenu: [
@@ -351,6 +359,14 @@ export default class MenuBuilder {
         ],
       });
     }
+
+    templateDefault[0].submenu.push({
+      label: '&Close',
+      accelerator: 'Ctrl+W',
+      click: async () => {
+        this.mainWindow.close();
+      },
+    });
 
     return templateDefault;
   }

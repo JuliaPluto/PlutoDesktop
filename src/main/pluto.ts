@@ -328,10 +328,12 @@ class Pluto {
         fs.existsSync(store.get('PLUTO-PRECOMPILED'))
       )
         options.push(`--sysimage=${store.get('PLUTO-PRECOMPILED')}`);
-      else
-        options.push(
-          `--trace-compile=${this.getAssetPath('pluto_precompile.jl')}`
-        );
+      else {
+        const STATEMENT_FILE = this.getAssetPath('pluto_precompile.jl');
+        if (fs.existsSync(STATEMENT_FILE)) fs.rmSync(STATEMENT_FILE);
+        fs.writeFileSync(STATEMENT_FILE, '');
+        options.push(`--trace-compile=${STATEMENT_FILE}`);
+      }
     }
     if (
       process.env.DEBUG_PROJECT_PATH ||
@@ -771,6 +773,52 @@ class Pluto {
   };
 
   /**
+   * Very similar to `checkNotebook`, but instead of returning
+   * if for given location, it returns location for given id.
+   * @param key Id of the file
+   * @returns File location string if found, else false or undefined
+   */
+  private static getFileLocation = async (key: string) => {
+    let result: string | boolean = false;
+
+    try {
+      if (!this.url) {
+        dialog.showErrorBox(
+          'Pluto not intialized',
+          'Please wait for pluto to initialize first'
+        );
+        return;
+      }
+
+      const res = await axios.get('notebooklist', {
+        responseType: 'arraybuffer',
+        params: {
+          secret: Pluto.url?.secret,
+        },
+      });
+
+      if (res.status === 200) {
+        this.notebookManager = new NotebookManager(
+          decodeMapFromBuffer(res.data)
+        );
+        if (this.notebookManager.hasId(key)) {
+          const temp = this.notebookManager.getFile(key)!;
+          if (isExtMatch(temp)) {
+            result = temp;
+          }
+        }
+      } else {
+        dialog.showErrorBox(res.statusText, res.data);
+      }
+    } catch (error: { message: string } | any) {
+      generalLogger.error('PLUTO-CHECK-NOTEBOOK-ERROR', error);
+    }
+
+    // eslint-disable-next-line consistent-return
+    return result;
+  };
+
+  /**
    * @param file location/url of the file
    * @returns id of the file if notebookManager is there
    * and has the file in its data
@@ -790,6 +838,7 @@ class Pluto {
     move: this.moveNotebook,
     shutdown: this.shutdownNotebook,
     getId: this.getId,
+    getFile: this.getFileLocation,
   };
 
   /**
