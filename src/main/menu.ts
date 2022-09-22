@@ -316,7 +316,7 @@ export default class MenuBuilder {
     if (this.showExport()) {
       templateDefault[0].submenu.push({
         label: 'Reveal in File Explorer',
-        accelerator: 'Ctrl+P',
+        accelerator: 'Shift+Alt+R',
         click: async () => {
           this.executeIfID(async (id) => {
             const res = await Pluto.notebook.getFile(id);
