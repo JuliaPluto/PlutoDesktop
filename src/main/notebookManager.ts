@@ -9,8 +9,11 @@
 class NotebookManager {
   private fileToId: Map<string, string> = new Map<string, string>();
 
+  private idToFile: Map<string, string> = new Map<string, string>();
+
   constructor(data: Record<string, string>) {
     Object.keys(data).forEach((k) => this.add(data[k], k));
+    this.printData();
   }
 
   remove = (filePath: string) => {
@@ -21,11 +24,16 @@ class NotebookManager {
 
   add = (file: string, id: string) => {
     this.fileToId.set(file, id);
+    this.idToFile.set(id, file);
   };
 
   hasFile = (file: string) => this.fileToId.has(file);
 
   getId = (file: string) => this.fileToId.get(file);
+
+  hasId = (id: string) => this.idToFile.has(id);
+
+  getFile = (id: string) => this.idToFile.get(id);
 
   printData = () => {
     console.log('Current NotebookManager Status');
