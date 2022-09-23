@@ -1,4 +1,5 @@
 # Pluto Desktop
+[![Build/Release](https://github.com/JuliaPluto/PlutoDesktop/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/JuliaPluto/PlutoDesktop/actions/workflows/build.yml)
 
 All included one stop solution to run [Pluto](https://github.com/fonsp/Pluto.jl) notebooks. Just install this and get going!
 Abstracts and automates the following processes:
