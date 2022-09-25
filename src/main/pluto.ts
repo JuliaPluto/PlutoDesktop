@@ -633,7 +633,10 @@ class Pluto {
           generalLogger.info(`File ${id} has been shutdown.`);
           if (!window.isDestroyed()) window.loadURL(Pluto.url!.url);
         } else {
-          dialog.showErrorBox(res.statusText, res.data);
+          dialog.showErrorBox(
+            'PLUTO-FILE-SHUTDOWN-ERROR',
+            'Could not shutdown file for some reason'
+          );
         }
       }
     } catch (error: { message: string } | any) {
