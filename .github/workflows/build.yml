@@ -11,7 +11,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [windows-latest, windows-2019]
 
     steps:
       - name: Check out Git repository
@@ -24,27 +24,26 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Run electron-builder
         run: npm run package
-        
+
       - name: Compress Portable Folder
         uses: vimtor/action-zip@v1
         with:
           files: .\release\build\win-unpacked
           dest: .\release\build\win-unpacked.zip
-      
+
       - name: List Artifacts
         run: ls
         working-directory: .\release\build
-        
+
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v3.1.0
         with:
+          name: Build Outputs
           path: |
             .\release\build\*.zip
             .\release\build\*.yml
             .\release\build\*.exe
             .\release\build\*.exe.*
-        
-        
