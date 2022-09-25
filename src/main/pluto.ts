@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import { app, BrowserWindow, dialog } from 'electron';
 import isDev from 'electron-is-dev';
 import unzip from 'extract-zip';
-import { exec, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import { join } from 'node:path';
 
@@ -12,6 +12,7 @@ import { generalLogger, juliaLogger } from './logger';
 import NotebookManager from './notebookManager';
 import { store, userStore } from './store';
 import {
+  askForAdminRights,
   decodeMapFromBuffer,
   isExtMatch,
   Loader,
@@ -91,23 +92,7 @@ class Pluto {
     }
 
     try {
-      if (!isDev)
-        exec('NET SESSION', (_error, _so, se) => {
-          if (se.length === 0) {
-            // admin
-          } else {
-            // no admin
-            dialog.showErrorBox(
-              'ADMIN PERMISSIONS NOT AVAILABLE',
-              'System image not available, to create it the application needs admin privileges. Please close the app and run again using right clicking and using "Run as administrator".'
-            );
-            generalLogger.error(
-              'PERMISSION-NOT-GRANTED',
-              "Can't create system image, permissions not granted."
-            );
-            app.quit();
-          }
-        });
+      askForAdminRights();
 
       const PRECOMPILE_SCRIPT_LOCATION = this.getAssetPath('precompile.jl');
       const SYSTIMAGE_LOCATION = this.getAssetPath('pluto-sysimage.so');
@@ -200,25 +185,11 @@ class Pluto {
     generalLogger.announce('Starting Julia installation');
 
     try {
-      // ask for permissions
-      if (!isDev)
-        exec('NET SESSION', (_error, _so, se) => {
-          if (se.length === 0) {
-            // admin
-            generalLogger.log('Admin permissions granted.');
-          } else {
-            // no admin
-            dialog.showErrorBox(
-              'ADMIN PERMISSIONS NOT AVAILABLE',
-              'Julia is not installed, to install it the application needs admin privileges. Please close the app and run again using right clicking and using "Run as administrator".'
-            );
-            generalLogger.error(
-              'PERMISSION-NOT-GRANTED',
-              "Can't install Julia, permissions not granted."
-            );
-            app.quit();
-          }
-        });
+      askForAdminRights({
+        errorTitle: 'ADMIN PERMISSIONS NOT AVAILABLE',
+        errorMessage:
+          'Julia is not installed, to install it the application needs admin privileges. Please close the app and run again using right clicking and using "Run as administrator".',
+      });
 
       this.win.webContents.send('pluto-url', 'Installing Julia');
       const files = fs.readdirSync(this.getAssetPath('.'));
@@ -332,6 +303,7 @@ class Pluto {
         const STATEMENT_FILE = this.getAssetPath('pluto_precompile.jl');
         if (fs.existsSync(STATEMENT_FILE)) fs.rmSync(STATEMENT_FILE);
         fs.writeFileSync(STATEMENT_FILE, '');
+        askForAdminRights();
         options.push(`--trace-compile=${STATEMENT_FILE}`);
       }
     }

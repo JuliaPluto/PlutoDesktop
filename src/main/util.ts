@@ -1,11 +1,13 @@
 /* eslint import/no-mutable-exports: off */
 
 import axios from 'axios';
-import { BrowserWindow } from 'electron';
+import { app, BrowserWindow, dialog } from 'electron';
 import msgpack from 'msgpack-lite';
 import path from 'path';
 import { URL } from 'url';
+import isDev from 'electron-is-dev';
 
+import { exec } from 'child_process';
 import { generalLogger } from './logger';
 
 export let resolveHtmlPath: (htmlFileName: string) => string;
@@ -116,6 +118,32 @@ const decodeMapFromBuffer = (data: Buffer) => {
   return decodedData;
 };
 
+interface AskForAdminRightsParams {
+  errorTitle: string;
+  errorMessage: string;
+}
+
+const defaultAskForAdminRightsParams: AskForAdminRightsParams = {
+  errorTitle: 'ADMIN PERMISSIONS NOT AVAILABLE',
+  errorMessage:
+    'System image not available, to create it the application needs admin privileges. Please close the app and run again using right clicking and using "Run as administrator".',
+};
+
+const askForAdminRights = (
+  args: AskForAdminRightsParams = defaultAskForAdminRightsParams
+) => {
+  if (!isDev)
+    exec('NET SESSION', (_error, _so, se) => {
+      if (se.length === 0) {
+        // admin
+      } else {
+        // no admin
+        dialog.showErrorBox(args.errorTitle, args.errorMessage);
+        app.quit();
+      }
+    });
+};
+
 export {
   isExtMatch,
   PLUTO_FILE_EXTENSIONS,
@@ -124,4 +152,5 @@ export {
   isUrlOrPath,
   setAxiosDefaults,
   decodeMapFromBuffer,
+  askForAdminRights,
 };
