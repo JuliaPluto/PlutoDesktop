@@ -18,6 +18,9 @@ const store = new Store<SettingsStore>({
     '0.0.3': (s) => {
       s.clear();
     },
+    '0.1.0': (s) => {
+      s.clear();
+    },
   },
 });
 
