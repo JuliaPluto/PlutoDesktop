@@ -1,5 +1,5 @@
 # Contribution Guidelines
-
+This project is linked to the [Pluto.jl project](https://github.com/fonsp/Pluto.jl), please refer to its [contribution guidelines](https://github.com/fonsp/Pluto.jl/blob/main/CONTRIBUTING.md) as well.
 ## Development setup
 Just a couple of steps!
 - Fork this repo
