@@ -92,13 +92,22 @@ class Pluto {
     }
 
     try {
-      askForAdminRights();
+      // askForAdminRights();
 
       const PRECOMPILE_SCRIPT_LOCATION = this.getAssetPath('precompile.jl');
-      const SYSTIMAGE_LOCATION = this.getAssetPath('pluto-sysimage.so');
-      const PRECOMPILED_PLUTO_OUTPUT_LOCATION = this.getAssetPath(
+      // const SYSTIMAGE_LOCATION = this.getAssetPath('pluto-sysimage.so');
+      // const PRECOMPILED_PLUTO_OUTPUT_LOCATION = this.getAssetPath(
+      //   'pluto_precompile.jl'
+      // );
+      const SYSTIMAGE_LOCATION = join(
+        app.getPath('userData'),
+        'pluto-sysimage.so'
+      );
+      const PRECOMPILED_PLUTO_OUTPUT_LOCATION = join(
+        app.getPath('userData'),
         'pluto_precompile.jl'
       );
+      fs.writeFileSync(PRECOMPILED_PLUTO_OUTPUT_LOCATION, '');
       generalLogger.info(chalk.yellow.bold('Trying to precompile Pluto.'));
       dialog.showMessageBox(this.win, {
         title: 'Precompiling Pluto',
@@ -300,10 +309,12 @@ class Pluto {
       )
         options.push(`--sysimage=${store.get('PLUTO-PRECOMPILED')}`);
       else {
-        const STATEMENT_FILE = this.getAssetPath('pluto_precompile.jl');
-        if (fs.existsSync(STATEMENT_FILE)) fs.rmSync(STATEMENT_FILE);
+        const STATEMENT_FILE = join(
+          app.getPath('userData'),
+          'pluto_precompile.jl'
+        );
         fs.writeFileSync(STATEMENT_FILE, '');
-        askForAdminRights();
+        // askForAdminRights();
         options.push(`--trace-compile=${STATEMENT_FILE}`);
       }
     }

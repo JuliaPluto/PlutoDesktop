@@ -84,35 +84,35 @@ exports.default = async (context) => {
   await unzip(zip, { dir: assetPath });
   spinner1.success({ text: '\tExtracted!', mark: '✓' });
 
-  const spinner2 = createSpinner('\tDeleting old system image').start();
-  const IMAGE_PATH = path.join(assetPath, 'pluto-sysimage.so');
-  rimraf.sync(IMAGE_PATH, {
-    recursive: true,
-    force: true,
-  });
-  spinner2.success({ text: '\tDeleted old system image', mark: '✓' });
+  // const spinner2 = createSpinner('\tDeleting old system image').start();
+  // const IMAGE_PATH = path.join(assetPath, 'pluto-sysimage.so');
+  // rimraf.sync(IMAGE_PATH, {
+  //   recursive: true,
+  //   force: true,
+  // });
+  // spinner2.success({ text: '\tDeleted old system image', mark: '✓' });
 
-  const STATEMENT_FILE = path.join(assetPath, 'pluto_precompile.jl');
-  const SCRIPT_FILE = path.join(__dirname, 'build-precompile.jl');
-  const TRACE_FILE_CREATER = path.join(__dirname, 'create-tracefile.jl');
+  // const STATEMENT_FILE = path.join(assetPath, 'pluto_precompile.jl');
+  // const SCRIPT_FILE = path.join(__dirname, 'build-precompile.jl');
+  // const TRACE_FILE_CREATER = path.join(__dirname, 'create-tracefile.jl');
 
-  const spinner3 = createSpinner('\tGenerating trace file...').start();
-  if (fs.existsSync(STATEMENT_FILE)) fs.rmSync(STATEMENT_FILE);
-  fs.writeFileSync(STATEMENT_FILE, '');
+  // const spinner3 = createSpinner('\tGenerating trace file...').start();
+  // if (fs.existsSync(STATEMENT_FILE)) fs.rmSync(STATEMENT_FILE);
+  // fs.writeFileSync(STATEMENT_FILE, '');
 
-  const CREATE_TRACEFILE = `${path.join(
-    assetPath,
-    'julia-1.8.1\\bin\\julia.exe'
-  )} --trace-compile=${STATEMENT_FILE} ${TRACE_FILE_CREATER}`;
-  // console.log(chalk.grey(CREATE_TRACEFILE));
-  execSync(CREATE_TRACEFILE);
-  spinner3.success({ text: '\tGenerated trace file', mark: '✓' });
+  // const CREATE_TRACEFILE = `${path.join(
+  //   assetPath,
+  //   'julia-1.8.1\\bin\\julia.exe'
+  // )} --trace-compile=${STATEMENT_FILE} ${TRACE_FILE_CREATER}`;
+  // // console.log(chalk.grey(CREATE_TRACEFILE));
+  // execSync(CREATE_TRACEFILE);
+  // spinner3.success({ text: '\tGenerated trace file', mark: '✓' });
 
-  const spinner4 = createSpinner('\tProcompiling...').start();
-  const cmd = `${path.join(
-    assetPath,
-    'julia-1.8.1\\bin\\julia.exe'
-  )} ${SCRIPT_FILE} ${IMAGE_PATH} ${STATEMENT_FILE}`;
-  execSync(cmd);
-  spinner4.success({ text: '\tPrecompilation successful', mark: '✓' });
+  // const spinner4 = createSpinner('\tProcompiling...').start();
+  // const cmd = `${path.join(
+  //   assetPath,
+  //   'julia-1.8.1\\bin\\julia.exe'
+  // )} ${SCRIPT_FILE} ${IMAGE_PATH} ${STATEMENT_FILE}`;
+  // execSync(cmd);
+  // spinner4.success({ text: '\tPrecompilation successful', mark: '✓' });
 };

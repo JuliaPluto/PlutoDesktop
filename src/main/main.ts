@@ -22,7 +22,7 @@ import {
 import { autoUpdater } from 'electron-updater';
 import fs from 'fs';
 import { release } from 'os';
-import path from 'path';
+import path, { join } from 'path';
 
 // import { Deeplink } from 'electron-deeplink';
 // import * as isDev from 'electron-is-dev';
@@ -100,7 +100,7 @@ const createWindow = async (
       if (fs.existsSync(juliaPath)) store.set('JULIA-PATH', juliaPath);
     }
     if (!store.has('PLUTO-PRECOMPILED')) {
-      const imagePath = getAssetPath('pluto-sysimage.so');
+      const imagePath = join(app.getPath('userData'), 'pluto-sysimage.so');
       if (fs.existsSync(imagePath)) store.set('PLUTO-PRECOMPILED', imagePath);
     }
 
