@@ -1,4 +1,10 @@
 # Contribution Guidelines
+This project is linked to the [Pluto.jl project](https://github.com/fonsp/Pluto.jl), please refer to its [contribution guidelines](https://github.com/fonsp/Pluto.jl/blob/main/CONTRIBUTING.md) as well.
+
+## Prequisites
+- Download and install [NodeJS](https://nodejs.org/en/) from [here](https://nodejs.org/en/download/).
+- Download latest Julia for Windows 64bit portable from [here](https://julialang.org/downloads/) and put in the assets folder.
+- Currently we only support systems running Windows OS.
 
 ## Development setup
 Just a couple of steps!
@@ -12,10 +18,10 @@ Just a couple of steps!
 
 ## How to build?
 A few things to consider:
+- NodeJS and npm should be present on your computer
 - There should be a julia-{some version}.zip file in the assets folder when you try to build it
-- As of now, generating a system image is not a part of the build process, so you need to run the application once so it can generate one
-- Building without a system image would work perfectly fine, only difference is that now the image would be generated on the system of the installer
-There is just one command: `npm run package` and it should create a build in the release/build folder.
+
+Try running `build.sh` or `build.ps1` present in this repo, or do `npm i` and then `npm run package`. Either of those options should provide you with an installer execuatble in release/build folder.
 
 ## Contributing
 See if there already exists and issue or an open PR against the issue you are trying to solve. If there isn't any, create a new issue.

@@ -2,8 +2,15 @@ name: Build/Release
 
 on:
   push:
+    paths-ignore:
+      - '**/*.md'
+      - '.github/**'
+  pull_request:
     branches:
       - 'main'
+    paths-ignore:
+      - '**/*.md'
+      - '.github/**'
 
 jobs:
   release:
@@ -11,7 +18,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [windows-latest, windows-2019]
+        os: [windows-latest]
 
     steps:
       - name: Check out Git repository
@@ -24,6 +31,14 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        
+      - uses: suisei-cn/actions-download-file@v1.0.1
+        id: downloadFileWin64
+        name: Download the Julia portable zip for Win 64 build
+        with:
+          url: 'Downloading Julia from [here](https://julialang-s3.julialang.org/bin/winnt/x64/1.8/julia-1.8.1-win64.zip)!'
+          target: assets/
+          auto-match: true
 
       - name: Run electron-builder
         run: npm run package
