@@ -3,6 +3,7 @@ This project is linked to the [Pluto.jl project](https://github.com/fonsp/Pluto.
 
 ## Prequisites
 - Download and install [NodeJS](https://nodejs.org/en/) from [here](https://nodejs.org/en/download/).
+- Currently we only support systems running Windows OS.
 
 ## Development setup
 Just a couple of steps!
