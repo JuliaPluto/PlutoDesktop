@@ -10,6 +10,7 @@ declare module 'electron-log' {
   }
 }
 
+// globally available types
 declare global {
   type Modify<T, R> = Omit<T, keyof R> & R;
 
