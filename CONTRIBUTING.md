@@ -14,6 +14,7 @@ Just a couple of steps!
 ## How to build?
 A few things to consider:
 - There should be a julia-{some version}.zip file in the assets folder when you try to build it
+
 There is just one command: `npm run package` and it should create a build in the release/build folder.
 
 ## Contributing
