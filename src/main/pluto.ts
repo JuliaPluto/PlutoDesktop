@@ -92,16 +92,10 @@ class Pluto {
     }
 
     try {
-      // askForAdminRights();
-
       const PRECOMPILE_SCRIPT_LOCATION = this.getAssetPath('precompile.jl');
-      // const SYSTIMAGE_LOCATION = this.getAssetPath('pluto-sysimage.so');
-      // const PRECOMPILED_PLUTO_OUTPUT_LOCATION = this.getAssetPath(
-      //   'pluto_precompile.jl'
-      // );
       const SYSTIMAGE_LOCATION = join(
         app.getPath('userData'),
-        'pluto-sysimage.so'
+        'pluto-sysimage-v0.1.0-beta.so'
       );
       const PRECOMPILED_PLUTO_OUTPUT_LOCATION = join(
         app.getPath('userData'),

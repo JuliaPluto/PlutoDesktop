@@ -4,17 +4,11 @@ Logging.global_logger(Logging.ConsoleLogger(stdout));
 
 Pkg.activate(Base.active_project());
 
-# if haskey(Pkg.dependencies(), "Pluto")
-#     Pkg.update("Pluto")
-# else
-#     Pkg.add("Pluto")
-# end
-
-# if !haskey(Pkg.dependencies(), "Pluto")
-#     Pkg.add(url="https://github.com/Illusion47586/Pluto.jl", rev="desktop-support")
-# end
-
-# Pkg.resolve();
+if haskey(Pkg.dependencies(), "Pluto")
+    Pkg.add(url="https://github.com/fonsp/Pluto.jl", rev="main")
+else
+    Pkg.add(url="https://github.com/fonsp/Pluto.jl", rev="main")
+end
 
 using Pluto;
 
