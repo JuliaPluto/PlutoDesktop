@@ -2,7 +2,7 @@ import Pkg;
 Pkg.add("PackageCompiler");
 
 if !haskey(Pkg.dependencies(), "Pluto")
-    Pkg.add(url="https://github.com/Illusion47586/Pluto.jl", rev="desktop-support")
+    Pkg.add(url="https://github.com/fonsp/Pluto.jl", rev="main")
 end
 import Pluto;
 

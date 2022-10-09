@@ -100,7 +100,10 @@ const createWindow = async (
       if (fs.existsSync(juliaPath)) store.set('JULIA-PATH', juliaPath);
     }
     if (!store.has('PLUTO-PRECOMPILED')) {
-      const imagePath = join(app.getPath('userData'), 'pluto-sysimage.so');
+      const imagePath = join(
+        app.getPath('userData'),
+        'pluto-sysimage-v0.1.0-beta.so'
+      );
       if (fs.existsSync(imagePath)) store.set('PLUTO-PRECOMPILED', imagePath);
     }
 
