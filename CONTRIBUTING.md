@@ -1,8 +1,11 @@
 # Contribution Guidelines
 This project is linked to the [Pluto.jl project](https://github.com/fonsp/Pluto.jl), please refer to its [contribution guidelines](https://github.com/fonsp/Pluto.jl/blob/main/CONTRIBUTING.md) as well.
+
+## Prequisites
+- Download and install [NodeJS](https://nodejs.org/en/) from [here](https://nodejs.org/en/download/).
+
 ## Development setup
 Just a couple of steps!
-- Download and install [NodeJS](https://nodejs.org/en/) from [here](https://nodejs.org/en/download/).
 - Fork this repo
 - Create your branch with appropriate name (Ex. feat/win32-support)
 - Clone it to your machine
