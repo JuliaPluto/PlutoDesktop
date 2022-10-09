@@ -7,7 +7,7 @@ Abstracts and automates the following processes:
 - Installing Julia (comes with its own binary)
 - Installing Pluto
 - Running Pluto
-- Creating a system image for better performance (comes with its own system image)
+- Creating a system image for better performance
 
 ![image](https://user-images.githubusercontent.com/51574716/188322175-1e04ec0e-b18c-4745-a2e8-4c3abaecbc79.png)
 
