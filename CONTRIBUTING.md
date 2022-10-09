@@ -13,9 +13,10 @@ Just a couple of steps!
 
 ## How to build?
 A few things to consider:
+- NodeJS and npm should be present on your computer
 - There should be a julia-{some version}.zip file in the assets folder when you try to build it
 
-There is just one command: `npm run package` and it should create a build in the release/build folder.
+Try running `build.sh` or `build.ps1` present in this repo, or do `npm i` and then `npm run package`. Either of those options should provide you with an installer execuatble in release/build folder.
 
 ## Contributing
 See if there already exists and issue or an open PR against the issue you are trying to solve. If there isn't any, create a new issue.
