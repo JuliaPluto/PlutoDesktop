@@ -4,10 +4,8 @@ Logging.global_logger(Logging.ConsoleLogger(stdout));
 
 Pkg.activate(Base.active_project());
 
-if haskey(Pkg.dependencies(), "Pluto")
-    Pkg.add(url="https://github.com/fonsp/Pluto.jl", rev="main")
-else
-    Pkg.add(url="https://github.com/fonsp/Pluto.jl", rev="main")
+if !haskey(Pkg.dependencies(), "Pluto")
+    Pkg.add(name="Pluto", version="0.19.13")
 end
 
 using Pluto;
