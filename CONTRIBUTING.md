@@ -3,7 +3,7 @@ This project is linked to the [Pluto.jl project](https://github.com/fonsp/Pluto.
 
 ## Prequisites
 - Download and install [NodeJS](https://nodejs.org/en/) from [here](https://nodejs.org/en/download/).
-- Download latest Julia for Windows 64bit portable from [here](https://julialang.org/downloads/).
+- Download latest Julia for Windows 64bit portable from [here](https://julialang.org/downloads/) and put in the assets folder.
 - Currently we only support systems running Windows OS.
 
 ## Development setup
