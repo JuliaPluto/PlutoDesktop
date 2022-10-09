@@ -2,7 +2,7 @@ import Pkg;
 Pkg.add("PackageCompiler");
 
 if !haskey(Pkg.dependencies(), "Pluto")
-    Pkg.add(url="https://github.com/fonsp/Pluto.jl", rev="main")
+    Pkg.add(name="Pluto", version="0.19.13")
 end
 import Pluto;
 
