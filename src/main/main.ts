@@ -95,16 +95,10 @@ const createWindow = async (
       return path.join(RESOURCES_PATH, ...paths);
     };
 
+    // TODO: remove
     if (!store.has('JULIA-PATH')) {
       const juliaPath = getAssetPath('julia-1.8.1\\bin\\julia.exe');
       if (fs.existsSync(juliaPath)) store.set('JULIA-PATH', juliaPath);
-    }
-    if (!store.has('PLUTO-PRECOMPILED')) {
-      const imagePath = join(
-        app.getPath('userData'),
-        'pluto-sysimage-v0.1.0-beta.so'
-      );
-      if (fs.existsSync(imagePath)) store.set('PLUTO-PRECOMPILED', imagePath);
     }
 
     if (checkIfCalledViaCLI(process.argv)) {

@@ -31,9 +31,6 @@ class Pluto {
    */
   private win: BrowserWindow;
 
-  /**
-   * self-explanatory
-   */
   private getAssetPath: (...paths: string[]) => string;
 
   private static url: PlutoURL | null;
@@ -82,26 +79,25 @@ class Pluto {
       );
       return;
     }
+    const SYSTIMAGE_LOCATION = join(
+      app.getPath('userData'),
+      // TODO: auto version number
+      'pluto-sysimage-v0.1.0-beta.so'
+    );
 
-    if (
-      store.has('PLUTO-PRECOMPILED') &&
-      fs.existsSync(store.get('PLUTO-PRECOMPILED'))
-    ) {
+    if (fs.existsSync(SYSTIMAGE_LOCATION)) {
       generalLogger.silly('Already precompiled, so not precompiling.');
       return;
     }
 
     try {
       const PRECOMPILE_SCRIPT_LOCATION = this.getAssetPath('precompile.jl');
-      const SYSTIMAGE_LOCATION = join(
-        app.getPath('userData'),
-        'pluto-sysimage-v0.1.0-beta.so'
-      );
-      const PRECOMPILED_PLUTO_OUTPUT_LOCATION = join(
+      const PRECOMPILE_STATEMENTS_FILE_LOCATION = join(
         app.getPath('userData'),
         'pluto_precompile.jl'
       );
-      fs.writeFileSync(PRECOMPILED_PLUTO_OUTPUT_LOCATION, '');
+      fs.writeFileSync(PRECOMPILE_STATEMENTS_FILE_LOCATION, '');
+
       generalLogger.info(chalk.yellow.bold('Trying to precompile Pluto.'));
       dialog.showMessageBox(this.win, {
         title: 'Precompiling Pluto',
@@ -112,7 +108,7 @@ class Pluto {
         `--project=${this.project}`,
         PRECOMPILE_SCRIPT_LOCATION,
         SYSTIMAGE_LOCATION,
-        PRECOMPILED_PLUTO_OUTPUT_LOCATION,
+        PRECOMPILE_STATEMENTS_FILE_LOCATION,
       ]);
       generalLogger.verbose(
         'Executing Command:',
@@ -120,7 +116,7 @@ class Pluto {
         `--project=${this.project}`,
         PRECOMPILE_SCRIPT_LOCATION,
         SYSTIMAGE_LOCATION,
-        PRECOMPILED_PLUTO_OUTPUT_LOCATION
+        PRECOMPILE_STATEMENTS_FILE_LOCATION
       );
 
       res.stderr.on('data', (data: { toString: () => any }) => {
@@ -134,7 +130,6 @@ class Pluto {
             'Pluto has been precompiled to',
             SYSTIMAGE_LOCATION
           );
-          store.set('PLUTO-PRECOMPILED', SYSTIMAGE_LOCATION);
           dialog.showMessageBox(this.win, {
             title: 'Pluto has been precompiled',
             message: 'Pluto has been precompiled successfully.',
@@ -294,14 +289,16 @@ class Pluto {
       );
       return;
     }
+    const SYSTIMAGE_LOCATION = join(
+      app.getPath('userData'),
+      // TODO: auto version number
+      'pluto-sysimage-v0.1.0-beta.so'
+    );
 
     const options = [`--project=${this.project}`];
     if (!process.env.DEBUG_PROJECT_PATH) {
-      if (
-        store.has('PLUTO-PRECOMPILED') &&
-        fs.existsSync(store.get('PLUTO-PRECOMPILED'))
-      )
-        options.push(`--sysimage=${store.get('PLUTO-PRECOMPILED')}`);
+      if (fs.existsSync(SYSTIMAGE_LOCATION))
+        options.push(`--sysimage=${SYSTIMAGE_LOCATION}`);
       else {
         const STATEMENT_FILE = join(
           app.getPath('userData'),
@@ -312,11 +309,7 @@ class Pluto {
         options.push(`--trace-compile=${STATEMENT_FILE}`);
       }
     }
-    if (
-      process.env.DEBUG_PROJECT_PATH ||
-      (store.has('PLUTO-PRECOMPILED') &&
-        fs.existsSync(store.get('PLUTO-PRECOMPILED')))
-    )
+    if (process.env.DEBUG_PROJECT_PATH || fs.existsSync(SYSTIMAGE_LOCATION))
       options.push(this.getAssetPath('pluto_no_update.jl'));
     else options.push(this.getAssetPath('script.jl'));
     if (notebook) options.push(notebook);

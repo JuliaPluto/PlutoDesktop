@@ -29,8 +29,6 @@ npm-debug.log.*
 *.scss.d.ts
 
 # Julia
-*.toml
-project
 assets/julia*
 assets/pluto-sysimage.so
 assets/pluto_precompile.jl
