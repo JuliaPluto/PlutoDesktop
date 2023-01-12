@@ -36,7 +36,7 @@ jobs:
         id: downloadFileWin64
         name: Download the Julia portable zip for Win 64 build
         with:
-          url: 'Downloading Julia from [here](https://julialang-s3.julialang.org/bin/winnt/x64/1.8/julia-1.8.1-win64.zip)!'
+          url: 'Downloading Julia from [here](https://julialang-s3.julialang.org/bin/winnt/x64/1.8/julia-1.8.5-win64.zip)!'
           target: assets/
           auto-match: true
 
