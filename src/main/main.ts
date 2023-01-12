@@ -94,12 +94,6 @@ const createWindow = async (
       return path.join(RESOURCES_PATH, ...paths);
     };
 
-    // TODO: remove
-    if (!store.has('JULIA-PATH')) {
-      const juliaPath = getAssetPath('julia-1.8.1\\bin\\julia.exe');
-      if (fs.existsSync(juliaPath)) store.set('JULIA-PATH', juliaPath);
-    }
-
     if (checkIfCalledViaCLI(process.argv)) {
       const loc = arg._.length > 0 ? (arg._[0] as string) : undefined;
       const isPathOrURL = loc ? isUrlOrPath(loc) : 'none';

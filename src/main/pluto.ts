@@ -10,9 +10,7 @@ import { join } from 'node:path';
 import { PlutoExport } from '../../types/enums';
 import { generalLogger, juliaLogger } from './logger';
 import NotebookManager from './notebookManager';
-import { store } from './store';
 import {
-  askForAdminRights,
   decodeMapFromBuffer,
   isExtMatch,
   Loader,
@@ -67,8 +65,7 @@ class Pluto {
   }
 
   /**
-   * if Pluto.jl hasn't been precompiled already, it precompiles
-   * it and also checks for admin rights before doing that.
+   * if Pluto.jl hasn't been precompiled already, it precompiles it.
    * @returns nothing
    */
   private precompilePluto = async () => {
@@ -151,85 +148,17 @@ class Pluto {
     }
   };
 
-  /**
-   * * Checks for JULIA-PATH
-   * else looks for a zip to extract Julia
-   * * Extracts Julia from bundled zip
-   * * removes used zip for space saving
-   * @returns nothing
-   */
-  private extractJulia = async () => {
-    /**
-     * Prefer to use extracted folder
-     */
+  private findJulia = async () => {
+    const files = fs.readdirSync(this.getAssetPath('.'));
 
-    if (store.has('JULIA-PATH') && fs.existsSync(store.get('JULIA-PATH'))) {
-      Pluto.julia = store.get('JULIA-PATH');
-      return;
-    }
-
-    /**
-     * New Extraction
-     */
-
-    generalLogger.announce('Starting Julia installation');
-
-    try {
-      askForAdminRights({
-        errorTitle: 'ADMIN PERMISSIONS NOT AVAILABLE',
-        errorMessage:
-          'Julia is not installed, to install it the application needs admin privileges. Please close the app and run again using right clicking and using "Run as administrator".',
-      });
-
-      this.win.webContents.send('pluto-url', 'Installing Julia');
-      const files = fs.readdirSync(this.getAssetPath('.'));
-      const idx = files.findIndex(
-        (v) => v.startsWith('julia-') && v.endsWith('zip')
+    let julia_dir = files.find((s) => /^julia-\d+.\d+.\d+$/.test(s)) ?? `julia`;
+    if (julia_dir === `julia`) {
+      generalLogger.error(
+        "Couldn't find Julia in assets, falling back to the `julia` command."
       );
-      if (idx === -1) {
-        generalLogger.error('JULIA-INSTALL-ERROR', "Can't find Julia zip");
-        return;
-      }
-      let zip = files[idx];
-      const nameInitial = zip.replace('-win64.zip', '');
-      store.set('JULIA-VERSION', nameInitial.replace('julia-', ''));
-      this.win.webContents.send('pluto-url', `File found: ${zip}`);
-      generalLogger.log('File found:', zip);
-      zip = this.getAssetPath(zip);
-      const name = this.getAssetPath(nameInitial);
-      if (fs.existsSync(name)) {
-        this.win.webContents.send(
-          'pluto-url',
-          'Deleting already existing directory'
-        );
-        generalLogger.log('Deleting already existing directory');
-        fs.rmSync(name, { recursive: true, force: true });
-      }
-
-      this.win.webContents.send('pluto-url', 'Unzipping');
-      generalLogger.log('Unzipping');
-      await unzip(zip, { dir: this.getAssetPath('.') });
-      this.win.webContents.send('pluto-url', 'Unzipped');
-      generalLogger.log('Unzipped');
-      if (!isDev) {
-        this.win.webContents.send('pluto-url', 'Removing zip');
-        generalLogger.log('Removing zip');
-        fs.rm(zip, (e) => {
-          if (e) {
-            generalLogger.error(e);
-          }
-        });
-        this.win.webContents.send('pluto-url', 'Zip removed');
-        generalLogger.log('Zip removed');
-      }
-      const finalPath = this.getAssetPath(join(nameInitial, '/bin/julia.exe'));
-      store.set('JULIA-PATH', finalPath);
-      Pluto.julia = finalPath;
-      generalLogger.announce(`Julia installed at: ${finalPath}`);
-      this.win.webContents.send('pluto-url', 'Julia Successfully Installed.');
-    } catch (error) {
-      generalLogger.error('JULIA-INSTALL-ERROR', error);
     }
+    Pluto.julia = julia_dir;
+    return julia_dir;
   };
 
   /**
@@ -255,7 +184,7 @@ class Pluto {
       return;
     }
 
-    await this.extractJulia();
+    await this.findJulia();
 
     generalLogger.log(`Julia found at: ${Pluto.julia}`);
 
@@ -274,13 +203,6 @@ class Pluto {
       notebook
     );
 
-    if (!store.has('JULIA-PATH')) {
-      dialog.showErrorBox(
-        'JULIA NOT FOUND',
-        'Please download latest julia win64 portable zip and place it in the assets folder.'
-      );
-      return;
-    }
     const SYSTIMAGE_LOCATION = join(
       app.getPath('userData'),
       // TODO: auto version number
@@ -297,7 +219,6 @@ class Pluto {
           'pluto_precompile.jl'
         );
         fs.writeFileSync(STATEMENT_FILE, '');
-        // askForAdminRights();
         options.push(`--trace-compile=${STATEMENT_FILE}`);
       }
     }
