@@ -1,6 +1,4 @@
-import { app, BrowserWindow, dialog } from 'electron';
 import Store from 'electron-store';
-import fs from 'fs';
 
 /**
  * This store contains all the internal config data.

@@ -1,8 +1,6 @@
 import axios from 'axios';
 import chalk from 'chalk';
 import { app, BrowserWindow, dialog } from 'electron';
-import isDev from 'electron-is-dev';
-import unzip from 'extract-zip';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import { join } from 'node:path';
@@ -63,90 +61,6 @@ class Pluto {
     this.project = Pluto.getProjectPath(project);
     Pluto.url ??= null;
   }
-
-  /**
-   * if Pluto.jl hasn't been precompiled already, it precompiles it.
-   * @returns nothing
-   */
-  private precompilePluto = async () => {
-    if (process.env.DEBUG_PROJECT_PATH) {
-      generalLogger.silly(
-        'Not precompiling because currently using',
-        process.env.DEBUG_PROJECT_PATH
-      );
-      return;
-    }
-    const SYSTIMAGE_LOCATION = join(
-      app.getPath('userData'),
-      // TODO: auto version number
-      'pluto-sysimage-v0.1.0-beta.so'
-    );
-
-    if (fs.existsSync(SYSTIMAGE_LOCATION)) {
-      generalLogger.silly('Already precompiled, so not precompiling.');
-      return;
-    }
-
-    try {
-      const PRECOMPILE_SCRIPT_LOCATION = this.getAssetPath('precompile.jl');
-      const PRECOMPILE_STATEMENTS_FILE_LOCATION = join(
-        app.getPath('userData'),
-        'pluto_precompile.jl'
-      );
-      fs.writeFileSync(PRECOMPILE_STATEMENTS_FILE_LOCATION, '');
-
-      generalLogger.info(chalk.yellow.bold('Trying to precompile Pluto.'));
-      dialog.showMessageBox(this.win, {
-        title: 'Precompiling Pluto',
-        message:
-          "Trying to precompile Pluto in the background, you'll be prompted when it is done. Once completed it will decrease the load time for further usage.\nThis is a one time process.",
-      });
-      const res = spawn(Pluto.julia, [
-        `--project=${this.project}`,
-        PRECOMPILE_SCRIPT_LOCATION,
-        SYSTIMAGE_LOCATION,
-        PRECOMPILE_STATEMENTS_FILE_LOCATION,
-      ]);
-      generalLogger.verbose(
-        'Executing Command:',
-        Pluto.julia,
-        `--project=${this.project}`,
-        PRECOMPILE_SCRIPT_LOCATION,
-        SYSTIMAGE_LOCATION,
-        PRECOMPILE_STATEMENTS_FILE_LOCATION
-      );
-
-      res.stderr.on('data', (data: { toString: () => any }) => {
-        const plutoLog = data.toString();
-        juliaLogger.log(plutoLog);
-      });
-
-      res.once('close', (code) => {
-        if (code === 0) {
-          generalLogger.info(
-            'Pluto has been precompiled to',
-            SYSTIMAGE_LOCATION
-          );
-          dialog.showMessageBox(this.win, {
-            title: 'Pluto has been precompiled',
-            message: 'Pluto has been precompiled successfully.',
-          });
-        } else {
-          generalLogger.error(
-            'PLUTO-PRECOMPILE-ERROR',
-            'Failed with error code',
-            code
-          );
-          dialog.showErrorBox(
-            'PLUTO-PRECOMPILE-ERROR',
-            `Failed with error code ${code}.`
-          );
-        }
-      });
-    } catch (error) {
-      generalLogger.error('PLUTO-PRECOMPLIE-ERROR', error);
-    }
-  };
 
   private findJulia = async () => {
     const files = fs.readdirSync(this.getAssetPath('.'));
@@ -259,8 +173,6 @@ class Pluto {
             this.win.loadURL(entryUrl);
 
             generalLogger.announce('Entry url found:', Pluto.url);
-
-            this.precompilePluto();
           }
         }
         juliaLogger.log(plutoLog);

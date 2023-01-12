@@ -1,11 +1,13 @@
 const process = require('process');
+const { spawn } = require('node:child_process');
 const path = require('node:path');
-const fs = require('fs');
+const fs = require('node:fs');
 const unzip = require('extract-zip');
 const chalk = require('chalk');
 const { execSync } = require('child_process');
 const { createSpinner } = require('nanospinner');
 const { default: axios } = require('axios');
+const { exit } = require('process');
 
 const assetPath = path.join(__dirname, '../..', 'assets');
 
@@ -55,6 +57,45 @@ const downloadJulia = async () => {
   });
 };
 
+const precompilePluto = async ({ julia_path }) => {
+  const SYSTIMAGE_LOCATION = path.join(
+    assetPath,
+    // TODO: auto version number
+    'pluto-sysimage.so'
+  );
+
+  const PRECOMPILE_SCRIPT_LOCATION = path.join(assetPath, 'precompile.jl');
+  const PRECOMPILE_STATEMENTS_FILE_LOCATION = path.join(
+    assetPath,
+    'pluto_precompile.jl'
+  );
+  fs.writeFileSync(PRECOMPILE_STATEMENTS_FILE_LOCATION, '');
+
+  const res = spawn(julia_path, [
+    `--project=${this.project}`,
+    PRECOMPILE_SCRIPT_LOCATION,
+    SYSTIMAGE_LOCATION,
+    PRECOMPILE_STATEMENTS_FILE_LOCATION,
+  ]);
+
+  res.stderr.on('data', (data: { toString: () => any }) => {
+    const plutoLog = data.toString();
+    console.log(plutoLog);
+  });
+
+  await new Promise((resolve) => {
+    res.once('close', (code) => {
+      if (code === 0) {
+        console.info('Pluto has been precompiled to', SYSTIMAGE_LOCATION);
+      } else {
+        console.error('Pluto precompile failed');
+        exit(code);
+      }
+      resolve();
+    });
+  });
+};
+
 exports.default = async (context) => {
   let files = fs.readdirSync(assetPath);
 
@@ -76,6 +117,10 @@ exports.default = async (context) => {
   const spinner1 = createSpinner(`\tExtracting: ${ZIP_NAME}`).start();
   await unzip(path.join(assetPath, ZIP_NAME), { dir: assetPath });
   spinner1.success({ text: '\tExtracted!', mark: '✓' });
+
+  await precompilePluto({
+    julia_path: path.join(assetPath, JULIA_DIR_NAME, 'bin', 'julia.exe'),
+  });
 
   // const spinner2 = createSpinner('\tDeleting old system image').start();
   // const IMAGE_PATH = path.join(assetPath, 'pluto-sysimage.so');
