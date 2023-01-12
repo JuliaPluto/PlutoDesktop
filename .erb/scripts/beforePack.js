@@ -10,14 +10,17 @@ const { default: axios } = require('axios');
 
 const assetPath = path.join(__dirname, '../..', 'assets');
 
-const JULIA_URL =
-  'https://julialang-s3.julialang.org/bin/winnt/x64/1.8/julia-1.8.1-win64.zip';
+const JULIA_VERSION_PARTS = [1, 8, 5];
+const JULIA_VERSION = JULIA_VERSION_PARTS.join('.');
+const JULIA_VERSION_M = JULIA_VERSION_PARTS.slice(0, 2).join('.');
+
+const JULIA_URL = `https://julialang-s3.julialang.org/bin/winnt/x64/${JULIA_VERSION_M}/julia-${JULIA_VERSION}-win64.zip`;
+
+const ZIP_NAME = `julia-${JULIA_VERSION}-win64.zip`;
 
 const downloadJulia = async () => {
-  const spinner = createSpinner(`\tDownloading Julia 1.8.1`).start();
-  const writer = fs.createWriteStream(
-    path.join(assetPath, 'julia-1.8.1-win64.zip')
-  );
+  const spinner = createSpinner(`\tDownloading Julia ${JULIA_VERSION}`).start();
+  const writer = fs.createWriteStream(path.join(assetPath, ZIP_NAME));
 
   const response = await axios.get(JULIA_URL, {
     responseType: 'stream',
@@ -26,7 +29,7 @@ const downloadJulia = async () => {
         (progressEvent.loaded * 100) / progressEvent.total
       );
       spinner
-        .update({ text: `\tDownloading Julia 1.8.1 ${percentage}%` })
+        .update({ text: `\tDownloading Julia ${JULIA_VERSION} ${percentage}%` })
         .spin();
     },
   });
@@ -65,23 +68,15 @@ exports.default = async (context) => {
     });
   }
 
-  let juliaIdx = files.findIndex(
-    (v) => v.startsWith('julia-') && v.endsWith('zip')
-  );
-  if (juliaIdx === -1) {
+  if (files.includes(ZIP_NAME)) {
     await downloadJulia();
   }
   files = fs.readdirSync(assetPath);
-  juliaIdx = files.findIndex(
-    (v) => v.startsWith('julia-') && v.endsWith('zip')
-  );
-  let zip = files[juliaIdx];
-  const nameInitial = zip.replace('.zip', '');
-  if (nameInitial.includes('-win64')) nameInitial.replace('-win64', '');
 
-  const spinner1 = createSpinner(`\tExtracting: ${zip}`).start();
-  zip = path.join(assetPath, zip);
-  await unzip(zip, { dir: assetPath });
+  // const output_name = ZIP_NAME.replace('.zip', '').replace('-win64', '');
+
+  const spinner1 = createSpinner(`\tExtracting: ${ZIP_NAME}`).start();
+  await unzip(path.join(assetPath, ZIP_NAME), { dir: assetPath });
   spinner1.success({ text: '\tExtracted!', mark: '✓' });
 
   // const spinner2 = createSpinner('\tDeleting old system image').start();
