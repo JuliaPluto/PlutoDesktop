@@ -1,4 +1,3 @@
-const rimraf = require('rimraf');
 const process = require('process');
 const path = require('node:path');
 const fs = require('fs');
@@ -17,6 +16,7 @@ const JULIA_VERSION_M = JULIA_VERSION_PARTS.slice(0, 2).join('.');
 const JULIA_URL = `https://julialang-s3.julialang.org/bin/winnt/x64/${JULIA_VERSION_M}/julia-${JULIA_VERSION}-win64.zip`;
 
 const ZIP_NAME = `julia-${JULIA_VERSION}-win64.zip`;
+const JULIA_DIR_NAME = `julia-${JULIA_VERSION}`;
 
 const downloadJulia = async () => {
   const spinner = createSpinner(`\tDownloading Julia ${JULIA_VERSION}`).start();
@@ -57,21 +57,19 @@ const downloadJulia = async () => {
 
 exports.default = async (context) => {
   let files = fs.readdirSync(assetPath);
-  const juliaFolderIdx = files.findIndex(
-    (v) => v.startsWith('julia-') && !v.endsWith('zip')
-  );
-  if (juliaFolderIdx !== -1) {
+
+  if (files.includes(JULIA_DIR_NAME)) {
     console.log(chalk.grey('\tDeleted Old Julia folder'));
-    rimraf.sync(path.join(assetPath, files[juliaFolderIdx]), {
-      recursive: true,
+    fs.rmSync(path.join(assetPath, JULIA_DIR_NAME), {
       force: true,
+      recursive: true,
     });
   }
 
-  if (files.includes(ZIP_NAME)) {
+  if (!files.includes(ZIP_NAME)) {
     await downloadJulia();
   }
-  files = fs.readdirSync(assetPath);
+  // files = fs.readdirSync(assetPath);
 
   // const output_name = ZIP_NAME.replace('.zip', '').replace('-win64', '');
 
@@ -81,7 +79,7 @@ exports.default = async (context) => {
 
   // const spinner2 = createSpinner('\tDeleting old system image').start();
   // const IMAGE_PATH = path.join(assetPath, 'pluto-sysimage.so');
-  // rimraf.sync(IMAGE_PATH, {
+  // fs.rmSync(IMAGE_PATH, {
   //   recursive: true,
   //   force: true,
   // });

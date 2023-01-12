@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
-import rimraf from 'rimraf';
 import process from 'process';
 import path from 'node:path';
+import fs from 'node:fs';
 import webpackPaths from '../configs/webpack.paths';
 
 const args = process.argv.slice(2);
@@ -14,6 +14,6 @@ const commandMap = {
 args.forEach((x) => {
   const pathToRemove = commandMap[x];
   if (pathToRemove !== undefined) {
-    rimraf.sync(pathToRemove);
+    fs.rmSync(pathToRemove);
   }
 });
