@@ -79,7 +79,7 @@ const precompilePluto = async ({ julia_path }) => {
   ]);
 
   res.stderr.on('data', (data) => {
-    console.log(data);
+    console.log(data?.toString?.());
   });
 
   await new Promise((resolve) => {
