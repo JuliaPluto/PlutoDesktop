@@ -32,10 +32,6 @@ declare global {
     'JULIA-VERSION': string;
     'JULIA-PATH': string;
   };
-
-  type UserSettingsStore = {
-    'CUSTOM-JULIA-PATH': string;
-  };
 }
 
 export {};

@@ -11,7 +11,6 @@ import { URL } from 'node:url';
 
 import { PlutoExport } from '../../types/enums';
 import Pluto from './pluto';
-// import { openUserStoreInEditor } from './store';
 import { PLUTO_FILE_EXTENSIONS } from './util';
 
 interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
@@ -258,22 +257,6 @@ export default class MenuBuilder {
           },
         ],
       },
-      /**
-       * This allows the user to add custom
-       * configuration like path to another
-       * julia executable.
-       */
-      // {
-      //   label: `&Edit`,
-      //   submenu: [
-      //     {
-      //       label: 'Open Config file',
-      //       click: () => {
-      //         openUserStoreInEditor();
-      //       },
-      //     },
-      //   ],
-      // },
       {
         label: '&View',
         submenu:

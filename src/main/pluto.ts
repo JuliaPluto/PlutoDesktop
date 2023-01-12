@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { PlutoExport } from '../../types/enums';
 import { generalLogger, juliaLogger } from './logger';
 import NotebookManager from './notebookManager';
-import { store, userStore } from './store';
+import { store } from './store';
 import {
   askForAdminRights,
   decodeMapFromBuffer,
@@ -152,7 +152,7 @@ class Pluto {
   };
 
   /**
-   * * Checks for CUSTOM-JULIA-PATH, if not found then JULIA-PATH
+   * * Checks for JULIA-PATH
    * else looks for a zip to extract Julia
    * * Extracts Julia from bundled zip
    * * removes used zip for space saving
@@ -162,14 +162,6 @@ class Pluto {
     /**
      * Prefer to use extracted folder
      */
-
-    if (
-      userStore.has('CUSTOM-JULIA-PATH') &&
-      fs.existsSync(userStore.get('CUSTOM-JULIA-PATH'))
-    ) {
-      Pluto.julia = userStore.get('CUSTOM-JULIA-PATH');
-      return;
-    }
 
     if (store.has('JULIA-PATH') && fs.existsSync(store.get('JULIA-PATH'))) {
       Pluto.julia = store.get('JULIA-PATH');

@@ -30,13 +30,12 @@ import { arg, checkIfCalledViaCLI } from './cli';
 import { backgroundLogger, generalLogger } from './logger';
 import MenuBuilder from './menu';
 import Pluto from './pluto';
-import { store, userStore } from './store';
+import { store } from './store';
 import { isUrlOrPath, resolveHtmlPath } from './util';
 
 generalLogger.verbose('---------- NEW SESSION ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
 generalLogger.verbose(chalk.green('CONFIG STORE:'), store.store);
-generalLogger.verbose(chalk.green('USER STORE:'), userStore.store);
 
 export default class AppUpdater {
   constructor() {
