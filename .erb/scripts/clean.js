@@ -14,6 +14,6 @@ const commandMap = {
 args.forEach((x) => {
   const pathToRemove = commandMap[x];
   if (pathToRemove !== undefined) {
-    fs.rmSync(pathToRemove);
+    fs.rmSync(pathToRemove, { recursive: true, force: true });
   }
 });
