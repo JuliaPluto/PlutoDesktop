@@ -1,4 +1,5 @@
 copy!(LOAD_PATH, ["@"])
+import Pkg; Pkg.instantiate()
 
 import Logging
 Logging.global_logger(Logging.ConsoleLogger(stdout));
