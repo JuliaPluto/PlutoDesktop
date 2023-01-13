@@ -1,5 +1,3 @@
-/* eslint global-require: off */
-
 import { generalLogger } from './logger';
 
 if (process.env.NODE_ENV === 'production') {

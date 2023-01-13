@@ -10,7 +10,6 @@ root.render(<Loading />);
 
 // calling IPC exposed from preload script
 window.plutoDesktop.ipcRenderer.once('ipc-example', (arg) => {
-  // eslint-disable-next-line no-console
   console.log(arg);
 });
 window.plutoDesktop.ipcRenderer.sendMessage('ipc-example', ['ping']);

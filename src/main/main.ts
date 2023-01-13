@@ -1,4 +1,3 @@
-/* eslint-disable no-param-reassign */
 /**
  * This module executes inside of electron's main process. You can start
  * electron renderer process from here and communicate with the other processes
@@ -203,7 +202,6 @@ const createWindow = async (
     });
 
     // Remove this if your app does not use auto updates
-    // eslint-disable-next-line
     new AppUpdater();
   } catch (e) {
     generalLogger.error('CREATE-WINDOW-ERROR', e);
@@ -230,7 +228,6 @@ app.on('open-file', async (_event, file) => {
 
 app
   .whenReady()
-  // eslint-disable-next-line promise/always-return
   .then(() => {
     store.set(
       'IMPORTANT-NOTE',

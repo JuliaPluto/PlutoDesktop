@@ -32,7 +32,6 @@
     "build:main": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.main.prod.ts",
     "build:renderer": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.renderer.prod.ts",
     "postinstall": "ts-node .erb/scripts/check-native-dep.js && electron-builder install-app-deps && cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.ts",
-    "lint": "cross-env NODE_ENV=development eslint . --ext .js,.jsx,.ts,.tsx",
     "package": "ts-node ./.erb/scripts/clean.js dist && npm run build && electron-builder build --publish never",
     "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir release/app",
     "start": "ts-node ./.erb/scripts/check-port-in-use.js && npm run start:renderer",
@@ -41,28 +40,13 @@
     "start:renderer": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack serve --config ./.erb/configs/webpack.config.renderer.dev.ts",
     "test": "jest"
   },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
-      "cross-env NODE_ENV=development eslint --cache"
-    ],
-    "*.json,.{eslintrc,prettierrc}": [
-      "prettier --ignore-path .eslintignore --parser json --write"
-    ],
-    "*.{css,scss}": [
-      "prettier --ignore-path .eslintignore --single-quote --write"
-    ],
-    "*.{html,md,yml}": [
-      "prettier --ignore-path .eslintignore --single-quote --write"
-    ]
-  },
   "browserslist": [],
   "prettier": {
     "singleQuote": true,
     "overrides": [
       {
         "files": [
-          ".prettierrc",
-          ".eslintrc"
+          ".prettierrc"
         ],
         "options": {
           "parser": "json"
@@ -127,8 +111,6 @@
     "@types/react-test-renderer": "^18.0.0",
     "@types/terser-webpack-plugin": "^5.0.4",
     "@types/webpack-bundle-analyzer": "^4.4.2",
-    "@typescript-eslint/eslint-plugin": "^5.36.2",
-    "@typescript-eslint/parser": "^5.36.2",
     "axios-logger": "^2.6.1",
     "browserslist-config-erb": "^0.0.3",
     "chalk": "4.1.2",
@@ -145,18 +127,6 @@
     "electron-notarize": "^1.2.1",
     "electron-rebuild": "^3.2.9",
     "electronmon": "^2.0.2",
-    "eslint": "^8.23.0",
-    "eslint-config-airbnb-base": "^15.0.0",
-    "eslint-config-erb": "^4.0.3",
-    "eslint-import-resolver-typescript": "^3.5.1",
-    "eslint-import-resolver-webpack": "^0.13.2",
-    "eslint-plugin-compat": "^4.0.2",
-    "eslint-plugin-import": "^2.26.0",
-    "eslint-plugin-jest": "^27.0.1",
-    "eslint-plugin-jsx-a11y": "^6.6.1",
-    "eslint-plugin-promise": "^6.0.1",
-    "eslint-plugin-react": "^7.31.7",
-    "eslint-plugin-react-hooks": "^4.6.0",
     "extract-zip": "^2.0.1",
     "file-loader": "^6.2.0",
     "html-webpack-plugin": "^5.5.0",

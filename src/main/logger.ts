@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-
 import axios from 'axios';
 import {
   errorLogger,
@@ -91,7 +89,6 @@ generalLogger.transports.console.useStyles = true;
 const juliaLogger = log.create('julia-log');
 juliaLogger.variables.label = 'julia';
 juliaLogger.transports.file.format = format;
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 juliaLogger.transports.console = (message) => {
   const text = util.format(...message.data);

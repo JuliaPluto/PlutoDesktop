@@ -272,7 +272,6 @@ class Pluto {
 
           if (r.canceled) return;
 
-          // eslint-disable-next-line no-param-reassign
           [pathOrURL] = r.filePaths;
         } else if (type !== 'url') {
           dialog.showErrorBox(
@@ -553,7 +552,6 @@ class Pluto {
       generalLogger.error('PLUTO-CHECK-NOTEBOOK-ERROR', error);
     }
 
-    // eslint-disable-next-line consistent-return
     return result;
   };
 
@@ -599,7 +597,6 @@ class Pluto {
       generalLogger.error('PLUTO-CHECK-NOTEBOOK-ERROR', error);
     }
 
-    // eslint-disable-next-line consistent-return
     return result;
   };
 

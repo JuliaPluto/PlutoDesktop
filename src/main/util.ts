@@ -1,5 +1,3 @@
-/* eslint import/no-mutable-exports: off */
-
 import axios from 'axios';
 import { app, BrowserWindow, dialog } from 'electron';
 import msgpack from 'msgpack-lite';

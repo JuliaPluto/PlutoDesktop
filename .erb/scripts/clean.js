@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import process from 'process';
 import path from 'node:path';
 import fs from 'node:fs';

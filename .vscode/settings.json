@@ -1,19 +1,10 @@
 {
   "files.associations": {
-    ".eslintrc": "jsonc",
-    ".prettierrc": "jsonc",
-    ".eslintignore": "ignore"
+    ".prettierrc": "jsonc"
   },
-  "eslint.validate": [
-    "javascript",
-    "javascriptreact",
-    "html",
-    "typescriptreact"
-  ],
   "javascript.validate.enable": false,
   "search.exclude": {
     ".git": true,
-    ".eslintcache": true,
     ".erb/dll": true,
     "release/{build,app/dist}": true,
     "node_modules": true,
