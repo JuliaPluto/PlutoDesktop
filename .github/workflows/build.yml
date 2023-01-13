@@ -33,6 +33,12 @@ jobs:
       - run: npm ci
       - run: npm run package
 
+      - name: Compress Portable Folder
+        uses: vimtor/action-zip@v1
+        with:
+          files: .\release\build\win-unpacked
+          dest: .\release\build\win-unpacked.zip
+
       - name: List Artifacts
         run: ls
         working-directory: .\release\build
@@ -42,7 +48,6 @@ jobs:
         with:
           name: Build Outputs
           path: |
-            .\release\build\win-unpacked\
             .\release\build\*.zip
             .\release\build\*.yml
             .\release\build\*.exe
