@@ -1,12 +1,9 @@
-import Pkg;
-Pkg.add("PackageCompiler");
+copy!(LOAD_PATH, ["@"])
 
-if !haskey(Pkg.dependencies(), "Pluto")
-    Pkg.add(name="Pluto", version="0.19.13")
-end
-import Pluto;
+import PackageCompiler
+import Pluto
 
-using PackageCompiler;
-
-PackageCompiler.create_sysimage(["Pluto"]; sysimage_path=ARGS[1],
-    precompile_statements_file=ARGS[2])
+PackageCompiler.create_sysimage(["Pluto"]; 
+    sysimage_path=ARGS[1],
+    precompile_statements_file=ARGS[2],
+)

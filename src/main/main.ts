@@ -20,9 +20,8 @@ import {
   shell,
 } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import fs from 'fs';
 import { release } from 'os';
-import path, { join } from 'path';
+import path from 'path';
 
 // import { Deeplink } from 'electron-deeplink';
 // import * as isDev from 'electron-is-dev';
