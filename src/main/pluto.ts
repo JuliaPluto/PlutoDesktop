@@ -40,25 +40,14 @@ class Pluto {
 
   private static closePlutoFunction: (() => void) | undefined;
 
-  private static getProjectPath(project?: string): string {
-    if (project) return project;
-    if (process.env.DEBUG_PROJECT_PATH) return process.env.DEBUG_PROJECT_PATH;
-
-    const p = join(app.getPath('userData'), '/project/');
-    if (!fs.existsSync(p)) {
-      fs.mkdirSync(p);
-    }
-    return p;
-  }
-
   constructor(
     win: BrowserWindow,
-    getAssetPath: (...paths: string[]) => string,
-    project?: string
+    getAssetPath: (...paths: string[]) => string
   ) {
     this.win = win;
     this.getAssetPath = getAssetPath;
-    this.project = Pluto.getProjectPath(project);
+    this.project =
+      process.env.DEBUG_PROJECT_PATH ?? getAssetPath('env_for_julia');
     Pluto.url ??= null;
   }
 
