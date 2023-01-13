@@ -54,14 +54,19 @@ class Pluto {
   private findJulia = async () => {
     const files = fs.readdirSync(this.getAssetPath('.'));
 
-    let julia_dir = files.find((s) => /^julia-\d+.\d+.\d+$/.test(s)) ?? `julia`;
-    if (julia_dir === `julia`) {
+    let julia_dir = files.find((s) => /^julia-\d+.\d+.\d+$/.test(s));
+    let result;
+
+    if (julia_dir == null) {
       generalLogger.error(
         "Couldn't find Julia in assets, falling back to the `julia` command."
       );
+      result = `julia`;
+    } else {
+      result = this.getAssetPath(julia_dir, 'bin', 'julia.exe');
     }
-    Pluto.julia = julia_dir;
-    return julia_dir;
+    Pluto.julia = result;
+    return result;
   };
 
   /**
@@ -118,13 +123,13 @@ class Pluto {
     if (notebook) options.push(notebook);
 
     try {
-      const res = spawn(Pluto.julia, options);
       generalLogger.verbose(
         'Executing',
         chalk.bold(Pluto.julia),
         'with options',
         chalk.bold(options.toLocaleString().replace(',', ' '))
       );
+      const res = spawn(Pluto.julia, options);
 
       res.stdout.on('data', (data: { toString: () => any }) => {
         const plutoLog = data.toString();
