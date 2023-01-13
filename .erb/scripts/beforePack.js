@@ -11,11 +11,13 @@ const { exit } = require('process');
 
 const assetPath = path.join(__dirname, '../..', 'assets');
 
+// YOU CAN EDIT ME
 const JULIA_VERSION_PARTS = [1, 8, 5];
-const JULIA_VERSION = JULIA_VERSION_PARTS.join('.');
-const JULIA_VERSION_M = JULIA_VERSION_PARTS.slice(0, 2).join('.');
 
-const JULIA_URL = `https://julialang-s3.julialang.org/bin/winnt/x64/${JULIA_VERSION_M}/julia-${JULIA_VERSION}-win64.zip`;
+const JULIA_VERSION = JULIA_VERSION_PARTS.join('.');
+const JULIA_VERSION_MINOR = JULIA_VERSION_PARTS.slice(0, 2).join('.');
+
+const JULIA_URL = `https://julialang-s3.julialang.org/bin/winnt/x64/${JULIA_VERSION_MINOR}/julia-${JULIA_VERSION}-win64.zip`;
 
 const ZIP_NAME = `julia-${JULIA_VERSION}-win64.zip`;
 const JULIA_DIR_NAME = `julia-${JULIA_VERSION}`;
@@ -58,7 +60,7 @@ const downloadJulia = async () => {
 };
 
 const precompilePluto = async ({ julia_path }) => {
-  const SYSTIMAGE_LOCATION = path.join(
+  const SYSIMAGE_LOCATION = path.join(
     assetPath,
     // TODO: auto version number
     'pluto-sysimage.so'
@@ -72,9 +74,9 @@ const precompilePluto = async ({ julia_path }) => {
   fs.writeFileSync(PRECOMPILE_STATEMENTS_FILE_LOCATION, '');
 
   const res = spawn(julia_path, [
-    `--project=${this.project}`,
+    `--project=${path.join(assetPath, 'env_for_julia')}`,
     PRECOMPILE_SCRIPT_LOCATION,
-    SYSTIMAGE_LOCATION,
+    SYSIMAGE_LOCATION,
     PRECOMPILE_STATEMENTS_FILE_LOCATION,
   ]);
 
@@ -82,15 +84,15 @@ const precompilePluto = async ({ julia_path }) => {
     console.log(data?.toString?.());
   });
 
-  await new Promise((resolve) => {
+  return new Promise((resolve) => {
     res.once('close', (code) => {
       if (code === 0) {
-        console.info('Pluto has been precompiled to', SYSTIMAGE_LOCATION);
+        console.info('Pluto has been precompiled to', SYSIMAGE_LOCATION);
       } else {
         console.error('Pluto precompile failed');
         exit(code);
       }
-      resolve();
+      resolve(SYSIMAGE_LOCATION);
     });
   });
 };
@@ -111,15 +113,13 @@ exports.default = async (context) => {
   }
   // files = fs.readdirSync(assetPath);
 
-  // const output_name = ZIP_NAME.replace('.zip', '').replace('-win64', '');
-
   const spinner1 = createSpinner(`\tExtracting: ${ZIP_NAME}`).start();
   await unzip(path.join(assetPath, ZIP_NAME), { dir: assetPath });
   spinner1.success({ text: '\tExtracted!', mark: '✓' });
 
-  await precompilePluto({
-    julia_path: path.join(assetPath, JULIA_DIR_NAME, 'bin', 'julia.exe'),
-  });
+  // await precompilePluto({
+  //   julia_path: path.join(assetPath, JULIA_DIR_NAME, 'bin', 'julia.exe'),
+  // });
 
   // const spinner2 = createSpinner('\tDeleting old system image').start();
   // const IMAGE_PATH = path.join(assetPath, 'pluto-sysimage.so');

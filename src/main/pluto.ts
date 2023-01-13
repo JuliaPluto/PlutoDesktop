@@ -117,28 +117,15 @@ class Pluto {
       notebook
     );
 
-    const SYSTIMAGE_LOCATION = join(
-      app.getPath('userData'),
-      // TODO: auto version number
-      'pluto-sysimage-v0.1.0-beta.so'
-    );
+    const SYSIMAGE_LOCATION = this.getAssetPath('pluto-sysimage.so');
 
     const options = [`--project=${this.project}`];
     if (!process.env.DEBUG_PROJECT_PATH) {
-      if (fs.existsSync(SYSTIMAGE_LOCATION))
-        options.push(`--sysimage=${SYSTIMAGE_LOCATION}`);
-      else {
-        const STATEMENT_FILE = join(
-          app.getPath('userData'),
-          'pluto_precompile.jl'
-        );
-        fs.writeFileSync(STATEMENT_FILE, '');
-        options.push(`--trace-compile=${STATEMENT_FILE}`);
-      }
+      if (fs.existsSync(SYSIMAGE_LOCATION))
+        options.push(`--sysimage=${SYSIMAGE_LOCATION}`);
     }
-    if (process.env.DEBUG_PROJECT_PATH || fs.existsSync(SYSTIMAGE_LOCATION))
-      options.push(this.getAssetPath('pluto_no_update.jl'));
-    else options.push(this.getAssetPath('script.jl'));
+
+    options.push(this.getAssetPath('run_pluto.jl'));
     if (notebook) options.push(notebook);
 
     try {
