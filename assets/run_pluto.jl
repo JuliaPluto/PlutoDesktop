@@ -30,5 +30,5 @@ else
 end
 
 # Here we go!
-Pluto.run(; notebook, launch_browser=false)
+Pluto.run(; notebook, launch_browser=false, port_hint=7122)
 
