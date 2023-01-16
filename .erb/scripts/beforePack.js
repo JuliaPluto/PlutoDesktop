@@ -106,7 +106,6 @@ const prepareJuliaDEPOT = async ({ julia_path }) => {
   fs.rmSync(DEPOT_LOCATION, {
     force: true,
     recursive: true,
-    err,
   });
 
   const res = spawn(
