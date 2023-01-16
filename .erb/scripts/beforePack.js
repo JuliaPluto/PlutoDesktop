@@ -23,7 +23,7 @@ const JULIA_URL = `https://julialang-s3.julialang.org/bin/winnt/x64/${JULIA_VERS
 const ZIP_NAME = `julia-${JULIA_VERSION}-win64.zip`;
 const JULIA_DIR_NAME = `julia-${JULIA_VERSION}`;
 
-const DEPOT_NAME = `depot_for_julia`;
+const DEPOT_NAME = `julia_depot`;
 
 const downloadJulia = async () => {
   const spinner = createSpinner(`\tDownloading Julia ${JULIA_VERSION}`).start();

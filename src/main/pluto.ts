@@ -112,7 +112,7 @@ class Pluto {
     );
 
     const SYSIMAGE_LOCATION = this.getAssetPath('pluto-sysimage.so');
-    const DEPOT_LOCATION = this.getAssetPath('depot_for_julia');
+    const DEPOT_LOCATION = this.getAssetPath('julia_depot');
 
     const options = [`--project=${this.project}`];
     if (!process.env.DEBUG_PROJECT_PATH) {
