@@ -88,12 +88,12 @@ const precompilePluto = async ({ julia_path }) => {
   });
 
   return new Promise((resolve) => {
-    res.once('close', (code) => {
-      if (code === 0) {
+    res.once('close', (exit_code) => {
+      if (exit_code === 0) {
         console.info('Pluto has been precompiled to', SYSIMAGE_LOCATION);
       } else {
         console.error('Pluto precompile failed');
-        exit(code);
+        exit(exit_code);
       }
       resolve(SYSIMAGE_LOCATION);
     });
@@ -130,9 +130,9 @@ const prepareJuliaDEPOT = async ({ julia_path }) => {
     res.once('close', resolve);
   });
 
-  if (code !== 0) {
+  if (exit_code !== 0) {
     console.error('DEPOT preparation failed');
-    exit(code);
+    exit(exit_code);
   }
 
   // Remove downloaded registry for file savings: you don't need it to run an environment that has already been instantiated.
