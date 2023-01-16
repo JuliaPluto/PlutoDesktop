@@ -23,7 +23,11 @@ import Pluto
 # But! This script was launched by our node process with a custom ENV value for JULIA_DEPOT_PATH, because this Pluto server should use our dedicated DEPOT (distributed in our app). The original ENV value is passed in as command line argument, so that we can reset it here.
 
 # We do this by modifying the ENV dictionary in this Julia process (the server process). (When Distributed creates child processes, the value of `ENV` is used.) This will not modify DEPOT_PATH on this process 👍.
-ENV["JULIA_DEPOT_PATH"] = depot
+if depot === nothing
+    delete!(ENV, "JULIA_DEPOT_PATH")
+else
+    ENV["JULIA_DEPOT_PATH"] = depot
+end
 
 # Here we go!
 Pluto.run(; notebook, launch_browser=false)
