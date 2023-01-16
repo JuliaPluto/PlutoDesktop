@@ -24,7 +24,6 @@ import path from 'path';
 
 // import { Deeplink } from 'electron-deeplink';
 // import * as isDev from 'electron-is-dev';
-import { arg, checkIfCalledViaCLI } from './cli';
 import { backgroundLogger, generalLogger } from './logger';
 import MenuBuilder from './menu';
 import Pluto from './pluto';
@@ -91,18 +90,6 @@ const createWindow = async (
     const getAssetPath = (...paths: string[]): string => {
       return path.join(RESOURCES_PATH, ...paths);
     };
-
-    if (checkIfCalledViaCLI(process.argv)) {
-      const loc = arg._.length > 0 ? (arg._[0] as string) : undefined;
-      const isPathOrURL = loc ? isUrlOrPath(loc) : 'none';
-      url ??= arg.url;
-      notebook ??= arg.notebook;
-      project ??= arg.project;
-      if (isPathOrURL === 'url') url ??= loc;
-      else if (isPathOrURL === 'path') notebook ??= loc;
-    }
-
-    generalLogger.info('Arguments received:', arg);
 
     const pathOrURL = notebook ?? url;
 
