@@ -1,11 +1,12 @@
 
 # Parsing ARGS
-notebook_input, depot_input = ARGS
+notebook_input, depot_input, unsaved_notebooks_dir = ARGS
 
 notebook = isempty(notebook_input) ? nothing : notebook_input
 depot = isempty(depot_input) ? nothing : depot_input
 
-
+# https://github.com/fonsp/Pluto.jl/commit/7bbdc7b55bd5149a9eb92cdfc2b540464dc32626
+ENV["JULIA_PLUTO_NEW_NOTEBOOKS_DIR"] = unsaved_notebooks_dir
 
 # We modify the LOAD_PATH of this process to only include the active project (created for this app), not the global project.
 copy!(LOAD_PATH, ["@"])

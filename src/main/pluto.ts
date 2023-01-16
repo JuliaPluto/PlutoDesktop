@@ -98,11 +98,6 @@ class Pluto {
 
     this.win.webContents.send('pluto-url', 'loading');
 
-    const p = join(app.getPath('userData'), '/project/');
-    if (!fs.existsSync(p)) {
-      fs.mkdirSync(p);
-    }
-
     generalLogger.info(
       'LAUNCHING\n',
       'project:',
@@ -124,6 +119,7 @@ class Pluto {
     // See run_pluto.jl for info about these command line arguments.
     options.push(notebook ?? '');
     options.push(process.env.JULIA_DEPOT_PATH ?? '');
+    options.push(join(app.getPath('userData'), 'unsaved_notebooks'));
 
     try {
       generalLogger.verbose(
