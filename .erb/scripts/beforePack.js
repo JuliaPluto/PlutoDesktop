@@ -13,6 +13,7 @@ const assetPath = path.join(__dirname, '../..', 'assets');
 
 // YOU CAN EDIT ME
 const JULIA_VERSION_PARTS = [1, 8, 5];
+/// ☝️
 
 const JULIA_VERSION = JULIA_VERSION_PARTS.join('.');
 const JULIA_VERSION_MINOR = JULIA_VERSION_PARTS.slice(0, 2).join('.');
@@ -21,6 +22,8 @@ const JULIA_URL = `https://julialang-s3.julialang.org/bin/winnt/x64/${JULIA_VERS
 
 const ZIP_NAME = `julia-${JULIA_VERSION}-win64.zip`;
 const JULIA_DIR_NAME = `julia-${JULIA_VERSION}`;
+
+const DEPOT_NAME = `julia_depot`;
 
 const downloadJulia = async () => {
   const spinner = createSpinner(`\tDownloading Julia ${JULIA_VERSION}`).start();
@@ -85,28 +88,64 @@ const precompilePluto = async ({ julia_path }) => {
   });
 
   return new Promise((resolve) => {
-    res.once('close', (code) => {
-      if (code === 0) {
+    res.once('close', (exit_code) => {
+      if (exit_code === 0) {
         console.info('Pluto has been precompiled to', SYSIMAGE_LOCATION);
       } else {
         console.error('Pluto precompile failed');
-        exit(code);
+        exit(exit_code);
       }
       resolve(SYSIMAGE_LOCATION);
     });
   });
 };
 
+const prepareJuliaDEPOT = async ({ julia_path }) => {
+  const DEPOT_LOCATION = path.join(assetPath, DEPOT_NAME);
+
+  fs.rmSync(DEPOT_LOCATION, {
+    force: true,
+    recursive: true,
+  });
+
+  const res = spawn(
+    julia_path,
+    [
+      `--project=${path.join(assetPath, 'env_for_julia')}`,
+      `-e`,
+      `import Pkg; Pkg.instantiate(); Pkg.precompile(); import Pluto;`,
+    ],
+    {
+      env: {
+        JULIA_DEPOT_PATH: DEPOT_LOCATION,
+      },
+    }
+  );
+
+  res.stderr.on('data', (data) => {
+    console.log(data?.toString?.());
+  });
+
+  const exit_code = await new Promise((resolve) => {
+    res.once('close', resolve);
+  });
+
+  if (exit_code !== 0) {
+    console.error('DEPOT preparation failed');
+    exit(exit_code);
+  }
+
+  // Remove downloaded registry for file savings: you don't need it to run an environment that has already been instantiated.
+  fs.rmSync(path.join(DEPOT_LOCATION, 'registries'), {
+    force: true,
+    recursive: true,
+  });
+
+  console.info('DEPOT preparation success', DEPOT_LOCATION);
+};
+
 exports.default = async (context) => {
   let files = fs.readdirSync(assetPath);
-
-  if (files.includes(JULIA_DIR_NAME)) {
-    console.log(chalk.grey('\tDeleted Old Julia folder'));
-    fs.rmSync(path.join(assetPath, JULIA_DIR_NAME), {
-      force: true,
-      recursive: true,
-    });
-  }
 
   if (!files.includes(ZIP_NAME)) {
     await downloadJulia();
@@ -114,42 +153,19 @@ exports.default = async (context) => {
   // files = fs.readdirSync(assetPath);
 
   const spinner1 = createSpinner(`\tExtracting: ${ZIP_NAME}`).start();
+  fs.rmSync(path.join(assetPath, JULIA_DIR_NAME), {
+    force: true,
+    recursive: true,
+  });
   await unzip(path.join(assetPath, ZIP_NAME), { dir: assetPath });
   spinner1.success({ text: '\tExtracted!', mark: '✓' });
 
+  // NOT DOING THIS, see https://github.com/JuliaPluto/PlutoDesktop/issues/56
   // await precompilePluto({
   //   julia_path: path.join(assetPath, JULIA_DIR_NAME, 'bin', 'julia.exe'),
   // });
 
-  // const spinner2 = createSpinner('\tDeleting old system image').start();
-  // const IMAGE_PATH = path.join(assetPath, 'pluto-sysimage.so');
-  // fs.rmSync(IMAGE_PATH, {
-  //   recursive: true,
-  //   force: true,
-  // });
-  // spinner2.success({ text: '\tDeleted old system image', mark: '✓' });
-
-  // const STATEMENT_FILE = path.join(assetPath, 'pluto_precompile.jl');
-  // const SCRIPT_FILE = path.join(__dirname, 'build-precompile.jl');
-  // const TRACE_FILE_CREATER = path.join(__dirname, 'create-tracefile.jl');
-
-  // const spinner3 = createSpinner('\tGenerating trace file...').start();
-  // if (fs.existsSync(STATEMENT_FILE)) fs.rmSync(STATEMENT_FILE);
-  // fs.writeFileSync(STATEMENT_FILE, '');
-
-  // const CREATE_TRACEFILE = `${path.join(
-  //   assetPath,
-  //   'julia-1.8.1\\bin\\julia.exe'
-  // )} --trace-compile=${STATEMENT_FILE} ${TRACE_FILE_CREATER}`;
-  // // console.log(chalk.grey(CREATE_TRACEFILE));
-  // execSync(CREATE_TRACEFILE);
-  // spinner3.success({ text: '\tGenerated trace file', mark: '✓' });
-
-  // const spinner4 = createSpinner('\tProcompiling...').start();
-  // const cmd = `${path.join(
-  //   assetPath,
-  //   'julia-1.8.1\\bin\\julia.exe'
-  // )} ${SCRIPT_FILE} ${IMAGE_PATH} ${STATEMENT_FILE}`;
-  // execSync(cmd);
-  // spinner4.success({ text: '\tPrecompilation successful', mark: '✓' });
+  await prepareJuliaDEPOT({
+    julia_path: path.join(assetPath, JULIA_DIR_NAME, 'bin', 'julia.exe'),
+  });
 };

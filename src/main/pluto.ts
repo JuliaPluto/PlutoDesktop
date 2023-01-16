@@ -112,6 +112,7 @@ class Pluto {
     );
 
     const SYSIMAGE_LOCATION = this.getAssetPath('pluto-sysimage.so');
+    const DEPOT_LOCATION = this.getAssetPath('julia_depot');
 
     const options = [`--project=${this.project}`];
     if (!process.env.DEBUG_PROJECT_PATH) {
@@ -120,7 +121,9 @@ class Pluto {
     }
 
     options.push(this.getAssetPath('run_pluto.jl'));
-    if (notebook) options.push(notebook);
+    // See run_pluto.jl for info about these command line arguments.
+    options.push(notebook ?? '');
+    options.push(process.env.JULIA_DEPOT_PATH ?? '');
 
     try {
       generalLogger.verbose(
@@ -129,7 +132,9 @@ class Pluto {
         'with options',
         chalk.bold(options.toLocaleString().replace(',', ' '))
       );
-      const res = spawn(Pluto.julia, options);
+      const res = spawn(Pluto.julia, options, {
+        env: { ...process.env, JULIA_DEPOT_PATH: DEPOT_LOCATION },
+      });
 
       res.stdout.on('data', (data: { toString: () => any }) => {
         const plutoLog = data.toString();
