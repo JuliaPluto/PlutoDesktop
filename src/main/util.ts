@@ -1,11 +1,7 @@
 import axios from 'axios';
-import { app, BrowserWindow, dialog } from 'electron';
-import msgpack from 'msgpack-lite';
+import { BrowserWindow } from 'electron';
 import path from 'path';
 import { URL } from 'url';
-import isDev from 'electron-is-dev';
-
-import { exec } from 'child_process';
 import { generalLogger } from './logger';
 
 export let resolveHtmlPath: (htmlFileName: string) => string;
@@ -23,9 +19,6 @@ if (process.env.NODE_ENV === 'development') {
   };
 }
 
-/**
- * These are the extensions supported by Pluto.jl
- */
 const PLUTO_FILE_EXTENSIONS = [
   '.pluto.jl',
   '.Pluto.jl',
@@ -43,13 +36,8 @@ const PLUTO_FILE_EXTENSIONS = [
  * @param file location
  * @returns whether the current file is a supported file or not
  */
-const isExtMatch = (file: string) => {
-  for (let index = 0; index < PLUTO_FILE_EXTENSIONS.length; index += 1) {
-    const ext = PLUTO_FILE_EXTENSIONS[index];
-    if (file.endsWith(ext)) return true;
-  }
-  return false;
-};
+const isExtMatch = (file: string) =>
+  PLUTO_FILE_EXTENSIONS.some((ext) => file.endsWith(ext));
 
 /**
  * This is a loader, it simply inserts custom cursor
@@ -79,17 +67,6 @@ class Loader {
   };
 }
 
-const tryCatch = async (
-  executable: (...args: any[]) => Promise<void>,
-  catchExec?: (...args: any[]) => Promise<void>
-) => {
-  try {
-    await executable();
-  } catch (error) {
-    if (catchExec) await catchExec();
-  }
-};
-
 /**
  * @param text location of the file
  * @returns type of location
@@ -106,49 +83,10 @@ const setAxiosDefaults = (url: PlutoURL) => {
   generalLogger.verbose('Base URL set to', axios.defaults.baseURL);
 };
 
-/**
- * Decodes data received from Pluto.jl shutdown query
- * @param data Buffer
- * @returns map of id -> location
- */
-const decodeMapFromBuffer = (data: Buffer) => {
-  const decodedData = msgpack.decode(data);
-  return decodedData;
-};
-
-interface AskForAdminRightsParams {
-  errorTitle: string;
-  errorMessage: string;
-}
-
-const defaultAskForAdminRightsParams: AskForAdminRightsParams = {
-  errorTitle: 'ADMIN PERMISSIONS NOT AVAILABLE',
-  errorMessage:
-    'System image not available, to create it the application needs admin privileges. Please close the app and run again using right clicking and using "Run as administrator".',
-};
-
-const askForAdminRights = (
-  args: AskForAdminRightsParams = defaultAskForAdminRightsParams
-) => {
-  if (!isDev)
-    exec('NET SESSION', (_error, _so, se) => {
-      if (se.length === 0) {
-        // admin
-      } else {
-        // no admin
-        dialog.showErrorBox(args.errorTitle, args.errorMessage);
-        app.quit();
-      }
-    });
-};
-
 export {
   isExtMatch,
   PLUTO_FILE_EXTENSIONS,
   Loader,
-  tryCatch,
   isUrlOrPath,
   setAxiosDefaults,
-  decodeMapFromBuffer,
-  askForAdminRights,
 };

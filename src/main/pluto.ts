@@ -9,12 +9,12 @@ import { PlutoExport } from '../../types/enums';
 import { generalLogger, juliaLogger } from './logger';
 import NotebookManager from './notebookManager';
 import {
-  decodeMapFromBuffer,
   isExtMatch,
   Loader,
   PLUTO_FILE_EXTENSIONS,
   setAxiosDefaults,
 } from './util';
+import msgpack from 'msgpack-lite';
 
 class Pluto {
   /**
@@ -535,9 +535,7 @@ class Pluto {
       });
 
       if (res.status === 200) {
-        this.notebookManager = new NotebookManager(
-          decodeMapFromBuffer(res.data)
-        );
+        this.notebookManager = new NotebookManager(msgpack.decode(res.data));
         if (this.notebookManager.hasFile(key))
           result = this.notebookManager.getId(key);
       } else {
@@ -576,9 +574,7 @@ class Pluto {
       });
 
       if (res.status === 200) {
-        this.notebookManager = new NotebookManager(
-          decodeMapFromBuffer(res.data)
-        );
+        this.notebookManager = new NotebookManager(msgpack.decode(res.data));
         if (this.notebookManager.hasId(key)) {
           const temp = this.notebookManager.getFile(key)!;
           if (isExtMatch(temp)) {
