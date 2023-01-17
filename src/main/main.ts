@@ -139,7 +139,7 @@ const createWindow = async (
 
     mainWindow ??= currWindow;
 
-    await currWindow.loadURL(resolveHtmlPath('index.html'));
+    await currWindow.loadURL(`file://${getAssetPath('loading.html')}`);
 
     if (!Pluto.runningInfo) {
       await new Pluto(currWindow, getAssetPath).run(project, notebook, url);
