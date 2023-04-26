@@ -13,6 +13,7 @@ import {
   Loader,
   PLUTO_FILE_EXTENSIONS,
   setAxiosDefaults,
+  copyDirectoryRecursive,
 } from './util';
 import msgpack from 'msgpack-lite';
 
@@ -107,7 +108,17 @@ class Pluto {
     );
 
     const SYSIMAGE_LOCATION = this.getAssetPath('pluto-sysimage.so');
-    const DEPOT_LOCATION = this.getAssetPath('julia_depot');
+    const READONLY_DEPOT_LOCATION = this.getAssetPath('julia_depot');
+    const DEPOT_LOCATION =
+      'C:\\Users\\ctrek\\AppData\\Roaming\\pluto\\julia_depot';
+
+    // ensure depot has been copied from read-only installation directory to writable directory
+    if (!fs.existsSync(DEPOT_LOCATION)) {
+      generalLogger.verbose(
+        'Copying julia_depot from installation directory...'
+      );
+      copyDirectoryRecursive(READONLY_DEPOT_LOCATION, DEPOT_LOCATION);
+    }
 
     const options = [`--project=${this.project}`];
     if (!process.env.DEBUG_PROJECT_PATH) {

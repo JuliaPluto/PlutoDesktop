@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { BrowserWindow } from 'electron';
-import path from 'path';
+import path from 'node:path';
+import fs from 'node:fs';
 import { URL } from 'url';
 import { generalLogger } from './logger';
 
@@ -38,6 +39,37 @@ const PLUTO_FILE_EXTENSIONS = [
  */
 const isExtMatch = (file: string) =>
   PLUTO_FILE_EXTENSIONS.some((ext) => file.endsWith(ext));
+
+function copyDirectoryRecursive(source: string, destination: string) {
+  // Check if source directory exists
+  if (!fs.existsSync(source)) {
+    console.error(`Source directory ${source} does not exist.`);
+    return;
+  }
+
+  // Create destination directory if it does not exist
+  if (!fs.existsSync(destination)) {
+    fs.mkdirSync(destination);
+  }
+
+  // Read the contents of the source directory
+  const files = fs.readdirSync(source);
+
+  // Loop through each file in the source directory
+  files.forEach((file) => {
+    const filePath = path.join(source, file);
+    const destFilePath = path.join(destination, file);
+
+    // Check if the current file is a directory
+    if (fs.statSync(filePath).isDirectory()) {
+      // Recursively copy the directory
+      copyDirectoryRecursive(filePath, destFilePath);
+    } else {
+      // Copy the file
+      fs.copyFileSync(filePath, destFilePath);
+    }
+  });
+}
 
 /**
  * This is a loader, it simply inserts custom cursor
@@ -89,4 +121,5 @@ export {
   Loader,
   isUrlOrPath,
   setAxiosDefaults,
+  copyDirectoryRecursive,
 };
