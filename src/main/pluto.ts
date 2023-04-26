@@ -118,7 +118,7 @@ class Pluto {
     options.push(this.getAssetPath('run_pluto.jl'));
     // See run_pluto.jl for info about these command line arguments.
     options.push(notebook ?? '');
-    options.push(process.env.JULIA_DEPOT_PATH ?? '');
+    options.push(DEPOT_LOCATION ?? '');
     options.push(join(app.getPath('userData'), 'unsaved_notebooks'));
 
     try {
