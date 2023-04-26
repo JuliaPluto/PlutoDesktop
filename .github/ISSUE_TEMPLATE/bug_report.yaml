@@ -3,7 +3,7 @@ description: File a bug report
 title: '[Bug]: '
 labels: ['bug', 'triage']
 assignees:
-  - illusion47586
+  - ctrekker
 body:
   - type: markdown
     attributes:
@@ -52,17 +52,17 @@ body:
       value: 'A bug happened!'
     validations:
       required: true
-  - type: dropdown
-    id: version
-    attributes:
-      label: Version
-      description: What version of our software are you running?
-      options:
-        - 0.0.1-alpha
-        - 0.0.2-alpha
-        - 0.0.2
-    validations:
-      required: true
+  # - type: dropdown
+  #   id: version
+  #   attributes:
+  #     label: Version
+  #     description: What version of our software are you running?
+  #     options:
+  #       - 0.0.1-alpha
+  #       - 0.0.2-alpha
+  #       - 0.0.2
+  #   validations:
+  #     required: true
   - type: textarea
     id: logs
     attributes:
@@ -70,7 +70,7 @@ body:
       description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
       render: shell
     validations:
-      required: true
+      required: false
   - type: textarea
     id: config
     attributes:
@@ -78,7 +78,7 @@ body:
       description: This will be automatically formatted into code, so no need for backticks. If no file created, please type NA.
       render: json
     validations:
-      required: true
+      required: false
   - type: textarea
     id: userConfig
     attributes:
@@ -86,4 +86,4 @@ body:
       description: This will be automatically formatted into code, so no need for backticks. If no file created, please type NA.
       render: json
     validations:
-      required: true
+      required: false
