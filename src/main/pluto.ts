@@ -29,6 +29,7 @@ class Pluto {
   private win: BrowserWindow;
 
   private getAssetPath: (...paths: string[]) => string;
+  private getWritablePath: (...paths: string[]) => string;
 
   private static url: PlutoURL | null;
 
@@ -43,10 +44,12 @@ class Pluto {
 
   constructor(
     win: BrowserWindow,
-    getAssetPath: (...paths: string[]) => string
+    getAssetPath: (...paths: string[]) => string,
+    getWritablePath: (...paths: string[]) => string
   ) {
     this.win = win;
     this.getAssetPath = getAssetPath;
+    this.getWritablePath = getWritablePath;
     this.project =
       process.env.DEBUG_PROJECT_PATH ?? getAssetPath('env_for_julia');
     Pluto.url ??= null;
@@ -109,8 +112,7 @@ class Pluto {
 
     const SYSIMAGE_LOCATION = this.getAssetPath('pluto-sysimage.so');
     const READONLY_DEPOT_LOCATION = this.getAssetPath('julia_depot');
-    const DEPOT_LOCATION =
-      'C:\\Users\\ctrek\\AppData\\Roaming\\pluto\\julia_depot';
+    const DEPOT_LOCATION = this.getWritablePath('julia_depot');
 
     // ensure depot has been copied from read-only installation directory to writable directory
     if (!fs.existsSync(DEPOT_LOCATION)) {
