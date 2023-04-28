@@ -86,10 +86,15 @@ const createWindow = async (
     const RESOURCES_PATH = app.isPackaged
       ? path.join(process.resourcesPath, 'assets')
       : path.join(__dirname, '../../assets');
+    const APPDATA_PATH = app.getPath('appData');
 
     const getAssetPath = (...paths: string[]): string => {
       return path.join(RESOURCES_PATH, ...paths);
     };
+    const getWritablePath = (...paths: string[]): string => {
+      return path.join(APPDATA_PATH, 'pluto', ...paths);
+    };
+    console.log(getWritablePath('.'));
 
     const pathOrURL = notebook ?? url;
 
@@ -142,7 +147,11 @@ const createWindow = async (
     await currWindow.loadURL(resolveHtmlPath('index.html'));
 
     if (!Pluto.runningInfo) {
-      await new Pluto(currWindow, getAssetPath).run(project, notebook, url);
+      await new Pluto(currWindow, getAssetPath, getWritablePath).run(
+        project,
+        notebook,
+        url
+      );
     } else if (url) {
       currWindow.focus();
       await Pluto.notebook.open('url', url);
