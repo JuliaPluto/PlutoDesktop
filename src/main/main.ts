@@ -128,8 +128,8 @@ const createWindow = async (
 
     const currWindow = new BrowserWindow({
       title: '⚡ Pluto ⚡',
-      height: 600,
-      width: 800,
+      height: 800,
+      width: 700,
       resizable: true,
       show: true,
       backgroundColor: nativeTheme.shouldUseDarkColors ? '#1F1F1F' : 'white',
@@ -144,7 +144,9 @@ const createWindow = async (
 
     mainWindow ??= currWindow;
 
-    await currWindow.loadURL(resolveHtmlPath('index.html'));
+    if (process.env.NODE_ENV === 'development') {
+      currWindow.webContents.openDevTools();
+    }
 
     if (!Pluto.runningInfo) {
       await new Pluto(currWindow, getAssetPath, getWritablePath).run(

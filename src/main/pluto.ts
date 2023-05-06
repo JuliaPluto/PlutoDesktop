@@ -14,6 +14,7 @@ import {
   PLUTO_FILE_EXTENSIONS,
   setAxiosDefaults,
   copyDirectoryRecursive,
+  resolveHtmlPath,
 } from './util';
 import msgpack from 'msgpack-lite';
 
@@ -83,6 +84,15 @@ class Pluto {
    * @returns if pluto is running, a fundtion to kill the process
    */
   public run = async (project?: string, notebook?: string, url?: string) => {
+    // todo: randomly generate this
+    const secret = 'badsecret';
+    await this.win.loadURL(
+      resolveHtmlPath('index.html') +
+        `?secret=${secret}&ws_url=${encodeURIComponent(
+          `ws://localhost:7122?secret=${secret}`
+        )}`
+    );
+
     if (Pluto.url) {
       generalLogger.info(
         'LAUNCHING\n',
@@ -133,6 +143,7 @@ class Pluto {
     options.push(notebook ?? '');
     options.push(DEPOT_LOCATION ?? '');
     options.push(join(app.getPath('userData'), 'unsaved_notebooks'));
+    options.push(secret);
 
     try {
       generalLogger.verbose(
@@ -145,35 +156,7 @@ class Pluto {
         env: { ...process.env, JULIA_DEPOT_PATH: DEPOT_LOCATION },
       });
 
-      res.stdout.on('data', (data: { toString: () => any }) => {
-        const plutoLog = data.toString();
-
-        if (plutoLog.includes('Loading') || plutoLog.includes('loading'))
-          this.win.webContents.send('pluto-url', 'loading');
-
-        if (Pluto.url === null) {
-          if (plutoLog.includes('?secret=')) {
-            const urlMatch = plutoLog.match(/http\S+/g);
-            const entryUrl = urlMatch[0];
-
-            const tempURL = new URL(entryUrl);
-            Pluto.url = {
-              url: entryUrl,
-              port: tempURL.port,
-              secret: tempURL.searchParams.get('secret')!,
-            };
-
-            this.win.webContents.send('pluto-url', 'loaded');
-            setAxiosDefaults(Pluto.url);
-            this.win.loadURL(entryUrl);
-
-            generalLogger.announce('Entry url found:', Pluto.url);
-          }
-        }
-        juliaLogger.log(plutoLog);
-      });
-
-      res.stderr.on('data', (data: any) => {
+      const loggerListener = (data: any) => {
         const dataString = data.toString();
 
         if (dataString.includes('Updating'))
@@ -197,7 +180,7 @@ class Pluto {
 
             this.win.webContents.send('pluto-url', 'loaded');
             setAxiosDefaults(Pluto.url);
-            this.win.loadURL(entryUrl);
+            // this.win.loadURL(entryUrl);
 
             generalLogger.announce('Entry url found:', Pluto.url);
           } else if (
@@ -218,7 +201,10 @@ class Pluto {
         }
 
         juliaLogger.error(dataString);
-      });
+      };
+
+      res.stdout.on('data', loggerListener);
+      res.stderr.on('data', loggerListener);
 
       res.once('close', (code: any) => {
         if (code !== 0) {
