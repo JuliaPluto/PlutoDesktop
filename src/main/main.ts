@@ -129,7 +129,7 @@ const createWindow = async (
     const currWindow = new BrowserWindow({
       title: '⚡ Pluto ⚡',
       height: 800,
-      width: 700,
+      width: process.env.NODE_ENV === 'development' ? 1200 : 700,
       resizable: true,
       show: true,
       backgroundColor: nativeTheme.shouldUseDarkColors ? '#1F1F1F' : 'white',
@@ -274,18 +274,17 @@ app
 
       if (details.url.match(/\/Pluto\.jl\/frontend(-dist)?/g)) {
         const url = new URL(details.url);
-        console.log(url.pathname);
 
         generalLogger.verbose(
           'Triggered Pluto.jl server-side route detection!',
           details.url
         );
 
-        if (details.url.endsWith('/')) {
-          next({ redirectURL: resolveHtmlPath('index.html') });
+        if (url.pathname.endsWith('/')) {
+          next({ redirectURL: resolveHtmlPath('index.html', Pluto.url) });
           return;
         }
-        if (details.url.endsWith('new')) {
+        if (url.pathname.endsWith('new')) {
           // this should be synchronous so the user sees the Pluto.jl loading screen on index.html
           await Pluto.notebook.new();
           next({
@@ -293,8 +292,20 @@ app
           });
           return;
         }
-        if (details.url.endsWith('edit')) {
+        if (url.pathname.endsWith('open')) {
           await Pluto.notebook.open('path', url.searchParams.get('path'));
+          next({
+            cancel: true,
+          });
+          return;
+        }
+        if (url.pathname.endsWith('edit')) {
+          next({
+            redirectURL:
+              resolveHtmlPath('editor.html', Pluto.url) +
+              `&id=${url.searchParams.get('id')}`,
+          });
+          return;
         }
       }
 

@@ -32,7 +32,7 @@ class Pluto {
   private getAssetPath: (...paths: string[]) => string;
   private getWritablePath: (...paths: string[]) => string;
 
-  private static url: PlutoURL | null;
+  public static url: PlutoURL | null;
 
   /**
    * location of the julia executable
@@ -87,10 +87,7 @@ class Pluto {
     // todo: randomly generate this
     const secret = 'badsecret';
     await this.win.loadURL(
-      resolveHtmlPath('index.html') +
-        `?secret=${secret}&ws_url=${encodeURIComponent(
-          `ws://localhost:7122?secret=${secret}`
-        )}`
+      resolveHtmlPath('index.html', { secret, url: '', port: '' })
     );
 
     if (Pluto.url) {
@@ -333,8 +330,9 @@ class Pluto {
             );
 
         if (res.status === 200) {
+          const notebookId = res.data;
           await window.loadURL(
-            `http://localhost:${this.url.port}/edit?secret=${this.url.secret}&id=${res.data}`
+            resolveHtmlPath('editor.html', this.url) + `&id=${notebookId}`
           );
           loader.stopLoading();
           return;

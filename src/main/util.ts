@@ -5,8 +5,6 @@ import fs from 'node:fs';
 import { URL } from 'url';
 import { generalLogger } from './logger';
 
-export let resolveHtmlPath: (htmlFileName: string) => string;
-
 // if (process.env.NODE_ENV === 'development') {
 //   const port = process.env.PORT || 1212;
 //   resolveHtmlPath = (htmlFileName: string) => {
@@ -15,10 +13,17 @@ export let resolveHtmlPath: (htmlFileName: string) => string;
 //     return url.href;
 //   };
 // } else {
-resolveHtmlPath = (htmlFileName: string) => {
+export let resolveHtmlPath = (
+  htmlFileName: string,
+  plutoUrl: PlutoURL | null
+) => {
   // return `file://${path.resolve(__dirname, '../renderer/', htmlFileName)}`;
   // TODO: change me to live path based on depot and package path
-  return `file:///C:/Users/ctrek/Programming/Pluto.jl/frontend/${htmlFileName}`;
+  return `file:///C:/Users/ctrek/Programming/Pluto.jl/frontend/${htmlFileName}?secret=${
+    plutoUrl?.secret
+  }&ws_url=${encodeURIComponent(
+    `ws://localhost:7122?secret=${plutoUrl?.secret}`
+  )}`;
 };
 // }
 
