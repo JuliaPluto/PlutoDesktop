@@ -268,5 +268,37 @@ app
           );
       });
     });
+
+    session.defaultSession.webRequest.onBeforeRequest(async (details, next) => {
+      let cancel = false;
+
+      if (details.url.match(/\/Pluto\.jl\/frontend(-dist)?/g)) {
+        const url = new URL(details.url);
+        console.log(url.pathname);
+
+        generalLogger.verbose(
+          'Triggered Pluto.jl server-side route detection!',
+          details.url
+        );
+
+        if (details.url.endsWith('/')) {
+          next({ redirectURL: resolveHtmlPath('index.html') });
+          return;
+        }
+        if (details.url.endsWith('new')) {
+          // this should be synchronous so the user sees the Pluto.jl loading screen on index.html
+          await Pluto.notebook.new();
+          next({
+            cancel: true,
+          });
+          return;
+        }
+        if (details.url.endsWith('edit')) {
+          await Pluto.notebook.open('path', url.searchParams.get('path'));
+        }
+      }
+
+      next({ cancel });
+    });
   })
   .catch(generalLogger.error);

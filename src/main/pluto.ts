@@ -200,7 +200,7 @@ class Pluto {
           }
         }
 
-        juliaLogger.error(dataString);
+        juliaLogger.info(dataString);
       };
 
       res.stdout.on('data', loggerListener);
@@ -237,7 +237,7 @@ class Pluto {
    */
   private static openNotebook = async (
     type: 'url' | 'path' | 'new' = 'new',
-    pathOrURL?: string
+    pathOrURL?: string | null
   ) => {
     try {
       const window = BrowserWindow.getFocusedWindow()!;
@@ -358,6 +358,13 @@ class Pluto {
         'Cannot open this notebook found on this path/url.'
       );
     }
+  };
+
+  /**
+   * Alias function for `openNotebook` with type set to 'new'
+   */
+  private static newNotebook = async () => {
+    return this.openNotebook('new');
   };
 
   /**
@@ -606,6 +613,7 @@ class Pluto {
    */
   public static notebook = {
     open: this.openNotebook,
+    new: this.newNotebook,
     export: this.exportNotebook,
     move: this.moveNotebook,
     shutdown: this.shutdownNotebook,

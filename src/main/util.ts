@@ -112,7 +112,13 @@ const isUrlOrPath = (text: string) => {
 };
 
 const setAxiosDefaults = (url: PlutoURL) => {
-  axios.defaults.baseURL = new URL(url.url).origin;
+  const baseURL = new URL(url.url);
+  if (baseURL.hostname === 'localhost') {
+    // there are issues with IPv6 and Node.JS on certain hardware / operating systems
+    // the loopback IP is generally safer
+    baseURL.hostname = '127.0.0.1';
+  }
+  axios.defaults.baseURL = baseURL.origin;
   axios.defaults.headers.common.Connection = 'keep-alive';
   generalLogger.verbose('Base URL set to', axios.defaults.baseURL);
 };
