@@ -8,10 +8,5 @@
     "email": "fons@plutojl.org",
     "url": "https://github.com/JuliaPluto"
   },
-  "main": "./dist/main/main.js",
-  "scripts": {
-    "electron-rebuild": "node -r ts-node/register ../../.erb/scripts/electron-rebuild.js",
-    "postinstall": "npm run electron-rebuild && npm run link-modules",
-    "link-modules": "node -r ts-node/register ../../.erb/scripts/link-modules.ts"
-  }
+  "main": "./dist/main/main.js"
 }
