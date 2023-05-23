@@ -5,28 +5,6 @@ import fs from 'node:fs';
 import { URL } from 'url';
 import { generalLogger } from './logger';
 
-// if (process.env.NODE_ENV === 'development') {
-//   const port = process.env.PORT || 1212;
-//   resolveHtmlPath = (htmlFileName: string) => {
-//     const url = new URL(`http://localhost:${port}`);
-//     url.pathname = htmlFileName;
-//     return url.href;
-//   };
-// } else {
-export let resolveHtmlPath = (
-  htmlFileName: string,
-  plutoUrl: PlutoURL | null
-) => {
-  // return `file://${path.resolve(__dirname, '../renderer/', htmlFileName)}`;
-  // TODO: change me to live path based on depot and package path
-  return `file:///C:/Users/ctrek/Programming/Pluto.jl/frontend/${htmlFileName}?secret=${
-    plutoUrl?.secret
-  }&ws_url=${encodeURIComponent(
-    `ws://localhost:7122?secret=${plutoUrl?.secret}`
-  )}`;
-};
-// }
-
 const PLUTO_FILE_EXTENSIONS = [
   '.pluto.jl',
   '.Pluto.jl',
@@ -126,6 +104,19 @@ const setAxiosDefaults = (url: PlutoURL) => {
   axios.defaults.baseURL = baseURL.origin;
   axios.defaults.headers.common.Connection = 'keep-alive';
   generalLogger.verbose('Base URL set to', axios.defaults.baseURL);
+};
+
+export const generateSecret = (length = 8) => {
+  const characters =
+    'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let secret = '';
+
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * characters.length);
+    secret += characters[randomIndex];
+  }
+
+  return secret;
 };
 
 export {

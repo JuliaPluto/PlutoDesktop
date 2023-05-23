@@ -1,9 +1,9 @@
 import axios from 'axios';
 import chalk from 'chalk';
-import { app, BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow, dialog, session } from 'electron';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
-import { join } from 'node:path';
+import * as path from 'node:path';
 
 import { PlutoExport } from '../../types/enums';
 import { generalLogger, juliaLogger } from './logger';
@@ -14,9 +14,10 @@ import {
   PLUTO_FILE_EXTENSIONS,
   setAxiosDefaults,
   copyDirectoryRecursive,
-  resolveHtmlPath,
+  generateSecret,
 } from './util';
 import msgpack from 'msgpack-lite';
+import { DEPOT_LOCATION, getAssetPath, READONLY_DEPOT_LOCATION } from './paths';
 
 class Pluto {
   /**
@@ -29,35 +30,33 @@ class Pluto {
    */
   private win: BrowserWindow;
 
-  private getAssetPath: (...paths: string[]) => string;
-  private getWritablePath: (...paths: string[]) => string;
-
   public static url: PlutoURL | null;
+
+  private static secret: string = generateSecret();
 
   /**
    * location of the julia executable
    */
   private static julia: string;
 
+  /**
+   * Location of the Pluto.jl package. This should always be somewhere inside the Julia depot
+   */
+  private static packageLocation: string;
+
   private static notebookManager: NotebookManager;
 
   private static closePlutoFunction: (() => void) | undefined;
 
-  constructor(
-    win: BrowserWindow,
-    getAssetPath: (...paths: string[]) => string,
-    getWritablePath: (...paths: string[]) => string
-  ) {
+  constructor(win: BrowserWindow) {
     this.win = win;
-    this.getAssetPath = getAssetPath;
-    this.getWritablePath = getWritablePath;
     this.project =
       process.env.DEBUG_PROJECT_PATH ?? getAssetPath('env_for_julia');
     Pluto.url ??= null;
   }
 
   private findJulia = async () => {
-    const files = fs.readdirSync(this.getAssetPath('.'));
+    const files = fs.readdirSync(getAssetPath('.'));
 
     let julia_dir = files.find((s) => /^julia-\d+.\d+.\d+$/.test(s));
     let result;
@@ -68,10 +67,32 @@ class Pluto {
       );
       result = `julia`;
     } else {
-      result = this.getAssetPath(julia_dir, 'bin', 'julia.exe');
+      result = getAssetPath(julia_dir, 'bin', 'julia.exe');
     }
     Pluto.julia = result;
     return result;
+  };
+
+  private findPluto = () => {
+    return new Promise(async (resolve, reject) => {
+      if (!Pluto.julia) await this.findJulia();
+
+      const options = [
+        `--project=${this.project}`,
+        getAssetPath('locate_pluto.jl'),
+      ];
+      const proc = spawn(Pluto.julia, options, {
+        env: { ...process.env, JULIA_DEPOT_PATH: DEPOT_LOCATION },
+      });
+      proc.stdout.on('data', (chunk) => {
+        Pluto.packageLocation = chunk.toString();
+        resolve(undefined);
+      });
+      proc.stderr.on('error', (err) => {
+        juliaLogger.error('Error determining Pluto.jl package location:', err);
+        reject();
+      });
+    });
   };
 
   /**
@@ -84,11 +105,11 @@ class Pluto {
    * @returns if pluto is running, a fundtion to kill the process
    */
   public run = async (project?: string, notebook?: string, url?: string) => {
-    // todo: randomly generate this
-    const secret = 'badsecret';
-    await this.win.loadURL(
-      resolveHtmlPath('index.html', { secret, url: '', port: '' })
-    );
+    await this.findJulia();
+    await this.findPluto();
+
+    // load the Pluto.jl homepage
+    await this.win.loadURL(Pluto.resolveHtmlPath('index.html'));
 
     if (Pluto.url) {
       generalLogger.info(
@@ -117,9 +138,7 @@ class Pluto {
       notebook
     );
 
-    const SYSIMAGE_LOCATION = this.getAssetPath('pluto-sysimage.so');
-    const READONLY_DEPOT_LOCATION = this.getAssetPath('julia_depot');
-    const DEPOT_LOCATION = this.getWritablePath('julia_depot');
+    const SYSIMAGE_LOCATION = getAssetPath('pluto-sysimage.so');
 
     // ensure depot has been copied from read-only installation directory to writable directory
     if (!fs.existsSync(DEPOT_LOCATION)) {
@@ -135,12 +154,12 @@ class Pluto {
         options.push(`--sysimage=${SYSIMAGE_LOCATION}`);
     }
 
-    options.push(this.getAssetPath('run_pluto.jl'));
+    options.push(getAssetPath('run_pluto.jl'));
     // See run_pluto.jl for info about these command line arguments.
     options.push(notebook ?? '');
     options.push(DEPOT_LOCATION ?? '');
-    options.push(join(app.getPath('userData'), 'unsaved_notebooks'));
-    options.push(secret);
+    options.push(path.join(app.getPath('userData'), 'unsaved_notebooks'));
+    options.push(Pluto.secret);
 
     try {
       generalLogger.verbose(
@@ -332,7 +351,7 @@ class Pluto {
         if (res.status === 200) {
           const notebookId = res.data;
           await window.loadURL(
-            resolveHtmlPath('editor.html', this.url) + `&id=${notebookId}`
+            Pluto.resolveHtmlPath('editor.html') + `&id=${notebookId}`
           );
           loader.stopLoading();
           return;
@@ -593,6 +612,71 @@ class Pluto {
     }
 
     return result;
+  };
+
+  public static createRequestListener = () => {
+    session.defaultSession.webRequest.onBeforeRequest(async (details, next) => {
+      let cancel = false;
+
+      if (details.url.match(/\/Pluto\.jl\/frontend(-dist)?/g)) {
+        const url = new URL(details.url);
+        const tail = url.pathname.split('/').reverse()[0];
+
+        generalLogger.verbose(
+          'Triggered Pluto.jl server-side route detection!',
+          details.url
+        );
+
+        if (url.pathname.endsWith('/')) {
+          next({ redirectURL: Pluto.resolveHtmlPath('index.html') });
+          return;
+        }
+        if (tail === 'new') {
+          // this should be synchronous so the user sees the Pluto.jl loading screen on index.html
+          await Pluto.notebook.new();
+          next({
+            cancel: true,
+          });
+          return;
+        }
+        if (tail === 'open') {
+          await Pluto.notebook.open('path', url.searchParams.get('path'));
+          next({
+            cancel: true,
+          });
+          return;
+        }
+        if (tail === 'edit') {
+          next({
+            redirectURL:
+              Pluto.resolveHtmlPath('editor.html') +
+              `&id=${url.searchParams.get('id')}`,
+          });
+          return;
+        }
+      }
+
+      next({ cancel });
+    });
+  };
+
+  private static resolveHtmlPath = (htmlFileName: string) => {
+    let plutoLocation = Pluto.packageLocation;
+
+    // overwrite the default Pluto location if in development
+    if (process.env.NODE_ENV === 'development') {
+      const plutoLocationReplacement = path.resolve('..', 'Pluto.jl');
+      if (fs.existsSync(plutoLocationReplacement)) {
+        plutoLocation = plutoLocationReplacement;
+        generalLogger.info('Using Pluto.jl development path', plutoLocation);
+      }
+    }
+
+    return `file:///${plutoLocation}/frontend/${htmlFileName}?secret=${
+      Pluto.secret
+    }&ws_url=${encodeURIComponent(
+      `ws://localhost:7122?secret=${Pluto.secret}`
+    )}`;
   };
 
   /**

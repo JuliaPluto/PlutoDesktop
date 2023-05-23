@@ -28,7 +28,7 @@ import { backgroundLogger, generalLogger } from './logger';
 import MenuBuilder from './menu';
 import Pluto from './pluto';
 import { store } from './store';
-import { resolveHtmlPath } from './util';
+import { getAssetPath } from './paths';
 
 generalLogger.verbose('---------- NEW SESSION ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
@@ -83,19 +83,6 @@ const createWindow = async (
   forceNew = true
 ) => {
   try {
-    const RESOURCES_PATH = app.isPackaged
-      ? path.join(process.resourcesPath, 'assets')
-      : path.join(__dirname, '../../assets');
-    const APPDATA_PATH = app.getPath('appData');
-
-    const getAssetPath = (...paths: string[]): string => {
-      return path.join(RESOURCES_PATH, ...paths);
-    };
-    const getWritablePath = (...paths: string[]): string => {
-      return path.join(APPDATA_PATH, 'pluto', ...paths);
-    };
-    console.log(getWritablePath('.'));
-
     const pathOrURL = notebook ?? url;
 
     /**
@@ -149,11 +136,7 @@ const createWindow = async (
     }
 
     if (!Pluto.runningInfo) {
-      await new Pluto(currWindow, getAssetPath, getWritablePath).run(
-        project,
-        notebook,
-        url
-      );
+      await new Pluto(currWindow).run(project, notebook, url);
     } else if (url) {
       currWindow.focus();
       await Pluto.notebook.open('url', url);
@@ -269,47 +252,6 @@ app
       });
     });
 
-    session.defaultSession.webRequest.onBeforeRequest(async (details, next) => {
-      let cancel = false;
-
-      if (details.url.match(/\/Pluto\.jl\/frontend(-dist)?/g)) {
-        const url = new URL(details.url);
-
-        generalLogger.verbose(
-          'Triggered Pluto.jl server-side route detection!',
-          details.url
-        );
-
-        if (url.pathname.endsWith('/')) {
-          next({ redirectURL: resolveHtmlPath('index.html', Pluto.url) });
-          return;
-        }
-        if (url.pathname.endsWith('new')) {
-          // this should be synchronous so the user sees the Pluto.jl loading screen on index.html
-          await Pluto.notebook.new();
-          next({
-            cancel: true,
-          });
-          return;
-        }
-        if (url.pathname.endsWith('open')) {
-          await Pluto.notebook.open('path', url.searchParams.get('path'));
-          next({
-            cancel: true,
-          });
-          return;
-        }
-        if (url.pathname.endsWith('edit')) {
-          next({
-            redirectURL:
-              resolveHtmlPath('editor.html', Pluto.url) +
-              `&id=${url.searchParams.get('id')}`,
-          });
-          return;
-        }
-      }
-
-      next({ cancel });
-    });
+    Pluto.createRequestListener();
   })
   .catch(generalLogger.error);
