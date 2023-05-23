@@ -28,7 +28,7 @@ import { backgroundLogger, generalLogger } from './logger';
 import MenuBuilder from './menu';
 import Pluto from './pluto';
 import { store } from './store';
-import { isUrlOrPath, resolveHtmlPath } from './util';
+import { resolveHtmlPath } from './util';
 
 generalLogger.verbose('---------- NEW SESSION ----------');
 generalLogger.verbose('Application Version:', app.getVersion());

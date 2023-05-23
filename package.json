@@ -34,9 +34,10 @@
   "main": "./src/main/main.ts",
   "scripts": {
     "postinstall": "ts-node .erb/scripts/check-native-dep.js && electron-builder install-app-deps",
-    "package": "electron-builder build --publish never",
+    "package": "npm run build && electron-builder build --publish never",
     "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir release/app",
     "start": "cross-env NODE_ENV=development electronmon -r ts-node/register/transpile-only .",
+    "build": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.main.prod.ts",
     "test": "jest"
   },
   "browserslist": [],
