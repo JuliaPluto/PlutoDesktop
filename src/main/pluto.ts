@@ -674,7 +674,7 @@ class Pluto {
 
     return `file:///${plutoLocation}/frontend/${htmlFileName}?secret=${
       Pluto.secret
-    }&ws_url=${encodeURIComponent(
+    }&pluto_server_url=${encodeURIComponent(
       `ws://localhost:7122?secret=${Pluto.secret}`
     )}`;
   };
