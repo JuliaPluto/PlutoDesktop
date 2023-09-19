@@ -14,7 +14,7 @@ Just a couple of steps!
 
 ## Run in development mode
 - run `npm run start`
-> Node: Currently the code has some Windows specific parts, like checking for admin rights etc.
+> Node: Currently the code has some Windows-specific parts, such as checking for admin rights etc.
 
 ## Working with Pluto.jl
 

@@ -3,6 +3,7 @@ import { BrowserWindow } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { URL } from 'url';
+import { getRandomValues } from 'node:crypto';
 import { generalLogger } from './logger';
 
 const PLUTO_FILE_EXTENSIONS = [
@@ -106,17 +107,24 @@ const setAxiosDefaults = (url: PlutoURL) => {
   generalLogger.verbose('Base URL set to', axios.defaults.baseURL);
 };
 
-export const generateSecret = (length = 8) => {
-  const characters =
-    'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let secret = '';
+// adapted from PlutoHash.js in fonsp/Pluto.jl
+export const urlSafeBase64 = (original: string) => {
+  return original.replaceAll(/[\+\/\=]/g, (s) => {
+    const c = s.charCodeAt(0);
+    return c === 43 ? '-' : c === 47 ? '_' : '';
+  });
+};
 
-  for (let i = 0; i < length; i++) {
-    const randomIndex = Math.floor(Math.random() * characters.length);
-    secret += characters[randomIndex];
+export const generateSecret = (length = 8) => {
+  if (length <= 0 || !Number.isInteger(length)) {
+    throw new Error('Invalid key length');
   }
 
-  return secret;
+  const arr = new Uint32Array(Math.ceil((3 * length) / 4));
+  getRandomValues(arr);
+  const secretBase64 = Buffer.from(arr).toString('base64').slice(0, length);
+
+  return urlSafeBase64(secretBase64);
 };
 
 export {
