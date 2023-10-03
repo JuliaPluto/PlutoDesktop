@@ -1,9 +1,9 @@
 import axios from 'axios';
 import chalk from 'chalk';
-import { app, BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow, dialog, session } from 'electron';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
-import { join } from 'node:path';
+import * as path from 'node:path';
 
 import { PlutoExport } from '../../types/enums';
 import { generalLogger, juliaLogger } from './logger';
@@ -14,10 +14,14 @@ import {
   PLUTO_FILE_EXTENSIONS,
   setAxiosDefaults,
   copyDirectoryRecursive,
+  generateSecret,
 } from './util';
 import msgpack from 'msgpack-lite';
+import { DEPOT_LOCATION, getAssetPath, READONLY_DEPOT_LOCATION } from './paths';
 
 class Pluto {
+  private static instance: Pluto;
+
   /**
    * project folder location
    */
@@ -28,35 +32,43 @@ class Pluto {
    */
   private win: BrowserWindow;
 
-  private getAssetPath: (...paths: string[]) => string;
-  private getWritablePath: (...paths: string[]) => string;
+  public static url: PlutoURL | null;
 
-  private static url: PlutoURL | null;
+  private static secret: string = generateSecret();
 
   /**
    * location of the julia executable
    */
   private static julia: string;
 
+  /**
+   * Location of the Pluto.jl package. This should always be somewhere inside the Julia depot
+   */
+  private static packageLocation: string;
+
   private static notebookManager: NotebookManager;
 
   private static closePlutoFunction: (() => void) | undefined;
 
-  constructor(
-    win: BrowserWindow,
-    getAssetPath: (...paths: string[]) => string,
-    getWritablePath: (...paths: string[]) => string
-  ) {
+  constructor(win: BrowserWindow) {
+    // currently Pluto functions as a singleton
+    // TODO: refactor to support arbitrary window counts
+    if (Pluto.instance) {
+      throw new Error(
+        'ERROR: Pluto is written as a singleton class and another instance was created!'
+      );
+    }
+
     this.win = win;
-    this.getAssetPath = getAssetPath;
-    this.getWritablePath = getWritablePath;
     this.project =
       process.env.DEBUG_PROJECT_PATH ?? getAssetPath('env_for_julia');
     Pluto.url ??= null;
+
+    Pluto.instance = this;
   }
 
   private findJulia = async () => {
-    const files = fs.readdirSync(this.getAssetPath('.'));
+    const files = fs.readdirSync(getAssetPath('.'));
 
     let julia_dir = files.find((s) => /^julia-\d+.\d+.\d+$/.test(s));
     let result;
@@ -67,11 +79,35 @@ class Pluto {
       );
       result = `julia`;
     } else {
-      result = this.getAssetPath(julia_dir, 'bin', 'julia.exe');
+      result = getAssetPath(julia_dir, 'bin', 'julia.exe');
     }
     Pluto.julia = result;
     return result;
   };
+
+  private findPluto = () => {
+    return new Promise(async (resolve, reject) => {
+      if (!Pluto.julia) await this.findJulia();
+
+      const options = [
+        `--project=${this.project}`,
+        getAssetPath('locate_pluto.jl'),
+      ];
+      const proc = spawn(Pluto.julia, options, {
+        env: { ...process.env, JULIA_DEPOT_PATH: DEPOT_LOCATION },
+      });
+      proc.stdout.on('data', (chunk) => {
+        Pluto.packageLocation = chunk.toString();
+        resolve(undefined);
+      });
+      proc.stderr.on('error', (err) => {
+        juliaLogger.error('Error determining Pluto.jl package location:', err);
+        reject();
+      });
+    });
+  };
+
+  public static getInstance = () => Pluto.instance;
 
   /**
    * The main function the actually runs a `julia` script that
@@ -83,6 +119,12 @@ class Pluto {
    * @returns if pluto is running, a fundtion to kill the process
    */
   public run = async (project?: string, notebook?: string, url?: string) => {
+    await this.findJulia();
+    await this.findPluto();
+
+    // load the Pluto.jl homepage
+    await this.win.loadURL(Pluto.resolveHtmlPath('index.html'));
+
     if (Pluto.url) {
       generalLogger.info(
         'LAUNCHING\n',
@@ -91,8 +133,8 @@ class Pluto {
         '\nnotebook:',
         notebook
       );
-      if (notebook) await Pluto.openNotebook('path', notebook);
-      else if (url) await Pluto.openNotebook('url', url);
+      if (notebook) await this.open('path', notebook);
+      else if (url) await this.open('url', url);
       return;
     }
 
@@ -110,9 +152,7 @@ class Pluto {
       notebook
     );
 
-    const SYSIMAGE_LOCATION = this.getAssetPath('pluto-sysimage.so');
-    const READONLY_DEPOT_LOCATION = this.getAssetPath('julia_depot');
-    const DEPOT_LOCATION = this.getWritablePath('julia_depot');
+    const SYSIMAGE_LOCATION = getAssetPath('pluto-sysimage.so');
 
     // ensure depot has been copied from read-only installation directory to writable directory
     if (!fs.existsSync(DEPOT_LOCATION)) {
@@ -128,11 +168,12 @@ class Pluto {
         options.push(`--sysimage=${SYSIMAGE_LOCATION}`);
     }
 
-    options.push(this.getAssetPath('run_pluto.jl'));
+    options.push(getAssetPath('run_pluto.jl'));
     // See run_pluto.jl for info about these command line arguments.
     options.push(notebook ?? '');
     options.push(DEPOT_LOCATION ?? '');
-    options.push(join(app.getPath('userData'), 'unsaved_notebooks'));
+    options.push(path.join(app.getPath('userData'), 'unsaved_notebooks'));
+    options.push(Pluto.secret);
 
     try {
       generalLogger.verbose(
@@ -145,35 +186,7 @@ class Pluto {
         env: { ...process.env, JULIA_DEPOT_PATH: DEPOT_LOCATION },
       });
 
-      res.stdout.on('data', (data: { toString: () => any }) => {
-        const plutoLog = data.toString();
-
-        if (plutoLog.includes('Loading') || plutoLog.includes('loading'))
-          this.win.webContents.send('pluto-url', 'loading');
-
-        if (Pluto.url === null) {
-          if (plutoLog.includes('?secret=')) {
-            const urlMatch = plutoLog.match(/http\S+/g);
-            const entryUrl = urlMatch[0];
-
-            const tempURL = new URL(entryUrl);
-            Pluto.url = {
-              url: entryUrl,
-              port: tempURL.port,
-              secret: tempURL.searchParams.get('secret')!,
-            };
-
-            this.win.webContents.send('pluto-url', 'loaded');
-            setAxiosDefaults(Pluto.url);
-            this.win.loadURL(entryUrl);
-
-            generalLogger.announce('Entry url found:', Pluto.url);
-          }
-        }
-        juliaLogger.log(plutoLog);
-      });
-
-      res.stderr.on('data', (data: any) => {
+      const loggerListener = (data: any) => {
         const dataString = data.toString();
 
         if (dataString.includes('Updating'))
@@ -197,7 +210,7 @@ class Pluto {
 
             this.win.webContents.send('pluto-url', 'loaded');
             setAxiosDefaults(Pluto.url);
-            this.win.loadURL(entryUrl);
+            // this.win.loadURL(entryUrl);
 
             generalLogger.announce('Entry url found:', Pluto.url);
           } else if (
@@ -217,8 +230,11 @@ class Pluto {
           }
         }
 
-        juliaLogger.error(dataString);
-      });
+        juliaLogger.info(dataString);
+      };
+
+      res.stdout.on('data', loggerListener);
+      res.stderr.on('data', loggerListener);
 
       res.once('close', (code: any) => {
         if (code !== 0) {
@@ -249,14 +265,15 @@ class Pluto {
    * opens that notebook. If false and no path is there, opens the file selector.
    * If true, opens a new blank notebook.
    */
-  private static openNotebook = async (
+  public open = async (
     type: 'url' | 'path' | 'new' = 'new',
-    pathOrURL?: string
+    pathOrURL?: string | null
   ) => {
-    try {
-      const window = BrowserWindow.getFocusedWindow()!;
-      console.log(pathOrURL);
+    const window = BrowserWindow.getFocusedWindow()!;
+    const setBlockScreenText = (blockScreenText: string | null) =>
+      window.webContents.send('set-block-screen-text', blockScreenText);
 
+    try {
       if (type === 'path' && pathOrURL && !isExtMatch(pathOrURL)) {
         dialog.showErrorBox(
           'PLUTO-CANNOT-OPEN-NOTEBOOK',
@@ -281,6 +298,7 @@ class Pluto {
           if (r.canceled) return;
 
           [pathOrURL] = r.filePaths;
+          // this.win.webContents.send();
         } else if (type !== 'url') {
           dialog.showErrorBox(
             'PLUTO-CANNOT-OPEN-NOTEBOOK',
@@ -292,16 +310,18 @@ class Pluto {
 
       const loader = new Loader(window);
 
-      if (this.url) {
+      if (Pluto.url) {
         let params = {};
         if (pathOrURL) {
           generalLogger.log(`Trying to open ${pathOrURL}`);
           if (type === 'path') {
+            setBlockScreenText(pathOrURL);
             window.webContents.send('pluto-url', `Trying to open ${pathOrURL}`);
             params = { secret: Pluto.url?.secret, path: pathOrURL };
           } else if (type === 'url') {
             const newURL = new URL(pathOrURL);
             if (newURL.searchParams.has('path')) {
+              setBlockScreenText(pathOrURL);
               window.webContents.send(
                 'pluto-url',
                 `Trying to open ${newURL.searchParams.get('path')}`
@@ -311,6 +331,7 @@ class Pluto {
                 path: newURL.searchParams.get('path'),
               };
             } else {
+              setBlockScreenText('new notebook');
               window.webContents.send(
                 'pluto-url',
                 `Trying to open ${pathOrURL}`
@@ -333,7 +354,7 @@ class Pluto {
             // is a local url
             id = new URL(pathOrURL).searchParams.get('id');
           } else {
-            id = await this.checkNotebook(pathOrURL);
+            id = await Pluto.checkNotebook(pathOrURL);
           }
         }
         const res = id
@@ -347,12 +368,16 @@ class Pluto {
             );
 
         if (res.status === 200) {
+          const notebookId = res.data;
           await window.loadURL(
-            `http://localhost:${this.url.port}/edit?secret=${this.url.secret}&id=${res.data}`
+            Pluto.resolveHtmlPath('editor.html') + `&id=${notebookId}`
           );
           loader.stopLoading();
           return;
         }
+
+        window.webContents.send('set-block-screen-text', pathOrURL);
+
         loader.stopLoading();
         dialog.showErrorBox(
           'PLUTO-CANNOT-OPEN-NOTEBOOK',
@@ -371,7 +396,16 @@ class Pluto {
         'PLUTO-NOTEBOOK-OPEN-ERROR',
         'Cannot open this notebook found on this path/url.'
       );
+    } finally {
+      setBlockScreenText(null);
     }
+  };
+
+  /**
+   * Alias function for `open` with type set to 'new'
+   */
+  private static newNotebook = async () => {
+    return Pluto.instance.open('new');
   };
 
   /**
@@ -604,6 +638,71 @@ class Pluto {
     return result;
   };
 
+  public static createRequestListener = () => {
+    session.defaultSession.webRequest.onBeforeRequest(async (details, next) => {
+      let cancel = false;
+
+      if (details.url.match(/\/Pluto\.jl\/frontend(-dist)?/g)) {
+        const url = new URL(details.url);
+        const tail = url.pathname.split('/').reverse()[0];
+
+        generalLogger.verbose(
+          'Triggered Pluto.jl server-side route detection!',
+          details.url
+        );
+
+        if (url.pathname.endsWith('/')) {
+          next({ redirectURL: Pluto.resolveHtmlPath('index.html') });
+          return;
+        }
+        if (tail === 'new') {
+          // this should be synchronous so the user sees the Pluto.jl loading screen on index.html
+          await Pluto.notebook.new();
+          next({
+            cancel: true,
+          });
+          return;
+        }
+        if (tail === 'open') {
+          await Pluto.instance.open('path', url.searchParams.get('path'));
+          next({
+            cancel: true,
+          });
+          return;
+        }
+        if (tail === 'edit') {
+          next({
+            redirectURL:
+              Pluto.resolveHtmlPath('editor.html') +
+              `&id=${url.searchParams.get('id')}`,
+          });
+          return;
+        }
+      }
+
+      next({ cancel });
+    });
+  };
+
+  private static resolveHtmlPath = (htmlFileName: string) => {
+    let plutoLocation = Pluto.packageLocation;
+
+    // overwrite the default Pluto location if in development
+    if (process.env.NODE_ENV === 'development') {
+      const plutoLocationReplacement = path.resolve('..', 'Pluto.jl');
+      if (fs.existsSync(plutoLocationReplacement)) {
+        plutoLocation = plutoLocationReplacement;
+        generalLogger.info('Using Pluto.jl development path', plutoLocation);
+      }
+    }
+
+    return `file:///${plutoLocation}/frontend/${htmlFileName}?secret=${
+      Pluto.secret
+    }&pluto_server_url=${encodeURIComponent(
+      `ws://localhost:7122?secret=${Pluto.secret}`
+    )}`;
+  };
+
   /**
    * @param file location/url of the file
    * @returns id of the file if notebookManager is there
@@ -619,7 +718,7 @@ class Pluto {
    * FileSystem functions publically in a ⚡ Pretty ⚡ way.
    */
   public static notebook = {
-    open: this.openNotebook,
+    new: this.newNotebook,
     export: this.exportNotebook,
     move: this.moveNotebook,
     shutdown: this.shutdownNotebook,

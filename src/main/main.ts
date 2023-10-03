@@ -28,7 +28,7 @@ import { backgroundLogger, generalLogger } from './logger';
 import MenuBuilder from './menu';
 import Pluto from './pluto';
 import { store } from './store';
-import { isUrlOrPath, resolveHtmlPath } from './util';
+import { getAssetPath } from './paths';
 
 generalLogger.verbose('---------- NEW SESSION ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
@@ -83,19 +83,6 @@ const createWindow = async (
   forceNew = true
 ) => {
   try {
-    const RESOURCES_PATH = app.isPackaged
-      ? path.join(process.resourcesPath, 'assets')
-      : path.join(__dirname, '../../assets');
-    const APPDATA_PATH = app.getPath('appData');
-
-    const getAssetPath = (...paths: string[]): string => {
-      return path.join(RESOURCES_PATH, ...paths);
-    };
-    const getWritablePath = (...paths: string[]): string => {
-      return path.join(APPDATA_PATH, 'pluto', ...paths);
-    };
-    console.log(getWritablePath('.'));
-
     const pathOrURL = notebook ?? url;
 
     /**
@@ -128,8 +115,8 @@ const createWindow = async (
 
     const currWindow = new BrowserWindow({
       title: '⚡ Pluto ⚡',
-      height: 600,
-      width: 800,
+      height: 800,
+      width: process.env.NODE_ENV === 'development' ? 1200 : 700,
       resizable: true,
       show: true,
       backgroundColor: nativeTheme.shouldUseDarkColors ? '#1F1F1F' : 'white',
@@ -144,20 +131,18 @@ const createWindow = async (
 
     mainWindow ??= currWindow;
 
-    await currWindow.loadURL(resolveHtmlPath('index.html'));
+    if (process.env.NODE_ENV === 'development') {
+      currWindow.webContents.openDevTools();
+    }
 
     if (!Pluto.runningInfo) {
-      await new Pluto(currWindow, getAssetPath, getWritablePath).run(
-        project,
-        notebook,
-        url
-      );
+      await new Pluto(currWindow).run(project, notebook, url);
     } else if (url) {
       currWindow.focus();
-      await Pluto.notebook.open('url', url);
+      await Pluto.getInstance().open('url', url);
     } else if (notebook) {
       currWindow.focus();
-      await Pluto.notebook.open('path', notebook);
+      await Pluto.getInstance().open('path', notebook);
     }
 
     currWindow.on('ready-to-show', () => {
@@ -266,5 +251,7 @@ app
           );
       });
     });
+
+    Pluto.createRequestListener();
   })
   .catch(generalLogger.error);

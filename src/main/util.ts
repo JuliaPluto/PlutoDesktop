@@ -3,22 +3,8 @@ import { BrowserWindow } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { URL } from 'url';
+import { getRandomValues } from 'node:crypto';
 import { generalLogger } from './logger';
-
-export let resolveHtmlPath: (htmlFileName: string) => string;
-
-if (process.env.NODE_ENV === 'development') {
-  const port = process.env.PORT || 1212;
-  resolveHtmlPath = (htmlFileName: string) => {
-    const url = new URL(`http://localhost:${port}`);
-    url.pathname = htmlFileName;
-    return url.href;
-  };
-} else {
-  resolveHtmlPath = (htmlFileName: string) => {
-    return `file://${path.resolve(__dirname, '../renderer/', htmlFileName)}`;
-  };
-}
 
 const PLUTO_FILE_EXTENSIONS = [
   '.pluto.jl',
@@ -110,9 +96,35 @@ const isUrlOrPath = (text: string) => {
 };
 
 const setAxiosDefaults = (url: PlutoURL) => {
-  axios.defaults.baseURL = new URL(url.url).origin;
+  const baseURL = new URL(url.url);
+  if (baseURL.hostname === 'localhost') {
+    // there are issues with IPv6 and Node.JS on certain hardware / operating systems
+    // the loopback IP is generally safer
+    baseURL.hostname = '127.0.0.1';
+  }
+  axios.defaults.baseURL = baseURL.origin;
   axios.defaults.headers.common.Connection = 'keep-alive';
   generalLogger.verbose('Base URL set to', axios.defaults.baseURL);
+};
+
+// adapted from PlutoHash.js in fonsp/Pluto.jl
+export const urlSafeBase64 = (original: string) => {
+  return original.replaceAll(/[\+\/\=]/g, (s) => {
+    const c = s.charCodeAt(0);
+    return c === 43 ? '-' : c === 47 ? '_' : '';
+  });
+};
+
+export const generateSecret = (length = 8) => {
+  if (length <= 0 || !Number.isInteger(length)) {
+    throw new Error('Invalid key length');
+  }
+
+  const arr = new Uint32Array(Math.ceil((3 * length) / 4));
+  getRandomValues(arr);
+  const secretBase64 = Buffer.from(arr).toString('base64').slice(0, length);
+
+  return urlSafeBase64(secretBase64);
 };
 
 export {

@@ -1,6 +1,6 @@
 
 # Parsing ARGS
-notebook_input, depot_input, unsaved_notebooks_dir = ARGS
+notebook_input, depot_input, unsaved_notebooks_dir, secret = ARGS
 
 notebook = isempty(notebook_input) ? nothing : notebook_input
 depot = isempty(depot_input) ? nothing : depot_input
@@ -10,7 +10,9 @@ ENV["JULIA_PLUTO_NEW_NOTEBOOKS_DIR"] = unsaved_notebooks_dir
 
 # We modify the LOAD_PATH of this process to only include the active project (created for this app), not the global project.
 copy!(LOAD_PATH, ["@"])
-import Pkg; Pkg.instantiate()
+import Pkg
+Pkg.instantiate()
+Pkg.update()
 
 
 # Make sure that all logs go to stdout instead of stderr.
@@ -31,5 +33,7 @@ else
 end
 
 # Here we go!
-Pluto.run(; notebook, launch_browser=false, port_hint=7122)
+options = Pluto.Configuration.from_flat_kwargs(; notebook, host="127.0.0.1", launch_browser=false, port_hint=7122)
+session = Pluto.ServerSession(; secret, options)
+Pluto.run(session)
 
