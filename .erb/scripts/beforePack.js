@@ -12,7 +12,7 @@ const { exit } = require('process');
 const assetPath = path.join(__dirname, '../..', 'assets');
 
 // YOU CAN EDIT ME
-const JULIA_VERSION_PARTS = [1, 9, 0];
+const JULIA_VERSION_PARTS = [1, 9, 3];
 /// ☝️
 
 const JULIA_VERSION = JULIA_VERSION_PARTS.join('.');
@@ -83,8 +83,9 @@ const precompilePluto = async ({ julia_path }) => {
     PRECOMPILE_STATEMENTS_FILE_LOCATION,
   ]);
 
+  // stderr includes precompile status text
   res.stderr.on('data', (data) => {
-    console.log(data?.toString?.());
+    process.stdout.write(data?.toString?.());
   });
 
   return new Promise((resolve) => {
@@ -100,7 +101,7 @@ const precompilePluto = async ({ julia_path }) => {
   });
 };
 
-const prepareJuliaDEPOT = async ({ julia_path }) => {
+const prepareJuliaDepot = async ({ julia_path }) => {
   const DEPOT_LOCATION = path.join(assetPath, DEPOT_NAME);
 
   fs.rmSync(DEPOT_LOCATION, {
@@ -165,7 +166,7 @@ exports.default = async (context) => {
   //   julia_path: path.join(assetPath, JULIA_DIR_NAME, 'bin', 'julia.exe'),
   // });
 
-  await prepareJuliaDEPOT({
+  await prepareJuliaDepot({
     julia_path: path.join(assetPath, JULIA_DIR_NAME, 'bin', 'julia.exe'),
   });
 };
