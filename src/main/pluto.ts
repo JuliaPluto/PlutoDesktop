@@ -20,6 +20,8 @@ import msgpack from 'msgpack-lite';
 import { DEPOT_LOCATION, getAssetPath, READONLY_DEPOT_LOCATION } from './paths';
 
 class Pluto {
+  private static instance: Pluto;
+
   /**
    * project folder location
    */
@@ -49,10 +51,20 @@ class Pluto {
   private static closePlutoFunction: (() => void) | undefined;
 
   constructor(win: BrowserWindow) {
+    // currently Pluto functions as a singleton
+    // TODO: refactor to support arbitrary window counts
+    if (Pluto.instance) {
+      throw new Error(
+        'ERROR: Pluto is written as a singleton class and another instance was created!'
+      );
+    }
+
     this.win = win;
     this.project =
       process.env.DEBUG_PROJECT_PATH ?? getAssetPath('env_for_julia');
     Pluto.url ??= null;
+
+    Pluto.instance = this;
   }
 
   private findJulia = async () => {
@@ -95,6 +107,8 @@ class Pluto {
     });
   };
 
+  public static getInstance = () => Pluto.instance;
+
   /**
    * The main function the actually runs a `julia` script that
    * checks and runs `Pluto` with specified options
@@ -119,8 +133,8 @@ class Pluto {
         '\nnotebook:',
         notebook
       );
-      if (notebook) await Pluto.openNotebook('path', notebook);
-      else if (url) await Pluto.openNotebook('url', url);
+      if (notebook) await this.open('path', notebook);
+      else if (url) await this.open('url', url);
       return;
     }
 
@@ -251,14 +265,15 @@ class Pluto {
    * opens that notebook. If false and no path is there, opens the file selector.
    * If true, opens a new blank notebook.
    */
-  private static openNotebook = async (
+  public open = async (
     type: 'url' | 'path' | 'new' = 'new',
     pathOrURL?: string | null
   ) => {
-    try {
-      const window = BrowserWindow.getFocusedWindow()!;
-      console.log(pathOrURL);
+    const window = BrowserWindow.getFocusedWindow()!;
+    const setBlockScreenText = (blockScreenText: string | null) =>
+      window.webContents.send('set-block-screen-text', blockScreenText);
 
+    try {
       if (type === 'path' && pathOrURL && !isExtMatch(pathOrURL)) {
         dialog.showErrorBox(
           'PLUTO-CANNOT-OPEN-NOTEBOOK',
@@ -283,6 +298,7 @@ class Pluto {
           if (r.canceled) return;
 
           [pathOrURL] = r.filePaths;
+          // this.win.webContents.send();
         } else if (type !== 'url') {
           dialog.showErrorBox(
             'PLUTO-CANNOT-OPEN-NOTEBOOK',
@@ -294,16 +310,18 @@ class Pluto {
 
       const loader = new Loader(window);
 
-      if (this.url) {
+      if (Pluto.url) {
         let params = {};
         if (pathOrURL) {
           generalLogger.log(`Trying to open ${pathOrURL}`);
           if (type === 'path') {
+            setBlockScreenText(pathOrURL);
             window.webContents.send('pluto-url', `Trying to open ${pathOrURL}`);
             params = { secret: Pluto.url?.secret, path: pathOrURL };
           } else if (type === 'url') {
             const newURL = new URL(pathOrURL);
             if (newURL.searchParams.has('path')) {
+              setBlockScreenText(pathOrURL);
               window.webContents.send(
                 'pluto-url',
                 `Trying to open ${newURL.searchParams.get('path')}`
@@ -313,6 +331,7 @@ class Pluto {
                 path: newURL.searchParams.get('path'),
               };
             } else {
+              setBlockScreenText('new notebook');
               window.webContents.send(
                 'pluto-url',
                 `Trying to open ${pathOrURL}`
@@ -335,7 +354,7 @@ class Pluto {
             // is a local url
             id = new URL(pathOrURL).searchParams.get('id');
           } else {
-            id = await this.checkNotebook(pathOrURL);
+            id = await Pluto.checkNotebook(pathOrURL);
           }
         }
         const res = id
@@ -356,6 +375,9 @@ class Pluto {
           loader.stopLoading();
           return;
         }
+
+        window.webContents.send('set-block-screen-text', pathOrURL);
+
         loader.stopLoading();
         dialog.showErrorBox(
           'PLUTO-CANNOT-OPEN-NOTEBOOK',
@@ -374,14 +396,16 @@ class Pluto {
         'PLUTO-NOTEBOOK-OPEN-ERROR',
         'Cannot open this notebook found on this path/url.'
       );
+    } finally {
+      setBlockScreenText(null);
     }
   };
 
   /**
-   * Alias function for `openNotebook` with type set to 'new'
+   * Alias function for `open` with type set to 'new'
    */
   private static newNotebook = async () => {
-    return this.openNotebook('new');
+    return Pluto.instance.open('new');
   };
 
   /**
@@ -640,7 +664,7 @@ class Pluto {
           return;
         }
         if (tail === 'open') {
-          await Pluto.notebook.open('path', url.searchParams.get('path'));
+          await Pluto.instance.open('path', url.searchParams.get('path'));
           next({
             cancel: true,
           });
@@ -694,7 +718,6 @@ class Pluto {
    * FileSystem functions publically in a ⚡ Pretty ⚡ way.
    */
   public static notebook = {
-    open: this.openNotebook,
     new: this.newNotebook,
     export: this.exportNotebook,
     move: this.moveNotebook,

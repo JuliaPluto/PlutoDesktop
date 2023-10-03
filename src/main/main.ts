@@ -139,10 +139,10 @@ const createWindow = async (
       await new Pluto(currWindow).run(project, notebook, url);
     } else if (url) {
       currWindow.focus();
-      await Pluto.notebook.open('url', url);
+      await Pluto.getInstance().open('url', url);
     } else if (notebook) {
       currWindow.focus();
-      await Pluto.notebook.open('path', notebook);
+      await Pluto.getInstance().open('path', notebook);
     }
 
     currWindow.on('ready-to-show', () => {

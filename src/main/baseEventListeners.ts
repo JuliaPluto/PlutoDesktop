@@ -14,7 +14,7 @@ ipcMain.on(
     _event,
     type: 'path' | 'url' | 'new' = 'new',
     pathOrURL?: string
-  ): Promise<void> => Pluto.notebook.open(type, pathOrURL)
+  ): Promise<void> => Pluto.getInstance().open(type, pathOrURL)
 );
 
 ipcMain.on(
