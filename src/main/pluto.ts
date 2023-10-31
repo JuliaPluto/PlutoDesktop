@@ -18,10 +18,10 @@ import {
 } from './util';
 import msgpack from 'msgpack-lite';
 import { DEPOT_LOCATION, getAssetPath, READONLY_DEPOT_LOCATION } from './paths';
+import { findJulia, findPluto } from './plutoProcess';
+import { createPlutoWindow } from './windowHelpers';
 
 class Pluto {
-  private static instance: Pluto;
-
   /**
    * project folder location
    */
@@ -53,61 +53,12 @@ class Pluto {
   constructor(win: BrowserWindow) {
     // currently Pluto functions as a singleton
     // TODO: refactor to support arbitrary window counts
-    if (Pluto.instance) {
-      throw new Error(
-        'ERROR: Pluto is written as a singleton class and another instance was created!'
-      );
-    }
 
     this.win = win;
     this.project =
       process.env.DEBUG_PROJECT_PATH ?? getAssetPath('env_for_julia');
     Pluto.url ??= null;
-
-    Pluto.instance = this;
   }
-
-  private findJulia = async () => {
-    const files = fs.readdirSync(getAssetPath('.'));
-
-    let julia_dir = files.find((s) => /^julia-\d+.\d+.\d+$/.test(s));
-    let result;
-
-    if (julia_dir == null) {
-      generalLogger.error(
-        "Couldn't find Julia in assets, falling back to the `julia` command."
-      );
-      result = `julia`;
-    } else {
-      result = getAssetPath(julia_dir, 'bin', 'julia.exe');
-    }
-    Pluto.julia = result;
-    return result;
-  };
-
-  private findPluto = () => {
-    return new Promise(async (resolve, reject) => {
-      if (!Pluto.julia) await this.findJulia();
-
-      const options = [
-        `--project=${this.project}`,
-        getAssetPath('locate_pluto.jl'),
-      ];
-      const proc = spawn(Pluto.julia, options, {
-        env: { ...process.env, JULIA_DEPOT_PATH: DEPOT_LOCATION },
-      });
-      proc.stdout.on('data', (chunk) => {
-        Pluto.packageLocation = chunk.toString();
-        resolve(undefined);
-      });
-      proc.stderr.on('error', (err) => {
-        juliaLogger.error('Error determining Pluto.jl package location:', err);
-        reject();
-      });
-    });
-  };
-
-  public static getInstance = () => Pluto.instance;
 
   /**
    * The main function the actually runs a `julia` script that
@@ -119,8 +70,8 @@ class Pluto {
    * @returns if pluto is running, a fundtion to kill the process
    */
   public run = async (project?: string, notebook?: string, url?: string) => {
-    await this.findJulia();
-    await this.findPluto();
+    Pluto.julia = findJulia();
+    Pluto.packageLocation = await findPluto();
 
     // load the Pluto.jl homepage
     await this.win.loadURL(Pluto.resolveHtmlPath('index.html'));
@@ -137,8 +88,6 @@ class Pluto {
       else if (url) await this.open('url', url);
       return;
     }
-
-    await this.findJulia();
 
     generalLogger.log(`Julia found at: ${Pluto.julia}`);
 
@@ -405,7 +354,9 @@ class Pluto {
    * Alias function for `open` with type set to 'new'
    */
   private static newNotebook = async () => {
-    return Pluto.instance.open('new');
+    const plutoWindow = new Pluto(createPlutoWindow());
+    plutoWindow.open('new');
+    return plutoWindow;
   };
 
   /**

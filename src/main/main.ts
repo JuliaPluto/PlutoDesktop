@@ -20,7 +20,6 @@ import {
 } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { release } from 'os';
-import path from 'path';
 
 // import { Deeplink } from 'electron-deeplink';
 // import * as isDev from 'electron-is-dev';
@@ -28,7 +27,7 @@ import { backgroundLogger, generalLogger } from './logger';
 import MenuBuilder from './menu';
 import Pluto from './pluto';
 import { store } from './store';
-import { getAssetPath } from './paths';
+import { createPlutoWindow } from './windowHelpers';
 
 generalLogger.verbose('---------- NEW SESSION ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
@@ -51,8 +50,6 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
   process.exit(0);
 }
-
-let mainWindow: BrowserWindow | null = null;
 
 ipcMain.on('ipc-example', async (event, args) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
@@ -79,61 +76,31 @@ ipcMain.on('ipc-example', async (event, args) => {
 const createWindow = async (
   url?: string,
   project?: string,
-  notebook?: string,
-  forceNew = true
+  notebook?: string
 ) => {
   try {
-    const pathOrURL = notebook ?? url;
-
     /**
      * If window with {pathOrURL} is already open, focus on it
      * else open a new one
      */
-    if (!forceNew && pathOrURL) {
-      const id = Pluto.notebook.getId(pathOrURL);
-      if (id) {
-        const windows = BrowserWindow.getAllWindows();
-        const windowId = windows.findIndex((window) =>
-          window.webContents.getURL().includes(id)
-        );
-        if (windowId !== -1) {
-          windows[windowId].focus();
-          return;
-        }
-      } else {
-        generalLogger.log(`Opening ${pathOrURL} in new window.`);
-      }
-    }
-
-    /**
-     * Uncomment the next LoC if you want devtools to open with
-     * every new window, please comment it again when you commit.
-     */
-    // await (await import('./devtools')).default();
-
+    // if (!forceNew && pathOrURL) {
+    //   const id = Pluto.notebook.getId(pathOrURL);
+    //   if (id) {
+    //     const windows = BrowserWindow.getAllWindows();
+    //     const windowId = windows.findIndex((window) =>
+    //       window.webContents.getURL().includes(id)
+    //     );
+    //     if (windowId !== -1) {
+    //       windows[windowId].focus();
+    //       return;
+    //     }
+    //   } else {
+    //     generalLogger.log(`Opening ${pathOrURL} in new window.`);
+    //   }
+    // }
     generalLogger.announce('Creating a new window.');
 
-    const currWindow = new BrowserWindow({
-      title: '⚡ Pluto ⚡',
-      height: 800,
-      width: process.env.NODE_ENV === 'development' ? 1200 : 700,
-      resizable: true,
-      show: true,
-      backgroundColor: nativeTheme.shouldUseDarkColors ? '#1F1F1F' : 'white',
-      icon: getAssetPath('icon.png'),
-      webPreferences: {
-        preload: app.isPackaged
-          ? path.join(__dirname, 'preload.js')
-          : path.join(__dirname, '../../.erb/dll/preload.js'),
-      },
-    });
-    currWindow.setMenuBarVisibility(false);
-
-    mainWindow ??= currWindow;
-
-    if (process.env.NODE_ENV === 'development') {
-      currWindow.webContents.openDevTools();
-    }
+    const currWindow = createPlutoWindow();
 
     if (!Pluto.runningInfo) {
       await new Pluto(currWindow).run(project, notebook, url);
@@ -146,9 +113,6 @@ const createWindow = async (
     }
 
     currWindow.on('ready-to-show', () => {
-      if (!currWindow) {
-        throw new Error('"currWindow" is not defined');
-      }
       if (process.env.START_MINIMIZED) {
         currWindow.minimize();
       } else {
@@ -158,7 +122,6 @@ const createWindow = async (
 
     currWindow.once('close', async () => {
       await Pluto.notebook.shutdown();
-      mainWindow = null;
     });
 
     const menuBuilder = new MenuBuilder(currWindow, createWindow);
@@ -216,9 +179,7 @@ app
     );
     createWindow();
     app.on('activate', () => {
-      // On macOS it's common to re-create a window in the app when the
-      // dock icon is clicked and there are no other windows open.
-      if (!mainWindow) createWindow();
+      createWindow();
     });
     app.on('will-quit', () => {
       Pluto.close();
