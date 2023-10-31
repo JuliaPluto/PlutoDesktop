@@ -12,7 +12,7 @@ ENV["JULIA_PLUTO_NEW_NOTEBOOKS_DIR"] = unsaved_notebooks_dir
 copy!(LOAD_PATH, ["@"])
 import Pkg
 Pkg.instantiate()
-Pkg.update()
+# Pkg.update()
 
 
 # Make sure that all logs go to stdout instead of stderr.

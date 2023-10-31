@@ -31,6 +31,7 @@
   "scripts": {
     "postinstall": "ts-node .erb/scripts/check-native-dep.js && electron-builder install-app-deps",
     "package": "electron-builder build --publish never",
+    "build:main": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.main.prod.ts",
     "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir release/app",
     "start": "cross-env NODE_ENV=development electronmon -r ts-node/register/transpile-only ."
   },
@@ -78,8 +79,12 @@
     "nanospinner": "^1.1.0",
     "prettier": "^2.7.1",
     "rimraf": "^3.0.2",
+    "ts-loader": "^9.5.0",
     "ts-node": "^10.9.1",
-    "typescript": "^4.8.2"
+    "typescript": "^4.8.2",
+    "webpack": "^5.89.0",
+    "webpack-bundle-analyzer": "^4.9.1",
+    "webpack-cli": "^5.1.4"
   },
   "build": {
     "productName": "Pluto",
