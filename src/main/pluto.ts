@@ -50,6 +50,8 @@ class Pluto {
 
   private static closePlutoFunction: (() => void) | undefined;
 
+  private id: string | undefined;
+
   constructor(win: BrowserWindow) {
     // currently Pluto functions as a singleton
     // TODO: refactor to support arbitrary window counts
@@ -589,53 +591,7 @@ class Pluto {
     return result;
   };
 
-  public static createRequestListener = () => {
-    session.defaultSession.webRequest.onBeforeRequest(async (details, next) => {
-      let cancel = false;
-
-      if (details.url.match(/\/Pluto\.jl\/frontend(-dist)?/g)) {
-        const url = new URL(details.url);
-        const tail = url.pathname.split('/').reverse()[0];
-
-        generalLogger.verbose(
-          'Triggered Pluto.jl server-side route detection!',
-          details.url
-        );
-
-        if (url.pathname.endsWith('/')) {
-          next({ redirectURL: Pluto.resolveHtmlPath('index.html') });
-          return;
-        }
-        if (tail === 'new') {
-          // this should be synchronous so the user sees the Pluto.jl loading screen on index.html
-          await Pluto.notebook.new();
-          next({
-            cancel: true,
-          });
-          return;
-        }
-        if (tail === 'open') {
-          await Pluto.instance.open('path', url.searchParams.get('path'));
-          next({
-            cancel: true,
-          });
-          return;
-        }
-        if (tail === 'edit') {
-          next({
-            redirectURL:
-              Pluto.resolveHtmlPath('editor.html') +
-              `&id=${url.searchParams.get('id')}`,
-          });
-          return;
-        }
-      }
-
-      next({ cancel });
-    });
-  };
-
-  private static resolveHtmlPath = (htmlFileName: string) => {
+  public static resolveHtmlPath = (htmlFileName: string) => {
     let plutoLocation = Pluto.packageLocation;
 
     // overwrite the default Pluto location if in development
@@ -654,15 +610,15 @@ class Pluto {
     )}`;
   };
 
-  /**
-   * @param file location/url of the file
-   * @returns id of the file if notebookManager is there
-   * and has the file in its data
-   */
-  private static getId = (file: string) =>
-    this.notebookManager && this.notebookManager.hasFile(file)
-      ? this.notebookManager.getId(file)
-      : undefined;
+  public setId(id: string) {
+    this.id = id;
+  }
+  public getId() {
+    return this.id;
+  }
+  public getBrowserWindow() {
+    return this.win;
+  }
 
   /**
    * Does nothing in particular but it just exposes the
@@ -673,7 +629,6 @@ class Pluto {
     export: this.exportNotebook,
     move: this.moveNotebook,
     shutdown: this.shutdownNotebook,
-    getId: this.getId,
     getFile: this.getFileLocation,
   };
 

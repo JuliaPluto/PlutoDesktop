@@ -7,14 +7,28 @@ import { ipcMain } from 'electron';
 
 import { PlutoExport } from '../../types/enums';
 import Pluto from './pluto';
+import { GlobalWindowManager } from './windowHelpers';
+import { generalLogger } from './logger';
 
 ipcMain.on(
   'PLUTO-OPEN-NOTEBOOK',
   async (
-    _event,
+    event,
     type: 'path' | 'url' | 'new' = 'new',
     pathOrURL?: string
-  ): Promise<void> => Pluto.getInstance().open(type, pathOrURL)
+  ): Promise<void> => {
+    const plutoWindow =
+      GlobalWindowManager.getInstance().getWindowByWebContentsId(
+        event.sender.id
+      );
+    if (!plutoWindow) {
+      generalLogger.error(
+        'Could not find Pluto window with matching webContentsId'
+      );
+      return;
+    }
+    plutoWindow.open(type, pathOrURL);
+  }
 );
 
 ipcMain.on(

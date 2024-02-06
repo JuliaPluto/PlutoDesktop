@@ -27,7 +27,7 @@ import { backgroundLogger, generalLogger } from './logger';
 import MenuBuilder from './menu';
 import Pluto from './pluto';
 import { store } from './store';
-import { createPlutoWindow } from './windowHelpers';
+import { createPlutoWindow, GlobalWindowManager } from './windowHelpers';
 
 generalLogger.verbose('---------- NEW SESSION ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
@@ -73,11 +73,7 @@ ipcMain.on('ipc-example', async (event, args) => {
  * @returns nothing
  */
 
-const createWindow = async (
-  url?: string,
-  project?: string,
-  notebook?: string
-) => {
+const createWindow = async () => {
   try {
     /**
      * If window with {pathOrURL} is already open, focus on it
@@ -101,15 +97,12 @@ const createWindow = async (
     generalLogger.announce('Creating a new window.');
 
     const currWindow = createPlutoWindow();
+    currWindow.focus();
+    const firstPluto = new Pluto(currWindow);
+    GlobalWindowManager.getInstance().registerWindow(firstPluto);
 
     if (!Pluto.runningInfo) {
-      await new Pluto(currWindow).run(project, notebook, url);
-    } else if (url) {
-      currWindow.focus();
-      await Pluto.getInstance().open('url', url);
-    } else if (notebook) {
-      currWindow.focus();
-      await Pluto.getInstance().open('path', notebook);
+      await firstPluto.run();
     }
 
     currWindow.on('ready-to-show', () => {
@@ -165,9 +158,10 @@ app.on('window-all-closed', () => {
 });
 
 app.on('open-file', async (_event, file) => {
+  // TODO: Implement filesystem open
   _event.preventDefault();
   console.log(file);
-  await createWindow(undefined, undefined, file, false);
+  // await createWindow(file);
 });
 
 app
@@ -213,6 +207,68 @@ app
       });
     });
 
-    Pluto.createRequestListener();
+    createRequestListener();
   })
   .catch(generalLogger.error);
+
+function createRequestListener() {
+  session.defaultSession.webRequest.onBeforeRequest(async (details, next) => {
+    let cancel = false;
+
+    if (!details.webContentsId) {
+      generalLogger.warn('Web request was made without defined webContentsId');
+      next({ cancel });
+      return;
+    }
+
+    const plutoWindow =
+      GlobalWindowManager.getInstance().getWindowByWebContentsId(
+        details.webContentsId
+      );
+
+    if (!plutoWindow) {
+      next({ cancel });
+      return;
+    }
+
+    if (details.url.match(/\/Pluto\.jl\/frontend(-dist)?/g)) {
+      const url = new URL(details.url);
+      const tail = url.pathname.split('/').reverse()[0];
+
+      generalLogger.verbose(
+        'Triggered Pluto.jl server-side route detection!',
+        details.url
+      );
+
+      if (url.pathname.endsWith('/')) {
+        next({ redirectURL: Pluto.resolveHtmlPath('index.html') });
+        return;
+      }
+      if (tail === 'new') {
+        // this should be synchronous so the user sees the Pluto.jl loading screen on index.html
+        await Pluto.notebook.new();
+        next({
+          cancel: true,
+        });
+        return;
+      }
+      if (tail === 'open') {
+        await plutoWindow.open('path', url.searchParams.get('path'));
+        next({
+          cancel: true,
+        });
+        return;
+      }
+      if (tail === 'edit') {
+        next({
+          redirectURL:
+            Pluto.resolveHtmlPath('editor.html') +
+            `&id=${url.searchParams.get('id')}`,
+        });
+        return;
+      }
+    }
+
+    next({ cancel });
+  });
+}
