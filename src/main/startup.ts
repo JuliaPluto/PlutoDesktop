@@ -3,11 +3,7 @@ import * as path from 'node:path';
 import { generalLogger, juliaLogger } from './logger';
 import { DEPOT_LOCATION, READONLY_DEPOT_LOCATION, getAssetPath } from './paths';
 import { findJulia, findPluto } from './plutoProcess';
-import {
-  copyDirectoryRecursive,
-  generateSecret,
-  setAxiosDefaults,
-} from './util';
+import { copyDirectoryRecursive, setAxiosDefaults } from './util';
 import { App, BrowserWindow, dialog } from 'electron';
 import chalk from 'chalk';
 import { spawn } from 'node:child_process';
@@ -19,7 +15,6 @@ export async function startup(app: App, window: BrowserWindow) {
   Globals.JULIA_PROJECT =
     process.env.DEBUG_PROJECT_PATH ?? getAssetPath('env_for_julia');
   Globals.PLUTO_LOCATION = await findPluto();
-  Globals.PLUTO_SECRET = generateSecret();
 
   generalLogger.log(`Julia found at: ${Globals.JULIA}`);
 

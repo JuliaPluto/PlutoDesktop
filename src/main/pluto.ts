@@ -1,50 +1,23 @@
 import axios from 'axios';
-import chalk from 'chalk';
-import { app, BrowserWindow, dialog, session } from 'electron';
-import { spawn } from 'node:child_process';
+import { BrowserWindow, dialog } from 'electron';
 import fs from 'node:fs';
 import * as path from 'node:path';
 
 import { PlutoExport } from '../../types/enums';
-import { generalLogger, juliaLogger } from './logger';
+import { generalLogger } from './logger';
 import NotebookManager from './notebookManager';
-import {
-  isExtMatch,
-  Loader,
-  PLUTO_FILE_EXTENSIONS,
-  setAxiosDefaults,
-  copyDirectoryRecursive,
-  generateSecret,
-} from './util';
+import { isExtMatch, Loader, PLUTO_FILE_EXTENSIONS } from './util';
 import msgpack from 'msgpack-lite';
-import { DEPOT_LOCATION, getAssetPath, READONLY_DEPOT_LOCATION } from './paths';
-import { findJulia, findPluto } from './plutoProcess';
 import { createPlutoWindow } from './windowHelpers';
+import { Globals } from './globals';
 
 class Pluto {
-  /**
-   * project folder location
-   */
-  private project: string;
-
   /**
    * window related to this Pluto instance
    */
   private win: BrowserWindow;
 
   public static url: PlutoURL | null;
-
-  private static secret: string = generateSecret();
-
-  /**
-   * location of the julia executable
-   */
-  private static julia: string;
-
-  /**
-   * Location of the Pluto.jl package. This should always be somewhere inside the Julia depot
-   */
-  private static packageLocation: string;
 
   private static notebookManager: NotebookManager;
 
@@ -444,7 +417,7 @@ class Pluto {
   };
 
   public static resolveHtmlPath = (htmlFileName: string) => {
-    let plutoLocation = Pluto.packageLocation;
+    let plutoLocation = Globals.PLUTO_LOCATION;
 
     // overwrite the default Pluto location if in development
     if (process.env.NODE_ENV === 'development') {
@@ -456,9 +429,9 @@ class Pluto {
     }
 
     return `file:///${plutoLocation}/frontend/${htmlFileName}?secret=${
-      Pluto.secret
+      Globals.PLUTO_SECRET
     }&pluto_server_url=${encodeURIComponent(
-      `ws://localhost:7122?secret=${Pluto.secret}`
+      `ws://localhost:7122?secret=${Globals.PLUTO_SECRET}`
     )}`;
   };
 
