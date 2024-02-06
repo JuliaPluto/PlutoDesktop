@@ -48,7 +48,7 @@ class Pluto {
 
   private static notebookManager: NotebookManager;
 
-  private static closePlutoFunction: (() => void) | undefined;
+  static closePlutoFunction: (() => void) | undefined;
 
   private id: string | undefined;
 
@@ -56,158 +56,10 @@ class Pluto {
     // currently Pluto functions as a singleton
     // TODO: refactor to support arbitrary window counts
 
-    this.win = win;
-    this.project =
-      process.env.DEBUG_PROJECT_PATH ?? getAssetPath('env_for_julia');
     Pluto.url ??= null;
+    this.win = win;
+    this.win.loadURL(Pluto.resolveHtmlPath('index.html'));
   }
-
-  /**
-   * The main function the actually runs a `julia` script that
-   * checks and runs `Pluto` with specified options
-   * It also updates the render process about the current status in the `pluto-url` channel.
-   * @param project project path
-   * @param notebook pluto notebook path
-   * @param url pltuo notebook url if it is hosted elsewhere
-   * @returns if pluto is running, a fundtion to kill the process
-   */
-  public run = async (project?: string, notebook?: string, url?: string) => {
-    Pluto.julia = findJulia();
-    Pluto.packageLocation = await findPluto();
-
-    // load the Pluto.jl homepage
-    await this.win.loadURL(Pluto.resolveHtmlPath('index.html'));
-
-    if (Pluto.url) {
-      generalLogger.info(
-        'LAUNCHING\n',
-        'project:',
-        project,
-        '\nnotebook:',
-        notebook
-      );
-      if (notebook) await this.open('path', notebook);
-      else if (url) await this.open('url', url);
-      return;
-    }
-
-    generalLogger.log(`Julia found at: ${Pluto.julia}`);
-
-    this.win.webContents.send('pluto-url', 'loading');
-
-    generalLogger.info(
-      'LAUNCHING\n',
-      'project:',
-      this.project,
-      '\nnotebook:',
-      notebook
-    );
-
-    const SYSIMAGE_LOCATION = getAssetPath('pluto-sysimage.so');
-
-    // ensure depot has been copied from read-only installation directory to writable directory
-    if (!fs.existsSync(DEPOT_LOCATION)) {
-      generalLogger.verbose(
-        'Copying julia_depot from installation directory...'
-      );
-      copyDirectoryRecursive(READONLY_DEPOT_LOCATION, DEPOT_LOCATION);
-    }
-
-    const options = [`--project=${this.project}`];
-    if (!process.env.DEBUG_PROJECT_PATH) {
-      if (fs.existsSync(SYSIMAGE_LOCATION))
-        options.push(`--sysimage=${SYSIMAGE_LOCATION}`);
-    }
-
-    options.push(getAssetPath('run_pluto.jl'));
-    // See run_pluto.jl for info about these command line arguments.
-    options.push(notebook ?? '');
-    options.push(DEPOT_LOCATION ?? '');
-    options.push(path.join(app.getPath('userData'), 'unsaved_notebooks'));
-    options.push(Pluto.secret);
-
-    try {
-      generalLogger.verbose(
-        'Executing',
-        chalk.bold(Pluto.julia),
-        'with options',
-        chalk.bold(options.toLocaleString().replace(',', ' '))
-      );
-      const res = spawn(Pluto.julia, options, {
-        env: { ...process.env, JULIA_DEPOT_PATH: DEPOT_LOCATION },
-      });
-
-      const loggerListener = (data: any) => {
-        const dataString = data.toString();
-
-        if (dataString.includes('Updating'))
-          this.win.webContents.send('pluto-url', 'updating');
-
-        if (dataString.includes('Loading') || dataString.includes('loading'))
-          this.win.webContents.send('pluto-url', 'loading');
-
-        if (Pluto.url === null) {
-          const plutoLog = dataString;
-          if (plutoLog.includes('?secret=')) {
-            const urlMatch = plutoLog.match(/http\S+/g);
-            const entryUrl = urlMatch[0];
-
-            const tempURL = new URL(entryUrl);
-            Pluto.url = {
-              url: entryUrl,
-              port: tempURL.port,
-              secret: tempURL.searchParams.get('secret')!,
-            };
-
-            this.win.webContents.send('pluto-url', 'loaded');
-            setAxiosDefaults(Pluto.url);
-            // this.win.loadURL(entryUrl);
-
-            generalLogger.announce('Entry url found:', Pluto.url);
-          } else if (
-            plutoLog.includes(
-              'failed to send request: The server name or address could not be resolved'
-            )
-          ) {
-            generalLogger.error(
-              'INTERNET-CONNECTION-ERROR',
-              'Pluto install failed, no internet connection.'
-            );
-            dialog.showErrorBox(
-              'CANNOT-INSTALL-PLUTO',
-              'Please check your internet connection!'
-            );
-            app.exit();
-          }
-        }
-
-        juliaLogger.info(dataString);
-      };
-
-      res.stdout.on('data', loggerListener);
-      res.stderr.on('data', loggerListener);
-
-      res.once('close', (code: any) => {
-        if (code !== 0) {
-          dialog.showErrorBox(code, 'Pluto crashed');
-        }
-        juliaLogger.info(`child process exited with code ${code}`);
-      });
-
-      res.once('exit', (code: any) => {
-        juliaLogger.info(`child process exited with code ${code}`);
-      });
-
-      Pluto.closePlutoFunction = () => {
-        if (res) {
-          juliaLogger.verbose('Killing Pluto process.');
-          res?.kill();
-        }
-      };
-    } catch (e) {
-      generalLogger.error('PLUTO-RUN-ERROR', e);
-    }
-  };
 
   /**
    * @param type [default = 'new'] whether you want to open a new notebook

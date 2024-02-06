@@ -1,8 +1,7 @@
 
 # Parsing ARGS
-notebook_input, depot_input, unsaved_notebooks_dir, secret = ARGS
+depot_input, unsaved_notebooks_dir, secret = ARGS
 
-notebook = isempty(notebook_input) ? nothing : notebook_input
 depot = isempty(depot_input) ? nothing : depot_input
 
 # https://github.com/fonsp/Pluto.jl/commit/7bbdc7b55bd5149a9eb92cdfc2b540464dc32626
@@ -33,7 +32,7 @@ else
 end
 
 # Here we go!
-options = Pluto.Configuration.from_flat_kwargs(; notebook, host="127.0.0.1", launch_browser=false, port_hint=7122)
+options = Pluto.Configuration.from_flat_kwargs(; host="127.0.0.1", launch_browser=false, port_hint=7122)
 session = Pluto.ServerSession(; secret, options)
 Pluto.run(session)
 

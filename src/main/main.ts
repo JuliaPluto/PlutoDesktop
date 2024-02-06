@@ -28,6 +28,7 @@ import MenuBuilder from './menu';
 import Pluto from './pluto';
 import { store } from './store';
 import { createPlutoWindow, GlobalWindowManager } from './windowHelpers';
+import { startup } from './startup';
 
 generalLogger.verbose('---------- NEW SESSION ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
@@ -73,76 +74,74 @@ ipcMain.on('ipc-example', async (event, args) => {
  * @returns nothing
  */
 
-const createWindow = async () => {
-  try {
-    /**
-     * If window with {pathOrURL} is already open, focus on it
-     * else open a new one
-     */
-    // if (!forceNew && pathOrURL) {
-    //   const id = Pluto.notebook.getId(pathOrURL);
-    //   if (id) {
-    //     const windows = BrowserWindow.getAllWindows();
-    //     const windowId = windows.findIndex((window) =>
-    //       window.webContents.getURL().includes(id)
-    //     );
-    //     if (windowId !== -1) {
-    //       windows[windowId].focus();
-    //       return;
-    //     }
-    //   } else {
-    //     generalLogger.log(`Opening ${pathOrURL} in new window.`);
-    //   }
-    // }
-    generalLogger.announce('Creating a new window.');
+const createWindow = () => {
+  /**
+   * If window with {pathOrURL} is already open, focus on it
+   * else open a new one
+   */
+  // if (!forceNew && pathOrURL) {
+  //   const id = Pluto.notebook.getId(pathOrURL);
+  //   if (id) {
+  //     const windows = BrowserWindow.getAllWindows();
+  //     const windowId = windows.findIndex((window) =>
+  //       window.webContents.getURL().includes(id)
+  //     );
+  //     if (windowId !== -1) {
+  //       windows[windowId].focus();
+  //       return;
+  //     }
+  //   } else {
+  //     generalLogger.log(`Opening ${pathOrURL} in new window.`);
+  //   }
+  // }
+  generalLogger.announce('Creating a new window.');
 
-    const currWindow = createPlutoWindow();
-    currWindow.focus();
-    const firstPluto = new Pluto(currWindow);
-    GlobalWindowManager.getInstance().registerWindow(firstPluto);
+  const currWindow = createPlutoWindow();
+  currWindow.focus();
+  const firstPluto = new Pluto(currWindow);
+  GlobalWindowManager.getInstance().registerWindow(firstPluto);
 
-    if (!Pluto.runningInfo) {
-      await firstPluto.run();
-    }
-
-    currWindow.on('ready-to-show', () => {
-      if (process.env.START_MINIMIZED) {
-        currWindow.minimize();
-      } else {
-        currWindow.show();
-      }
-    });
-
-    currWindow.once('close', async () => {
-      await Pluto.notebook.shutdown();
-    });
-
-    const menuBuilder = new MenuBuilder(currWindow, createWindow);
-
-    let first = true;
-    currWindow.on('page-title-updated', (_e, title) => {
-      generalLogger.verbose('Window', currWindow.id, 'moved to page:', title);
-      if (currWindow?.webContents.getTitle().includes('index.html')) return;
-      const pageUrl = new URL(currWindow!.webContents.getURL());
-      const isPluto = pageUrl.href.includes('localhost:');
-      if (first || isPluto) {
-        first = false;
-        currWindow?.setMenuBarVisibility(true);
-        menuBuilder.buildMenu();
-      }
-    });
-
-    // Open urls in the user's browser
-    currWindow.webContents.setWindowOpenHandler((edata) => {
-      shell.openExternal(edata.url);
-      return { action: 'deny' };
-    });
-
-    // Remove this if your app does not use auto updates
-    new AppUpdater();
-  } catch (e) {
-    generalLogger.error('CREATE-WINDOW-ERROR', e);
+  if (!Pluto.runningInfo) {
+    // await firstPluto.run();
   }
+
+  currWindow.on('ready-to-show', () => {
+    if (process.env.START_MINIMIZED) {
+      currWindow.minimize();
+    } else {
+      currWindow.show();
+    }
+  });
+
+  currWindow.once('close', async () => {
+    await Pluto.notebook.shutdown();
+  });
+
+  const menuBuilder = new MenuBuilder(currWindow, createWindow);
+
+  let first = true;
+  currWindow.on('page-title-updated', (_e, title) => {
+    generalLogger.verbose('Window', currWindow.id, 'moved to page:', title);
+    if (currWindow?.webContents.getTitle().includes('index.html')) return;
+    const pageUrl = new URL(currWindow!.webContents.getURL());
+    const isPluto = pageUrl.href.includes('localhost:');
+    if (first || isPluto) {
+      first = false;
+      currWindow?.setMenuBarVisibility(true);
+      menuBuilder.buildMenu();
+    }
+  });
+
+  // Open urls in the user's browser
+  currWindow.webContents.setWindowOpenHandler((edata) => {
+    shell.openExternal(edata.url);
+    return { action: 'deny' };
+  });
+
+  // Remove this if your app does not use auto updates
+  new AppUpdater();
+
+  return currWindow;
 };
 
 /**
@@ -171,10 +170,13 @@ app
       'IMPORTANT-NOTE',
       'This file is used for internal configuration. Please refrain from editing or deleting this file.'
     );
-    createWindow();
-    app.on('activate', () => {
-      createWindow();
-    });
+
+    const mainWindow = createWindow();
+    startup(app, mainWindow);
+
+    // app.on('activate', () => {
+    //   createWindow();
+    // });
     app.on('will-quit', () => {
       Pluto.close();
     });
