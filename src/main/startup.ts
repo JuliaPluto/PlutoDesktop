@@ -9,8 +9,9 @@ import chalk from 'chalk';
 import { spawn } from 'node:child_process';
 import Pluto from './pluto';
 import { Globals } from './globals';
+import { GlobalWindowManager } from './windowHelpers';
 
-export async function startup(app: App, window: BrowserWindow) {
+export async function startup(app: App) {
   Globals.JULIA = findJulia();
   Globals.JULIA_PROJECT =
     process.env.DEBUG_PROJECT_PATH ?? getAssetPath('env_for_julia');
@@ -18,7 +19,12 @@ export async function startup(app: App, window: BrowserWindow) {
 
   generalLogger.log(`Julia found at: ${Globals.JULIA}`);
 
-  window.webContents.send('pluto-url', 'loading');
+  const statusUpdate = (status: string) =>
+    GlobalWindowManager.all((p) =>
+      p.getBrowserWindow().webContents.send('pluto-url', status)
+    );
+
+  statusUpdate('loading');
 
   const SYSIMAGE_LOCATION = getAssetPath('pluto-sysimage.so');
 
@@ -54,11 +60,10 @@ export async function startup(app: App, window: BrowserWindow) {
     const loggerListener = (data: any) => {
       const dataString = data.toString();
 
-      if (dataString.includes('Updating'))
-        window.webContents.send('pluto-url', 'updating');
+      if (dataString.includes('Updating')) statusUpdate('updating');
 
       if (dataString.includes('Loading') || dataString.includes('loading'))
-        window.webContents.send('pluto-url', 'loading');
+        statusUpdate('loading');
 
       if (Pluto.url === null) {
         const plutoLog = dataString;
@@ -73,7 +78,7 @@ export async function startup(app: App, window: BrowserWindow) {
             secret: tempURL.searchParams.get('secret')!,
           };
 
-          window.webContents.send('pluto-url', 'loaded');
+          statusUpdate('loaded');
           setAxiosDefaults(Pluto.url);
 
           generalLogger.announce('Entry url found:', Pluto.url);

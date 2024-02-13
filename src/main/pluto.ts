@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow, dialog, nativeTheme, shell } from 'electron';
 import fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -8,8 +8,10 @@ import { generalLogger } from './logger';
 import NotebookManager from './notebookManager';
 import { isExtMatch, Loader, PLUTO_FILE_EXTENSIONS } from './util';
 import msgpack from 'msgpack-lite';
-import { createPlutoWindow } from './windowHelpers';
+import { GlobalWindowManager } from './windowHelpers';
 import { Globals } from './globals';
+import MenuBuilder from './menu';
+import { getAssetPath } from './paths';
 
 class Pluto {
   /**
@@ -25,13 +27,50 @@ class Pluto {
 
   private id: string | undefined;
 
-  constructor(win: BrowserWindow) {
+  constructor(landingUrl: string | null = Pluto.resolveHtmlPath('index.html')) {
     // currently Pluto functions as a singleton
     // TODO: refactor to support arbitrary window counts
 
     Pluto.url ??= null;
-    this.win = win;
-    this.win.loadURL(Pluto.resolveHtmlPath('index.html'));
+    this.win = _createPlutoBrowserWindow();
+    if (landingUrl) {
+      this.win.loadURL(landingUrl);
+    }
+
+    GlobalWindowManager.getInstance().registerWindow(this);
+
+    this.win.on('ready-to-show', () => {
+      if (process.env.START_MINIMIZED) {
+        this.win.minimize();
+      } else {
+        this.win.show();
+      }
+    });
+
+    this.win.once('close', async () => {
+      GlobalWindowManager.getInstance().unregisterWindow(this);
+    });
+
+    const menuBuilder = new MenuBuilder(this);
+
+    let first = true;
+    this.win.on('page-title-updated', (_e, title) => {
+      generalLogger.verbose('Window', this.win.id, 'moved to page:', title);
+      if (this.win?.webContents.getTitle().includes('index.html')) return;
+      const pageUrl = new URL(this.win!.webContents.getURL());
+      const isPluto = pageUrl.href.includes('localhost:');
+      if (first || isPluto) {
+        first = false;
+        this.win?.setMenuBarVisibility(true);
+        menuBuilder.buildMenu();
+      }
+    });
+
+    // Open urls in the user's browser
+    this.win.webContents.setWindowOpenHandler((edata) => {
+      shell.openExternal(edata.url);
+      return { action: 'deny' };
+    });
   }
 
   /**
@@ -41,13 +80,17 @@ class Pluto {
    * opens that notebook. If false and no path is there, opens the file selector.
    * If true, opens a new blank notebook.
    */
-  public open = async (
+  public static open = async (
     type: 'url' | 'path' | 'new' = 'new',
     pathOrURL?: string | null
   ) => {
-    const window = BrowserWindow.getFocusedWindow()!;
-    const setBlockScreenText = (blockScreenText: string | null) =>
+    const focusedWindow = BrowserWindow.getFocusedWindow()!;
+
+    let pluto: Pluto;
+    let window: BrowserWindow;
+    const setBlockScreenText = (blockScreenText: string | null) => {
       window.webContents.send('set-block-screen-text', blockScreenText);
+    };
 
     try {
       if (type === 'path' && pathOrURL && !isExtMatch(pathOrURL)) {
@@ -60,7 +103,7 @@ class Pluto {
 
       if (type !== 'new' && !pathOrURL) {
         if (type === 'path') {
-          const r = await dialog.showOpenDialog(window, {
+          const r = await dialog.showOpenDialog(focusedWindow, {
             message: 'Please select a Pluto Notebook.',
             filters: [
               {
@@ -74,7 +117,6 @@ class Pluto {
           if (r.canceled) return;
 
           [pathOrURL] = r.filePaths;
-          // this.win.webContents.send();
         } else if (type !== 'url') {
           dialog.showErrorBox(
             'PLUTO-CANNOT-OPEN-NOTEBOOK',
@@ -83,6 +125,9 @@ class Pluto {
           return;
         }
       }
+
+      pluto = new Pluto(null);
+      window = pluto.getBrowserWindow();
 
       const loader = new Loader(window);
 
@@ -181,9 +226,7 @@ class Pluto {
    * Alias function for `open` with type set to 'new'
    */
   private static newNotebook = async () => {
-    const plutoWindow = new Pluto(createPlutoWindow());
-    plutoWindow.open('new');
-    return plutoWindow;
+    Pluto.open('new');
   };
 
   /**
@@ -470,6 +513,36 @@ class Pluto {
   public static get runningInfo() {
     return Pluto.url;
   }
+}
+
+function _createPlutoBrowserWindow() {
+  const win = new BrowserWindow({
+    title: '⚡ Pluto ⚡',
+    height: 800,
+    width: process.env.NODE_ENV === 'development' ? 1200 : 700,
+    resizable: true,
+    show: true,
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#1F1F1F' : 'white',
+    icon: getAssetPath('icon.png'),
+    webPreferences: {
+      preload: app.isPackaged
+        ? path.join(__dirname, 'preload.js')
+        : path.join(__dirname, '../../.erb/dll/preload.js'),
+    },
+  });
+  win.setMenuBarVisibility(false);
+
+  if (process.env.NODE_ENV === 'development') {
+    win.webContents.openDevTools();
+  }
+
+  return win;
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 export default Pluto;

@@ -1,40 +1,18 @@
-import {
-  BrowserWindow,
-  dialog,
-  Menu,
-  MenuItemConstructorOptions,
-  shell,
-} from 'electron';
+import { dialog, Menu, MenuItemConstructorOptions, shell } from 'electron';
 import { URL } from 'node:url';
 
 import { PlutoExport } from '../../types/enums';
 import Pluto from './pluto';
 import { PLUTO_FILE_EXTENSIONS } from './util';
+import { GlobalWindowManager } from './windowHelpers';
 
 export default class MenuBuilder {
-  private mainWindow: BrowserWindow;
-
+  private pluto: Pluto;
   public hasbuilt: boolean;
 
-  private _createWindow: (
-    url?: string,
-    project?: string,
-    notebook?: string,
-    forceNew?: boolean
-  ) => Promise<void>;
-
-  constructor(
-    mainWindow: BrowserWindow,
-    createWindow: (
-      url?: string,
-      project?: string,
-      notebook?: string,
-      forceNew?: boolean
-    ) => Promise<void>
-  ) {
-    this.mainWindow = mainWindow;
+  constructor(pluto: Pluto) {
     this.hasbuilt = false;
-    this._createWindow = createWindow;
+    this.pluto = pluto;
   }
 
   buildMenu = () => {
@@ -44,13 +22,14 @@ export default class MenuBuilder {
     );
 
     const menu = Menu.buildFromTemplate(this.buildDefaultTemplate());
-    this.mainWindow.setMenu(menu);
+    this.pluto.getBrowserWindow().setMenu(menu);
 
     this.hasbuilt = true;
   };
 
   setupContextMenu(isDebug = false): void {
-    this.mainWindow.webContents.on('context-menu', (_, props) => {
+    const window = this.pluto.getBrowserWindow();
+    window.webContents.on('context-menu', (_, props) => {
       const { x, y, linkURL } = props;
 
       const template = isDebug
@@ -58,7 +37,7 @@ export default class MenuBuilder {
             {
               label: 'Inspect element',
               click: () => {
-                this.mainWindow.webContents.inspectElement(x, y);
+                window.webContents.inspectElement(x, y);
               },
             },
           ]
@@ -72,7 +51,7 @@ export default class MenuBuilder {
           },
         });
 
-      Menu.buildFromTemplate(template).popup({ window: this.mainWindow });
+      Menu.buildFromTemplate(template).popup({ window });
     });
   }
 
@@ -82,6 +61,12 @@ export default class MenuBuilder {
     /////////////////////////////
 
     const file: MenuItemConstructorOptions[] = [
+      {
+        label: 'New window',
+        click: async () => {
+          new Pluto();
+        },
+      },
       {
         label: '&New',
         accelerator: 'Ctrl+N',
@@ -93,7 +78,7 @@ export default class MenuBuilder {
         label: '&Open',
         accelerator: 'Ctrl+O',
         click: async () => {
-          await Pluto.notebook.open('path');
+          Pluto.open('path');
         },
       },
       {

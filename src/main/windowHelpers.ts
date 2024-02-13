@@ -1,32 +1,6 @@
-import { BrowserWindow, app, nativeTheme } from 'electron';
-import * as path from 'node:path';
-import { getAssetPath } from './paths';
 import Pluto from './pluto';
 import { randomUUID } from 'node:crypto';
-
-export function createPlutoWindow() {
-  const win = new BrowserWindow({
-    title: '⚡ Pluto ⚡',
-    height: 800,
-    width: process.env.NODE_ENV === 'development' ? 1200 : 700,
-    resizable: true,
-    show: true,
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#1F1F1F' : 'white',
-    icon: getAssetPath('icon.png'),
-    webPreferences: {
-      preload: app.isPackaged
-        ? path.join(__dirname, 'preload.js')
-        : path.join(__dirname, '../../.erb/dll/preload.js'),
-    },
-  });
-  win.setMenuBarVisibility(false);
-
-  if (process.env.NODE_ENV === 'development') {
-    win.webContents.openDevTools();
-  }
-
-  return win;
-}
+import { generalLogger } from './logger';
 
 type WindowList = { id: string; window: Pluto }[];
 export class GlobalWindowManager {
@@ -57,11 +31,20 @@ export class GlobalWindowManager {
       id,
       window: pluto,
     });
+    generalLogger.info(`Window registered with id=${id}`);
     return id;
+  }
+  unregisterWindow(pluto: Pluto) {
+    this.windowList = this.windowList.filter((x) => x.id !== pluto.getId());
+    generalLogger.info(`Window unregistered with id=${pluto.getId()}`);
   }
   getWindowByWebContentsId(webContentsId: number): Pluto | undefined {
     return this.windowList.find(
       (x) => x.window.getBrowserWindow().webContents.id === webContentsId
     )?.window;
+  }
+
+  static all(f: (p: Pluto) => void) {
+    this.getInstance().plutoWindows.forEach(f);
   }
 }

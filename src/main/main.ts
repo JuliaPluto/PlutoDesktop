@@ -10,24 +10,16 @@
 import './baseEventListeners';
 
 import chalk from 'chalk';
-import {
-  app,
-  BrowserWindow,
-  ipcMain,
-  nativeTheme,
-  session,
-  shell,
-} from 'electron';
+import { app, ipcMain, session } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { release } from 'os';
 
 // import { Deeplink } from 'electron-deeplink';
 // import * as isDev from 'electron-is-dev';
 import { backgroundLogger, generalLogger } from './logger';
-import MenuBuilder from './menu';
 import Pluto from './pluto';
 import { store } from './store';
-import { createPlutoWindow, GlobalWindowManager } from './windowHelpers';
+import { GlobalWindowManager } from './windowHelpers';
 import { startup } from './startup';
 
 generalLogger.verbose('---------- NEW SESSION ----------');
@@ -96,52 +88,14 @@ const createWindow = () => {
   // }
   generalLogger.announce('Creating a new window.');
 
-  const currWindow = createPlutoWindow();
-  currWindow.focus();
-  const firstPluto = new Pluto(currWindow);
-  GlobalWindowManager.getInstance().registerWindow(firstPluto);
-
-  if (!Pluto.runningInfo) {
-    // await firstPluto.run();
-  }
-
-  currWindow.on('ready-to-show', () => {
-    if (process.env.START_MINIMIZED) {
-      currWindow.minimize();
-    } else {
-      currWindow.show();
-    }
-  });
-
-  currWindow.once('close', async () => {
-    await Pluto.notebook.shutdown();
-  });
-
-  const menuBuilder = new MenuBuilder(currWindow, createWindow);
-
-  let first = true;
-  currWindow.on('page-title-updated', (_e, title) => {
-    generalLogger.verbose('Window', currWindow.id, 'moved to page:', title);
-    if (currWindow?.webContents.getTitle().includes('index.html')) return;
-    const pageUrl = new URL(currWindow!.webContents.getURL());
-    const isPluto = pageUrl.href.includes('localhost:');
-    if (first || isPluto) {
-      first = false;
-      currWindow?.setMenuBarVisibility(true);
-      menuBuilder.buildMenu();
-    }
-  });
-
-  // Open urls in the user's browser
-  currWindow.webContents.setWindowOpenHandler((edata) => {
-    shell.openExternal(edata.url);
-    return { action: 'deny' };
-  });
+  const firstPluto = new Pluto();
+  const window = firstPluto.getBrowserWindow();
+  window.focus();
 
   // Remove this if your app does not use auto updates
   new AppUpdater();
 
-  return currWindow;
+  return firstPluto;
 };
 
 /**
@@ -171,8 +125,8 @@ app
       'This file is used for internal configuration. Please refrain from editing or deleting this file.'
     );
 
-    const mainWindow = createWindow();
-    startup(app, mainWindow);
+    createWindow();
+    startup(app);
 
     // app.on('activate', () => {
     //   createWindow();
