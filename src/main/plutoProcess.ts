@@ -39,6 +39,7 @@ export function findPluto(): Promise<string> {
     if (_plutoLocation !== null) resolve(String(_plutoLocation));
 
     const juliaCmd = findJulia();
+    let resolved = false;
 
     const options = [
       `--project=${plutoProject}`,
@@ -49,11 +50,17 @@ export function findPluto(): Promise<string> {
     });
     proc.stdout.on('data', (chunk) => {
       _plutoLocation = chunk.toString();
+      resolved = true;
       resolve(String(_plutoLocation));
     });
     proc.stderr.on('error', (err) => {
       juliaLogger.error('Error determining Pluto.jl package location:', err);
       reject();
+    });
+    proc.on('close', () => {
+      if (!resolved) {
+        reject('Pluto could not be found with `locate_pluto.jl`!');
+      }
     });
   });
 }

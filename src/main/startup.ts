@@ -4,7 +4,7 @@ import { generalLogger, juliaLogger } from './logger';
 import { DEPOT_LOCATION, READONLY_DEPOT_LOCATION, getAssetPath } from './paths';
 import { findJulia, findPluto } from './plutoProcess';
 import { copyDirectoryRecursive, setAxiosDefaults } from './util';
-import { App, BrowserWindow, dialog } from 'electron';
+import { App, dialog } from 'electron';
 import chalk from 'chalk';
 import { spawn } from 'node:child_process';
 import Pluto from './pluto';
@@ -13,11 +13,11 @@ import { GlobalWindowManager } from './windowHelpers';
 
 export async function startup(app: App) {
   Globals.JULIA = findJulia();
+  generalLogger.log(`Julia found at: ${Globals.JULIA}`);
   Globals.JULIA_PROJECT =
     process.env.DEBUG_PROJECT_PATH ?? getAssetPath('env_for_julia');
   Globals.PLUTO_LOCATION = await findPluto();
-
-  generalLogger.log(`Julia found at: ${Globals.JULIA}`);
+  generalLogger.log(`Pluto found at: ${Globals.PLUTO_LOCATION}`);
 
   const statusUpdate = (status: string) =>
     GlobalWindowManager.all((p) =>
