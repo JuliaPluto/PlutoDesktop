@@ -218,8 +218,7 @@ function createRequestListener() {
       if (tail === 'edit') {
         next({
           redirectURL:
-            Pluto.resolveHtmlPath('editor.html') +
-            `&id=${url.searchParams.get('id')}`,
+            Pluto.resolveHtmlPath('editor.html') + url.search.replace('?', '&'),
         });
         return;
       }
