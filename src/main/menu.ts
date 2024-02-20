@@ -1,18 +1,24 @@
-import { dialog, Menu, MenuItemConstructorOptions, shell } from 'electron';
+import {
+  BrowserWindow,
+  dialog,
+  Menu,
+  MenuItemConstructorOptions,
+  shell,
+} from 'electron';
 import { URL } from 'node:url';
 
 import { PlutoExport } from '../../types/enums';
 import Pluto from './pluto';
-import { PLUTO_FILE_EXTENSIONS } from './util';
-import { GlobalWindowManager } from './windowHelpers';
 
 export default class MenuBuilder {
   private pluto: Pluto;
+  private browser: BrowserWindow;
   public hasbuilt: boolean;
 
   constructor(pluto: Pluto) {
     this.hasbuilt = false;
     this.pluto = pluto;
+    this.browser = this.pluto.getBrowserWindow();
   }
 
   buildMenu = () => {
@@ -47,7 +53,7 @@ export default class MenuBuilder {
         template.push({
           label: 'Open in new window',
           click: () => {
-            this._createWindow(linkURL);
+            new Pluto(linkURL);
           },
         });
 
@@ -57,6 +63,7 @@ export default class MenuBuilder {
 
   buildDefaultTemplate(): MenuItemConstructorOptions[] {
     const show_export = this.showExport();
+    const browser = this.pluto.getBrowserWindow();
 
     /////////////////////////////
 
@@ -67,41 +74,20 @@ export default class MenuBuilder {
           new Pluto();
         },
       },
-      {
-        label: '&New',
-        accelerator: 'Ctrl+N',
-        click: async () => {
-          await Pluto.notebook.open();
-        },
-      },
-      {
-        label: '&Open',
-        accelerator: 'Ctrl+O',
-        click: async () => {
-          Pluto.open('path');
-        },
-      },
-      {
-        label: 'Open in new window',
-        accelerator: 'Ctrl+Shift+O',
-        click: async () => {
-          const r = await dialog.showOpenDialog(this.mainWindow, {
-            message: 'Please select a Pluto Notebook.',
-            filters: [
-              {
-                name: 'Pluto Notebook',
-                extensions: PLUTO_FILE_EXTENSIONS.map((v) => v.slice(1)),
-              },
-            ],
-            properties: ['openFile'],
-          });
-
-          if (r.canceled) return;
-
-          const [path] = r.filePaths;
-          await this._createWindow(undefined, undefined, path);
-        },
-      },
+      // {
+      //   label: '&New',
+      //   accelerator: 'Ctrl+N',
+      //   click: async () => {
+      //     await Pluto.notebook.open();
+      //   },
+      // },
+      // {
+      //   label: '&Open',
+      //   accelerator: 'Ctrl+O',
+      //   click: async () => {
+      //     Pluto.open('path');
+      //   },
+      // },
       // {
       //   label: 'Copy current URL',
       //   click: async () => {
@@ -143,7 +129,7 @@ export default class MenuBuilder {
         label: '&Close',
         accelerator: 'Ctrl+W',
         click: async () => {
-          this.mainWindow.close();
+          this.pluto.close();
         },
       },
     ];
@@ -155,21 +141,21 @@ export default class MenuBuilder {
         label: '&Reload',
         accelerator: 'Ctrl+R',
         click: () => {
-          this.mainWindow.webContents.reload();
+          this.browser.webContents.reload();
         },
       },
       {
         label: 'Toggle &Full Screen',
         accelerator: 'F11',
         click: () => {
-          this.mainWindow.setFullScreen(!this.mainWindow.isFullScreen());
+          this.browser.setFullScreen(!browser.isFullScreen());
         },
       },
       {
         label: 'Toggle &Developer Tools',
         accelerator: 'Alt+Ctrl+I',
         click: () => {
-          this.mainWindow.webContents.toggleDevTools();
+          this.browser.webContents.toggleDevTools();
         },
       },
     ];
@@ -223,7 +209,7 @@ export default class MenuBuilder {
 
   showExport() {
     try {
-      const url = new URL(this.mainWindow.webContents.getURL());
+      const url = new URL(this.browser.webContents.getURL());
       return url.searchParams.has('id');
     } catch (error) {
       return false;
@@ -234,7 +220,7 @@ export default class MenuBuilder {
     callback: (id: string, ...extra: any[]) => Promise<void> | void,
     ...extraArgs: any[]
   ) {
-    const url = new URL(this.mainWindow.webContents.getURL());
+    const url = new URL(this.browser.webContents.getURL());
     const id = url.searchParams.get('id');
     if (id) {
       await callback(id, ...extraArgs);

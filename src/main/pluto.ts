@@ -80,14 +80,13 @@ class Pluto {
    * opens that notebook. If false and no path is there, opens the file selector.
    * If true, opens a new blank notebook.
    */
-  public static open = async (
+  public open = async (
     type: 'url' | 'path' | 'new' = 'new',
     pathOrURL?: string | null
   ) => {
     const focusedWindow = BrowserWindow.getFocusedWindow()!;
 
-    let pluto: Pluto;
-    let window: BrowserWindow;
+    let window: BrowserWindow = this.getBrowserWindow();
     const setBlockScreenText = (blockScreenText: string | null) => {
       window.webContents.send('set-block-screen-text', blockScreenText);
     };
@@ -125,9 +124,6 @@ class Pluto {
           return;
         }
       }
-
-      pluto = new Pluto(null);
-      window = pluto.getBrowserWindow();
 
       const loader = new Loader(window);
 
@@ -220,13 +216,6 @@ class Pluto {
     } finally {
       setBlockScreenText(null);
     }
-  };
-
-  /**
-   * Alias function for `open` with type set to 'new'
-   */
-  private static newNotebook = async () => {
-    Pluto.open('new');
   };
 
   /**
@@ -490,10 +479,9 @@ class Pluto {
 
   /**
    * Does nothing in particular but it just exposes the
-   * FileSystem functions publically in a ⚡ Pretty ⚡ way.
+   * FileSystem functions publicly in a ⚡ Pretty ⚡ way.
    */
   public static notebook = {
-    new: this.newNotebook,
     export: this.exportNotebook,
     move: this.moveNotebook,
     shutdown: this.shutdownNotebook,
@@ -505,6 +493,10 @@ class Pluto {
    */
   public static close = () => {
     Pluto.closePlutoFunction?.();
+  };
+
+  public close = () => {
+    this.win.close(); // will trigger callback in constructor to do more cleanup
   };
 
   /**
@@ -519,7 +511,7 @@ function _createPlutoBrowserWindow() {
   const win = new BrowserWindow({
     title: '⚡ Pluto ⚡',
     height: 800,
-    width: process.env.NODE_ENV === 'development' ? 1200 : 700,
+    width: 700,
     resizable: true,
     show: true,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#1F1F1F' : 'white',
@@ -531,10 +523,6 @@ function _createPlutoBrowserWindow() {
     },
   });
   win.setMenuBarVisibility(false);
-
-  if (process.env.NODE_ENV === 'development') {
-    win.webContents.openDevTools();
-  }
 
   return win;
 }

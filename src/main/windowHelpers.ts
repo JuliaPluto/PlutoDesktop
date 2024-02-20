@@ -37,6 +37,10 @@ export class GlobalWindowManager {
   unregisterWindow(pluto: Pluto) {
     this.windowList = this.windowList.filter((x) => x.id !== pluto.getId());
     generalLogger.info(`Window unregistered with id=${pluto.getId()}`);
+
+    if (this.windowList.length === 0) {
+      Pluto.closePlutoFunction?.();
+    }
   }
   getWindowByWebContentsId(webContentsId: number): Pluto | undefined {
     return this.windowList.find(

@@ -32,7 +32,12 @@ else
 end
 
 # Here we go!
-options = Pluto.Configuration.from_flat_kwargs(; host="127.0.0.1", launch_browser=false, port_hint=7122)
+options = Pluto.Configuration.from_flat_kwargs(;
+    host = "127.0.0.1",
+    launch_browser = false,
+    port_hint = 7122,
+    dismiss_update_notification = true
+)
 session = Pluto.ServerSession(; secret, options)
 Pluto.run(session)
 

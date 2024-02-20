@@ -27,7 +27,7 @@ ipcMain.on(
       );
       return;
     }
-    Pluto.open(type, pathOrURL);
+    plutoWindow.open(type, pathOrURL);
   }
 );
 

@@ -202,7 +202,7 @@ function createRequestListener() {
       }
       if (tail === 'new') {
         // this should be synchronous so the user sees the Pluto.jl loading screen on index.html
-        await Pluto.notebook.new();
+        await plutoWindow.open('new');
         next({
           cancel: true,
         });
