@@ -10,25 +10,17 @@
 import './baseEventListeners';
 
 import chalk from 'chalk';
-import {
-  app,
-  BrowserWindow,
-  ipcMain,
-  nativeTheme,
-  session,
-  shell,
-} from 'electron';
+import { app, ipcMain, session } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { release } from 'os';
-import path from 'path';
 
 // import { Deeplink } from 'electron-deeplink';
 // import * as isDev from 'electron-is-dev';
 import { backgroundLogger, generalLogger } from './logger';
-import MenuBuilder from './menu';
 import Pluto from './pluto';
 import { store } from './store';
-import { getAssetPath } from './paths';
+import { GlobalWindowManager } from './windowHelpers';
+import { startup } from './startup';
 
 generalLogger.verbose('---------- NEW SESSION ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
@@ -52,8 +44,6 @@ if (!app.requestSingleInstanceLock()) {
   process.exit(0);
 }
 
-let mainWindow: BrowserWindow | null = null;
-
 ipcMain.on('ipc-example', async (event, args) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
   console.log(msgTemplate(args));
@@ -76,117 +66,36 @@ ipcMain.on('ipc-example', async (event, args) => {
  * @returns nothing
  */
 
-const createWindow = async (
-  url?: string,
-  project?: string,
-  notebook?: string,
-  forceNew = true
-) => {
-  try {
-    const pathOrURL = notebook ?? url;
+const createWindow = () => {
+  /**
+   * If window with {pathOrURL} is already open, focus on it
+   * else open a new one
+   */
+  // if (!forceNew && pathOrURL) {
+  //   const id = Pluto.notebook.getId(pathOrURL);
+  //   if (id) {
+  //     const windows = BrowserWindow.getAllWindows();
+  //     const windowId = windows.findIndex((window) =>
+  //       window.webContents.getURL().includes(id)
+  //     );
+  //     if (windowId !== -1) {
+  //       windows[windowId].focus();
+  //       return;
+  //     }
+  //   } else {
+  //     generalLogger.log(`Opening ${pathOrURL} in new window.`);
+  //   }
+  // }
+  generalLogger.announce('Creating a new window.');
 
-    /**
-     * If window with {pathOrURL} is already open, focus on it
-     * else open a new one
-     */
-    if (!forceNew && pathOrURL) {
-      const id = Pluto.notebook.getId(pathOrURL);
-      if (id) {
-        const windows = BrowserWindow.getAllWindows();
-        const windowId = windows.findIndex((window) =>
-          window.webContents.getURL().includes(id)
-        );
-        if (windowId !== -1) {
-          windows[windowId].focus();
-          return;
-        }
-      } else {
-        generalLogger.log(`Opening ${pathOrURL} in new window.`);
-      }
-    }
+  const firstPluto = new Pluto();
+  const window = firstPluto.getBrowserWindow();
+  window.focus();
 
-    /**
-     * Uncomment the next LoC if you want devtools to open with
-     * every new window, please comment it again when you commit.
-     */
-    // await (await import('./devtools')).default();
+  // Remove this if your app does not use auto updates
+  new AppUpdater();
 
-    generalLogger.announce('Creating a new window.');
-
-    const currWindow = new BrowserWindow({
-      title: '⚡ Pluto ⚡',
-      height: 800,
-      width: process.env.NODE_ENV === 'development' ? 1200 : 700,
-      resizable: true,
-      show: true,
-      backgroundColor: nativeTheme.shouldUseDarkColors ? '#1F1F1F' : 'white',
-      icon: getAssetPath('icon.png'),
-      webPreferences: {
-        preload: app.isPackaged
-          ? path.join(__dirname, 'preload.js')
-          : path.join(__dirname, '../../.erb/dll/preload.js'),
-      },
-    });
-    currWindow.setMenuBarVisibility(false);
-
-    mainWindow ??= currWindow;
-
-    if (process.env.NODE_ENV === 'development') {
-      currWindow.webContents.openDevTools();
-    }
-
-    if (!Pluto.runningInfo) {
-      await new Pluto(currWindow).run(project, notebook, url);
-    } else if (url) {
-      currWindow.focus();
-      await Pluto.getInstance().open('url', url);
-    } else if (notebook) {
-      currWindow.focus();
-      await Pluto.getInstance().open('path', notebook);
-    }
-
-    currWindow.on('ready-to-show', () => {
-      if (!currWindow) {
-        throw new Error('"currWindow" is not defined');
-      }
-      if (process.env.START_MINIMIZED) {
-        currWindow.minimize();
-      } else {
-        currWindow.show();
-      }
-    });
-
-    currWindow.once('close', async () => {
-      await Pluto.notebook.shutdown();
-      mainWindow = null;
-    });
-
-    const menuBuilder = new MenuBuilder(currWindow, createWindow);
-
-    let first = true;
-    currWindow.on('page-title-updated', (_e, title) => {
-      generalLogger.verbose('Window', currWindow.id, 'moved to page:', title);
-      if (currWindow?.webContents.getTitle().includes('index.html')) return;
-      const pageUrl = new URL(currWindow!.webContents.getURL());
-      const isPluto = pageUrl.href.includes('localhost:');
-      if (first || isPluto) {
-        first = false;
-        currWindow?.setMenuBarVisibility(true);
-        menuBuilder.buildMenu();
-      }
-    });
-
-    // Open urls in the user's browser
-    currWindow.webContents.setWindowOpenHandler((edata) => {
-      shell.openExternal(edata.url);
-      return { action: 'deny' };
-    });
-
-    // Remove this if your app does not use auto updates
-    new AppUpdater();
-  } catch (e) {
-    generalLogger.error('CREATE-WINDOW-ERROR', e);
-  }
+  return firstPluto;
 };
 
 /**
@@ -202,9 +111,10 @@ app.on('window-all-closed', () => {
 });
 
 app.on('open-file', async (_event, file) => {
+  // TODO: Implement filesystem open
   _event.preventDefault();
   console.log(file);
-  await createWindow(undefined, undefined, file, false);
+  // await createWindow(file);
 });
 
 app
@@ -214,12 +124,13 @@ app
       'IMPORTANT-NOTE',
       'This file is used for internal configuration. Please refrain from editing or deleting this file.'
     );
+
     createWindow();
-    app.on('activate', () => {
-      // On macOS it's common to re-create a window in the app when the
-      // dock icon is clicked and there are no other windows open.
-      if (!mainWindow) createWindow();
-    });
+    startup(app);
+
+    // app.on('activate', () => {
+    //   createWindow();
+    // });
     app.on('will-quit', () => {
       Pluto.close();
     });
@@ -252,6 +163,67 @@ app
       });
     });
 
-    Pluto.createRequestListener();
+    createRequestListener();
   })
   .catch(generalLogger.error);
+
+function createRequestListener() {
+  session.defaultSession.webRequest.onBeforeRequest(async (details, next) => {
+    let cancel = false;
+
+    if (!details.webContentsId) {
+      generalLogger.warn('Web request was made without defined webContentsId');
+      next({ cancel });
+      return;
+    }
+
+    const plutoWindow =
+      GlobalWindowManager.getInstance().getWindowByWebContentsId(
+        details.webContentsId
+      );
+
+    if (!plutoWindow) {
+      next({ cancel });
+      return;
+    }
+
+    if (details.url.match(/\/Pluto\.jl\/frontend(-dist)?/g)) {
+      const url = new URL(details.url);
+      const tail = url.pathname.split('/').reverse()[0];
+
+      generalLogger.verbose(
+        'Triggered Pluto.jl server-side route detection!',
+        details.url
+      );
+
+      if (url.pathname.endsWith('/')) {
+        next({ redirectURL: Pluto.resolveHtmlPath('index.html') });
+        return;
+      }
+      if (tail === 'new') {
+        // this should be synchronous so the user sees the Pluto.jl loading screen on index.html
+        await plutoWindow.open('new');
+        next({
+          cancel: true,
+        });
+        return;
+      }
+      if (tail === 'open') {
+        await plutoWindow.open('path', url.searchParams.get('path'));
+        next({
+          cancel: true,
+        });
+        return;
+      }
+      if (tail === 'edit') {
+        next({
+          redirectURL:
+            Pluto.resolveHtmlPath('editor.html') + url.search.replace('?', '&'),
+        });
+        return;
+      }
+    }
+
+    next({ cancel });
+  });
+}

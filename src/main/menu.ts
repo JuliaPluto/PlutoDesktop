@@ -9,32 +9,16 @@ import { URL } from 'node:url';
 
 import { PlutoExport } from '../../types/enums';
 import Pluto from './pluto';
-import { PLUTO_FILE_EXTENSIONS } from './util';
 
 export default class MenuBuilder {
-  private mainWindow: BrowserWindow;
-
+  private pluto: Pluto;
+  private browser: BrowserWindow;
   public hasbuilt: boolean;
 
-  private _createWindow: (
-    url?: string,
-    project?: string,
-    notebook?: string,
-    forceNew?: boolean
-  ) => Promise<void>;
-
-  constructor(
-    mainWindow: BrowserWindow,
-    createWindow: (
-      url?: string,
-      project?: string,
-      notebook?: string,
-      forceNew?: boolean
-    ) => Promise<void>
-  ) {
-    this.mainWindow = mainWindow;
+  constructor(pluto: Pluto) {
     this.hasbuilt = false;
-    this._createWindow = createWindow;
+    this.pluto = pluto;
+    this.browser = this.pluto.getBrowserWindow();
   }
 
   buildMenu = () => {
@@ -44,13 +28,14 @@ export default class MenuBuilder {
     );
 
     const menu = Menu.buildFromTemplate(this.buildDefaultTemplate());
-    this.mainWindow.setMenu(menu);
+    this.pluto.getBrowserWindow().setMenu(menu);
 
     this.hasbuilt = true;
   };
 
   setupContextMenu(isDebug = false): void {
-    this.mainWindow.webContents.on('context-menu', (_, props) => {
+    const window = this.pluto.getBrowserWindow();
+    window.webContents.on('context-menu', (_, props) => {
       const { x, y, linkURL } = props;
 
       const template = isDebug
@@ -58,7 +43,7 @@ export default class MenuBuilder {
             {
               label: 'Inspect element',
               click: () => {
-                this.mainWindow.webContents.inspectElement(x, y);
+                window.webContents.inspectElement(x, y);
               },
             },
           ]
@@ -68,55 +53,41 @@ export default class MenuBuilder {
         template.push({
           label: 'Open in new window',
           click: () => {
-            this._createWindow(linkURL);
+            new Pluto(linkURL);
           },
         });
 
-      Menu.buildFromTemplate(template).popup({ window: this.mainWindow });
+      Menu.buildFromTemplate(template).popup({ window });
     });
   }
 
   buildDefaultTemplate(): MenuItemConstructorOptions[] {
     const show_export = this.showExport();
+    const browser = this.pluto.getBrowserWindow();
 
     /////////////////////////////
 
     const file: MenuItemConstructorOptions[] = [
       {
-        label: '&New',
-        accelerator: 'Ctrl+N',
+        label: 'New window',
         click: async () => {
-          await Pluto.notebook.open();
+          new Pluto();
         },
       },
-      {
-        label: '&Open',
-        accelerator: 'Ctrl+O',
-        click: async () => {
-          await Pluto.notebook.open('path');
-        },
-      },
-      {
-        label: 'Open in new window',
-        accelerator: 'Ctrl+Shift+O',
-        click: async () => {
-          const r = await dialog.showOpenDialog(this.mainWindow, {
-            message: 'Please select a Pluto Notebook.',
-            filters: [
-              {
-                name: 'Pluto Notebook',
-                extensions: PLUTO_FILE_EXTENSIONS.map((v) => v.slice(1)),
-              },
-            ],
-            properties: ['openFile'],
-          });
-
-          if (r.canceled) return;
-
-          const [path] = r.filePaths;
-          await this._createWindow(undefined, undefined, path);
-        },
-      },
+      // {
+      //   label: '&New',
+      //   accelerator: 'Ctrl+N',
+      //   click: async () => {
+      //     await Pluto.notebook.open();
+      //   },
+      // },
+      // {
+      //   label: '&Open',
+      //   accelerator: 'Ctrl+O',
+      //   click: async () => {
+      //     Pluto.open('path');
+      //   },
+      // },
       // {
       //   label: 'Copy current URL',
       //   click: async () => {
@@ -158,7 +129,7 @@ export default class MenuBuilder {
         label: '&Close',
         accelerator: 'Ctrl+W',
         click: async () => {
-          this.mainWindow.close();
+          this.pluto.close();
         },
       },
     ];
@@ -170,21 +141,21 @@ export default class MenuBuilder {
         label: '&Reload',
         accelerator: 'Ctrl+R',
         click: () => {
-          this.mainWindow.webContents.reload();
+          this.browser.webContents.reload();
         },
       },
       {
         label: 'Toggle &Full Screen',
         accelerator: 'F11',
         click: () => {
-          this.mainWindow.setFullScreen(!this.mainWindow.isFullScreen());
+          this.browser.setFullScreen(!browser.isFullScreen());
         },
       },
       {
         label: 'Toggle &Developer Tools',
         accelerator: 'Alt+Ctrl+I',
         click: () => {
-          this.mainWindow.webContents.toggleDevTools();
+          this.browser.webContents.toggleDevTools();
         },
       },
     ];
@@ -238,7 +209,7 @@ export default class MenuBuilder {
 
   showExport() {
     try {
-      const url = new URL(this.mainWindow.webContents.getURL());
+      const url = new URL(this.browser.webContents.getURL());
       return url.searchParams.has('id');
     } catch (error) {
       return false;
@@ -249,7 +220,7 @@ export default class MenuBuilder {
     callback: (id: string, ...extra: any[]) => Promise<void> | void,
     ...extraArgs: any[]
   ) {
-    const url = new URL(this.mainWindow.webContents.getURL());
+    const url = new URL(this.browser.webContents.getURL());
     const id = url.searchParams.get('id');
     if (id) {
       await callback(id, ...extraArgs);
