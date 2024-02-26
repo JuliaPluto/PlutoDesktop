@@ -463,7 +463,7 @@ class Pluto {
     return `file:///${plutoLocation}/frontend/${htmlFileName}?secret=${
       Globals.PLUTO_SECRET
     }&pluto_server_url=${encodeURIComponent(
-      `ws://localhost:7122?secret=${Globals.PLUTO_SECRET}`
+      `http://localhost:7122?secret=${Globals.PLUTO_SECRET}`
     )}`;
   };
 
