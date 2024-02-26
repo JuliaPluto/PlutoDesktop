@@ -11,7 +11,7 @@ Abstracts and automates the following processes:
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://github.com/JuliaPluto/PlutoDesktop/assets/22894011/553e7022-08c9-4aa5-a5cf-385f4244473f">
-  <img alt="Pluto.jl landing page in Pluto Desktop" src="https://github.com/JuliaPluto/PlutoDesktop/assets/22894011/4d98e70b-7b51-4139-be66-3059099824f3">
+  <img alt="Pluto.jl landing page in Pluto Desktop" width="600" src="https://github.com/JuliaPluto/PlutoDesktop/assets/22894011/4d98e70b-7b51-4139-be66-3059099824f3">
 </picture>
 
 ## Features
