@@ -8,9 +8,8 @@ Abstracts and automates the following processes:
 - Installing Pluto
 - Running Pluto
 - Creating a system image for better performance
-
-![Dark-Mode](https://user-images.githubusercontent.com/51574716/188322175-1e04ec0e-b18c-4745-a2e8-4c3abaecbc79.png#gh-dark-mode-only)
-![Light-Mode]([https://user-images.githubusercontent.com/51574716/188322175-1e04ec0e-b18c-4745-a2e8-4c3abaecbc79.png#gh-light-mode-only](https://github.com/fonsp/Pluto.jl/assets/22894011/0cbeb05b-2f00-498d-af95-b8b11e4fda0c))
+![Dark-Mode](https://github.com/JuliaPluto/PlutoDesktop/assets/22894011/553e7022-08c9-4aa5-a5cf-385f4244473f#gh-dark-mode-only)
+![Light-Mode](https://github.com/JuliaPluto/PlutoDesktop/assets/22894011/f9f9f38c-1c62-4118-b738-2d831299ebd2#gh-light-mode-only)
 
 ## Features
 
