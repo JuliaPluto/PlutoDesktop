@@ -9,9 +9,10 @@ Abstracts and automates the following processes:
 - Running Pluto
 - Creating a system image for better performance
 
-
-![Editor Home](https://github.com/JuliaPluto/PlutoDesktop/assets/22894011/553e7022-08c9-4aa5-a5cf-385f4244473f#gh-dark-mode-only)
-![Editor Home](https://github.com/JuliaPluto/PlutoDesktop/assets/22894011/f9f9f38c-1c62-4118-b738-2d831299ebd2#gh-light-mode-only)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/JuliaPluto/PlutoDesktop/assets/22894011/553e7022-08c9-4aa5-a5cf-385f4244473f">
+  <img alt="Pluto.jl landing page in Pluto Desktop" src="https://github.com/JuliaPluto/PlutoDesktop/assets/22894011/4d98e70b-7b51-4139-be66-3059099824f3">
+</picture>
 
 ## Features
 
