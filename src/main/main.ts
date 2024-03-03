@@ -20,7 +20,8 @@ import { backgroundLogger, generalLogger } from './logger';
 import Pluto from './pluto';
 import { store } from './store';
 import { GlobalWindowManager } from './windowHelpers';
-import { startup } from './startup';
+import { initGlobals, startup } from './startup';
+import { Globals } from './globals';
 
 generalLogger.verbose('---------- NEW SESSION ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
@@ -119,14 +120,15 @@ app.on('open-file', async (_event, file) => {
 
 app
   .whenReady()
-  .then(() => {
+  .then(async () => {
     store.set(
       'IMPORTANT-NOTE',
       'This file is used for internal configuration. Please refrain from editing or deleting this file.'
     );
 
-    createWindow();
+    await initGlobals();
     startup(app);
+    createWindow();
 
     // app.on('activate', () => {
     //   createWindow();

@@ -1,5 +1,5 @@
 {
-  "description": "Desktop application for running Pluto notebooks",
+  "description": "Pluto.jl Desktop",
   "keywords": [
     "pluto",
     "julia"
@@ -17,6 +17,7 @@
     "name": "Pluto Developers",
     "url": "https://plutojl.org"
   },
+  "version": "0.19.40",
   "contributors": [
     {
       "name": "Dhruv Tiwari",
@@ -157,7 +158,8 @@
     },
     "win": {
       "target": [
-        "nsis"
+        "nsis",
+        "portable"
       ]
     },
     "linux": {

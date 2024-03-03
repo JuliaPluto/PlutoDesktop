@@ -1,7 +1,7 @@
 {
   "name": "pluto",
-  "version": "0.1.0",
-  "description": "Desktop application for running Pluto notebooks.",
+  "version": "0.19.36",
+  "description": "Pluto.jl Desktop",
   "license": "MIT",
   "author": {
     "name": "Pluto",

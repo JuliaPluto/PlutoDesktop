@@ -12,7 +12,7 @@ const { exit } = require('process');
 const assetPath = path.join(__dirname, '../..', 'assets');
 
 // YOU CAN EDIT ME
-const JULIA_VERSION_PARTS = [1, 9, 3];
+const JULIA_VERSION_PARTS = [1, 10, 1];
 /// ☝️
 
 const JULIA_VERSION = JULIA_VERSION_PARTS.join('.');
@@ -114,7 +114,7 @@ const prepareJuliaDepot = async ({ julia_path }) => {
     [
       `--project=${path.join(assetPath, 'env_for_julia')}`,
       `-e`,
-      `import Pkg; Pkg.instantiate(); Pkg.precompile(); import Pluto;`,
+      `import Pkg; Pkg.instantiate(); import Pluto`,
     ],
     {
       env: {
@@ -159,6 +159,9 @@ exports.default = async (context) => {
     recursive: true,
   });
   await unzip(path.join(assetPath, ZIP_NAME), { dir: assetPath });
+  fs.rmSync(path.join(assetPath, ZIP_NAME), {
+    force: true,
+  });
   spinner1.success({ text: '\tExtracted!', mark: '✓' });
 
   // NOT DOING THIS, see https://github.com/JuliaPluto/PlutoDesktop/issues/56

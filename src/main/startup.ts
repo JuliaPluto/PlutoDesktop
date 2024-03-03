@@ -11,14 +11,16 @@ import Pluto from './pluto';
 import { Globals } from './globals';
 import { GlobalWindowManager } from './windowHelpers';
 
-export async function startup(app: App) {
+export async function initGlobals() {
   Globals.JULIA = findJulia();
   generalLogger.log(`Julia found at: ${Globals.JULIA}`);
   Globals.JULIA_PROJECT =
     process.env.DEBUG_PROJECT_PATH ?? getAssetPath('env_for_julia');
   Globals.PLUTO_LOCATION = await findPluto();
   generalLogger.log(`Pluto found at: ${Globals.PLUTO_LOCATION}`);
+}
 
+export async function startup(app: App) {
   const statusUpdate = (status: string) =>
     GlobalWindowManager.all((p) =>
       p.getBrowserWindow().webContents.send('pluto-url', status)

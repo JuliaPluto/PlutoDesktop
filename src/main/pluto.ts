@@ -522,6 +522,7 @@ function _createPlutoBrowserWindow() {
         : path.join(__dirname, '../../.erb/dll/preload.js'),
     },
   });
+  win.webContents.setVisualZoomLevelLimits(1, 3);
   win.setMenuBarVisibility(false);
 
   return win;
