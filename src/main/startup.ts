@@ -16,7 +16,9 @@ export async function initGlobals() {
   generalLogger.log(`Julia found at: ${Globals.JULIA}`);
   Globals.JULIA_PROJECT =
     process.env.DEBUG_PROJECT_PATH ?? getAssetPath('env_for_julia');
-  Globals.PLUTO_LOCATION = await findPluto();
+  let loc = await findPluto();
+  if (loc.endsWith('/')) loc = loc.slice(0, loc.length - 1);
+  Globals.PLUTO_LOCATION = loc;
   generalLogger.log(`Pluto found at: ${Globals.PLUTO_LOCATION}`);
 }
 
