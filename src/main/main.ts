@@ -127,8 +127,8 @@ app
     );
 
     await initGlobals();
-    startup(app);
     createWindow();
+    startup(app);
 
     // app.on('activate', () => {
     //   createWindow();
@@ -189,7 +189,7 @@ function createRequestListener() {
       return;
     }
 
-    if (details.url.match(/\/Pluto\.jl\/frontend(-dist)?/g)) {
+    if (details.url.match(/\/Pluto\.jl\/(.*\/)?frontend(-dist)?/g)) {
       const url = new URL(details.url);
       const tail = url.pathname.split('/').reverse()[0];
 

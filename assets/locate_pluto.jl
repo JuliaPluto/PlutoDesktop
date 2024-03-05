@@ -5,7 +5,7 @@ function main()
     try_print = () -> begin
         pkg_loc = Base.locate_package(Base.identify_package("Pluto"))
         if !isnothing(pkg_loc)
-            println(normpath(pkg_loc, "..", ".."))
+            print(normpath(pkg_loc, "..", ".."))
             return true
         end
         false
