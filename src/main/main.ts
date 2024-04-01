@@ -94,7 +94,7 @@ const createWindow = () => {
   window.focus();
 
   // Remove this if your app does not use auto updates
-  new AppUpdater();
+  // new AppUpdater();
 
   return firstPluto;
 };
@@ -189,7 +189,9 @@ function createRequestListener() {
       return;
     }
 
-    if (details.url.match(/\/Pluto\.jl\/(.*\/)?frontend(-dist)?/g)) {
+    // In development, our path usually looks like /.../Pluto.jl/frontend
+    // In production, our path usually looks like  /.../Pluto/KkVLI/frontend
+    if (details.url.match(/\/Pluto(\.jl)?\/(.*\/)?frontend(-dist)?/g)) {
       const url = new URL(details.url);
       const tail = url.pathname.split('/').reverse()[0];
 
