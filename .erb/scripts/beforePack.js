@@ -12,7 +12,7 @@ const { exit } = require('process');
 const assetPath = path.join(__dirname, '../..', 'assets');
 
 // YOU CAN EDIT ME
-const JULIA_VERSION_PARTS = [1, 10, 1];
+const JULIA_VERSION_PARTS = [1, 10, 2];
 /// ☝️
 
 const JULIA_VERSION = JULIA_VERSION_PARTS.join('.');
@@ -148,21 +148,21 @@ const prepareJuliaDepot = async ({ julia_path }) => {
 exports.default = async (context) => {
   let files = fs.readdirSync(assetPath);
 
-  if (!files.includes(ZIP_NAME)) {
+  if (!files.includes(JULIA_DIR_NAME)) {
     await downloadJulia();
-  }
-  // files = fs.readdirSync(assetPath);
+    // files = fs.readdirSync(assetPath);
 
-  const spinner1 = createSpinner(`\tExtracting: ${ZIP_NAME}`).start();
-  fs.rmSync(path.join(assetPath, JULIA_DIR_NAME), {
-    force: true,
-    recursive: true,
-  });
-  await unzip(path.join(assetPath, ZIP_NAME), { dir: assetPath });
-  fs.rmSync(path.join(assetPath, ZIP_NAME), {
-    force: true,
-  });
-  spinner1.success({ text: '\tExtracted!', mark: '✓' });
+    const spinner1 = createSpinner(`\tExtracting: ${ZIP_NAME}`).start();
+    fs.rmSync(path.join(assetPath, JULIA_DIR_NAME), {
+      force: true,
+      recursive: true,
+    });
+    await unzip(path.join(assetPath, ZIP_NAME), { dir: assetPath });
+    fs.rmSync(path.join(assetPath, ZIP_NAME), {
+      force: true,
+    });
+    spinner1.success({ text: '\tExtracted!', mark: '✓' });
+  }
 
   // NOT DOING THIS, see https://github.com/JuliaPluto/PlutoDesktop/issues/56
   // await precompilePluto({
