@@ -29,8 +29,7 @@ npm-debug.log.*
 
 # Julia
 assets/julia*
-assets/pluto-sysimage.so
-assets/pluto_precompile.jl
+assets/pluto.so
 
 # ENV
 .env.local

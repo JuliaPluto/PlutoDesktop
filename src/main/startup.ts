@@ -33,7 +33,7 @@ export async function startup(app: App) {
 
   statusUpdate('loading');
 
-  const SYSIMAGE_LOCATION = getAssetPath('pluto-sysimage.so');
+  const SYSIMAGE_LOCATION = getAssetPath('pluto.so');
 
   // ensure depot has been copied from read-only installation directory to writable directory
   if (!fs.existsSync(DEPOT_LOCATION)) {
@@ -42,10 +42,13 @@ export async function startup(app: App) {
   }
 
   const options = [`--project=${Globals.JULIA_PROJECT}`];
-  if (!process.env.DEBUG_PROJECT_PATH) {
-    if (fs.existsSync(SYSIMAGE_LOCATION))
-      options.push(`--sysimage=${SYSIMAGE_LOCATION}`);
-  }
+  // if (!process.env.DEBUG_PROJECT_PATH) {
+  if (fs.existsSync(SYSIMAGE_LOCATION))
+    options.push(`--sysimage=${SYSIMAGE_LOCATION}`);
+  generalLogger.info(
+    `System image found at ${SYSIMAGE_LOCATION}. Julia will use this instead of the default`
+  );
+  // }
 
   options.push(getAssetPath('run_pluto.jl'));
   // See run_pluto.jl for info about these command line arguments.

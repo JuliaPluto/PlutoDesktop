@@ -66,21 +66,25 @@ const precompilePluto = async ({ julia_path }) => {
   const SYSIMAGE_LOCATION = path.join(
     assetPath,
     // TODO: auto version number
-    'pluto-sysimage.so'
+    'pluto.so'
   );
 
+  // immediately return if the sysimage has already been compiled
+  if (fs.existsSync(SYSIMAGE_LOCATION)) {
+    return new Promise((resolve) => resolve());
+  }
+
   const PRECOMPILE_SCRIPT_LOCATION = path.join(assetPath, 'precompile.jl');
-  const PRECOMPILE_STATEMENTS_FILE_LOCATION = path.join(
+  const PRECOMPILE_EXECUTION_LOCATION = path.join(
     assetPath,
-    'pluto_precompile.jl'
+    'precompile_execution.jl'
   );
-  fs.writeFileSync(PRECOMPILE_STATEMENTS_FILE_LOCATION, '');
 
   const res = spawn(julia_path, [
     `--project=${path.join(assetPath, 'env_for_julia')}`,
     PRECOMPILE_SCRIPT_LOCATION,
     SYSIMAGE_LOCATION,
-    PRECOMPILE_STATEMENTS_FILE_LOCATION,
+    PRECOMPILE_EXECUTION_LOCATION,
   ]);
 
   // stderr includes precompile status text
@@ -164,12 +168,13 @@ exports.default = async (context) => {
     spinner1.success({ text: '\tExtracted!', mark: '✓' });
   }
 
-  // NOT DOING THIS, see https://github.com/JuliaPluto/PlutoDesktop/issues/56
-  // await precompilePluto({
-  //   julia_path: path.join(assetPath, JULIA_DIR_NAME, 'bin', 'julia.exe'),
-  // });
-
   await prepareJuliaDepot({
+    julia_path: path.join(assetPath, JULIA_DIR_NAME, 'bin', 'julia.exe'),
+  });
+
+  // NOT DOING THIS, see https://github.com/JuliaPluto/PlutoDesktop/issues/56
+  //  maybe we are... (CB)
+  await precompilePluto({
     julia_path: path.join(assetPath, JULIA_DIR_NAME, 'bin', 'julia.exe'),
   });
 };
