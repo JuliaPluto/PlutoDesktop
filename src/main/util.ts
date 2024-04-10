@@ -95,14 +95,13 @@ const isUrlOrPath = (text: string) => {
   return 'none';
 };
 
-const setAxiosDefaults = (url: PlutoURL) => {
-  const baseURL = new URL(url.url);
-  if (baseURL.hostname === 'localhost') {
+const setAxiosDefaults = (url: URL) => {
+  if (url.hostname === 'localhost') {
     // there are issues with IPv6 and Node.JS on certain hardware / operating systems
     // the loopback IP is generally safer
-    baseURL.hostname = '127.0.0.1';
+    url.hostname = '127.0.0.1';
   }
-  axios.defaults.baseURL = baseURL.origin;
+  axios.defaults.baseURL = url.origin;
   axios.defaults.headers.common.Connection = 'keep-alive';
   generalLogger.verbose('Base URL set to', axios.defaults.baseURL);
 };

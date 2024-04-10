@@ -28,10 +28,6 @@ class Pluto {
   private id: string | undefined;
 
   constructor(landingUrl: string | null = Pluto.resolveHtmlPath('index.html')) {
-    // currently Pluto functions as a singleton
-    // TODO: refactor to support arbitrary window counts
-
-    Pluto.url ??= null;
     this.win = _createPlutoBrowserWindow();
     if (landingUrl) {
       this.win.loadURL(landingUrl);
@@ -127,14 +123,14 @@ class Pluto {
 
       const loader = new Loader(window);
 
-      if (Pluto.url) {
+      if (Globals.PLUTO_URL) {
         let params = {};
         if (pathOrURL) {
           generalLogger.log(`Trying to open ${pathOrURL}`);
           if (type === 'path') {
             setBlockScreenText(pathOrURL);
             window.webContents.send('pluto-url', `Trying to open ${pathOrURL}`);
-            params = { secret: Pluto.url?.secret, path: pathOrURL };
+            params = { secret: Globals.PLUTO_SECRET, path: pathOrURL };
           } else if (type === 'url') {
             const newURL = new URL(pathOrURL);
             if (newURL.searchParams.has('path')) {
@@ -144,7 +140,7 @@ class Pluto {
                 `Trying to open ${newURL.searchParams.get('path')}`
               );
               params = {
-                secret: Pluto.url?.secret,
+                secret: Globals.PLUTO_SECRET,
                 path: newURL.searchParams.get('path'),
               };
             } else {
@@ -154,14 +150,14 @@ class Pluto {
                 `Trying to open ${pathOrURL}`
               );
               params = {
-                secret: Pluto.url?.secret,
+                secret: Globals.PLUTO_SECRET,
                 url: pathOrURL,
               };
             }
           }
         } else {
           params = {
-            secret: Pluto.url?.secret,
+            secret: Globals.PLUTO_SECRET,
           };
         }
 
@@ -224,7 +220,7 @@ class Pluto {
    * @returns nothing
    */
   private static exportNotebook = async (id: string, type: PlutoExport) => {
-    if (!this.url) {
+    if (!Globals.PLUTO_STARTED) {
       dialog.showErrorBox(
         'Pluto not intialized',
         'Please wait for pluto to initialize first'
@@ -245,13 +241,13 @@ class Pluto {
     let url: string | null;
     switch (type) {
       case PlutoExport.FILE:
-        url = `http://localhost:${this.url.port}/notebookfile?secret=${this.url.secret}&id=${id}`;
+        url = `http://localhost:${Globals.PLUTO_URL.port}/notebookfile?secret=${Globals.PLUTO_SECRET}&id=${id}`;
         break;
       case PlutoExport.HTML:
-        url = `http://localhost:${this.url.port}/notebookexport?secret=${this.url.secret}&id=${id}`;
+        url = `http://localhost:${Globals.PLUTO_URL.port}/notebookexport?secret=${Globals.PLUTO_SECRET}&id=${id}`;
         break;
       case PlutoExport.STATE:
-        url = `http://localhost:${this.url.port}/statefile?secret=${this.url.secret}&id=${id}`;
+        url = `http://localhost:${Globals.PLUTO_URL.port}/statefile?secret=${Globals.PLUTO_SECRET}&id=${id}`;
         break;
       default:
         window.webContents.print();
@@ -270,7 +266,7 @@ class Pluto {
    */
   private static shutdownNotebook = async (_id?: string) => {
     try {
-      if (!this.url) {
+      if (!Globals.PLUTO_STARTED) {
         dialog.showErrorBox(
           'Pluto not intialized',
           'Please wait for pluto to initialize first'
@@ -285,7 +281,7 @@ class Pluto {
 
         const res = await axios.get('shutdown', {
           params: {
-            secret: Pluto.url?.secret,
+            secret: Globals.PLUTO_SECRET,
             id,
           },
         });
@@ -313,7 +309,7 @@ class Pluto {
    */
   private static moveNotebook = async (_id?: string) => {
     try {
-      if (!this.url) {
+      if (!Globals.PLUTO_STARTED) {
         dialog.showErrorBox(
           'Pluto not intialized',
           'Please wait for pluto to initialize first'
@@ -342,7 +338,7 @@ class Pluto {
         {},
         {
           params: {
-            secret: Pluto.url?.secret,
+            secret: Globals.PLUTO_SECRET,
             id,
             newpath: filePath,
           },
@@ -376,7 +372,7 @@ class Pluto {
     let result;
 
     try {
-      if (!this.url) {
+      if (!Globals.PLUTO_STARTED) {
         dialog.showErrorBox(
           'Pluto not intialized',
           'Please wait for pluto to initialize first'
@@ -387,7 +383,7 @@ class Pluto {
       const res = await axios.get('notebooklist', {
         responseType: 'arraybuffer',
         params: {
-          secret: Pluto.url?.secret,
+          secret: Globals.PLUTO_SECRET,
         },
       });
 
@@ -415,7 +411,7 @@ class Pluto {
     let result: string | boolean = false;
 
     try {
-      if (!this.url) {
+      if (!Globals.PLUTO_STARTED) {
         dialog.showErrorBox(
           'Pluto not intialized',
           'Please wait for pluto to initialize first'
@@ -426,7 +422,7 @@ class Pluto {
       const res = await axios.get('notebooklist', {
         responseType: 'arraybuffer',
         params: {
-          secret: Pluto.url?.secret,
+          secret: Globals.PLUTO_SECRET,
         },
       });
 

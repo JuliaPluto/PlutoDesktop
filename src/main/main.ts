@@ -22,6 +22,7 @@ import { store } from './store';
 import { GlobalWindowManager } from './windowHelpers';
 import { initGlobals, startup } from './startup';
 import { Globals } from './globals';
+import axios from 'axios';
 
 generalLogger.verbose('---------- NEW SESSION ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
@@ -68,25 +69,6 @@ ipcMain.on('ipc-example', async (event, args) => {
  */
 
 const createWindow = () => {
-  /**
-   * If window with {pathOrURL} is already open, focus on it
-   * else open a new one
-   */
-  // if (!forceNew && pathOrURL) {
-  //   const id = Pluto.notebook.getId(pathOrURL);
-  //   if (id) {
-  //     const windows = BrowserWindow.getAllWindows();
-  //     const windowId = windows.findIndex((window) =>
-  //       window.webContents.getURL().includes(id)
-  //     );
-  //     if (windowId !== -1) {
-  //       windows[windowId].focus();
-  //       return;
-  //     }
-  //   } else {
-  //     generalLogger.log(`Opening ${pathOrURL} in new window.`);
-  //   }
-  // }
   generalLogger.announce('Creating a new window.');
 
   const firstPluto = new Pluto();
@@ -115,6 +97,8 @@ app.on('open-file', async (_event, file) => {
   // TODO: Implement filesystem open
   _event.preventDefault();
   console.log(file);
+  console.log(app.isReady());
+  console.log(GlobalWindowManager.getInstance().plutoWindows.length);
   // await createWindow(file);
 });
 
@@ -225,6 +209,15 @@ function createRequestListener() {
             Pluto.resolveHtmlPath('editor.html') + url.search.replace('?', '&'),
         });
         return;
+      }
+      // this route gets called when pasting a notebook into the welcome page
+      if (tail === 'notebookupload') {
+        next({
+          redirectURL: new URL(
+            `notebookupload?secret=${Globals.PLUTO_SECRET}`,
+            Globals.PLUTO_URL
+          ).toString(),
+        });
       }
     }
 

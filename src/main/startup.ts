@@ -72,21 +72,17 @@ export async function startup(app: App) {
       if (dataString.includes('Loading') || dataString.includes('loading'))
         statusUpdate('loading');
 
-      if (Pluto.url === null) {
+      if (!Globals.PLUTO_URL) {
         const plutoLog = dataString;
         if (plutoLog.includes('?secret=')) {
           const urlMatch = plutoLog.match(/http\S+/g);
           const entryUrl = urlMatch[0];
 
           const tempURL = new URL(entryUrl);
-          Pluto.url = {
-            url: entryUrl,
-            port: tempURL.port,
-            secret: tempURL.searchParams.get('secret')!,
-          };
+          Globals.PLUTO_URL = new URL(`${tempURL.protocol}//${tempURL.host}`);
 
           statusUpdate('loaded');
-          setAxiosDefaults(Pluto.url);
+          setAxiosDefaults(Globals.PLUTO_URL);
 
           generalLogger.announce('Entry url found:', Pluto.url);
         } else if (
