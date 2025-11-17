@@ -119,7 +119,7 @@ export const generateSecret = (length = 8) => {
     throw new Error('Invalid key length');
   }
 
-  const arr = new Uint32Array(Math.ceil((3 * length) / 4));
+  const arr = new Uint8Array(Math.ceil((3 * length) / 4));
   getRandomValues(arr);
   const secretBase64 = Buffer.from(arr).toString('base64').slice(0, length);
 
