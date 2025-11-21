@@ -3,8 +3,8 @@
  */
 
 import * as fs from 'node:fs';
-import { DEPOT_LOCATION, getAssetPath } from './paths';
-import { generalLogger, juliaLogger } from './logger';
+import { DEPOT_LOCATION, getAssetPath } from './paths.ts';
+import { generalLogger, juliaLogger } from './logger.ts';
 import { spawn } from 'node:child_process';
 
 export const plutoProject =

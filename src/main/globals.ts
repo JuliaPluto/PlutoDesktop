@@ -1,4 +1,4 @@
-import { generateSecret } from './util';
+import { generateSecret } from './util.ts';
 
 export class Globals {
   public static JULIA: string;

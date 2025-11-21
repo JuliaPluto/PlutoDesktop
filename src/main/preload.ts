@@ -30,7 +30,7 @@ contextBridge.exposeInMainWorld('plutoDesktop', {
     moveNotebook(id?: string) {
       ipcRenderer.send('PLUTO-MOVE-NOTEBOOK', id);
     },
-    exportNotebook(id: string, type: PlutoExport) {
+    exportNotebook(id: string, type: (typeof PlutoExport)[keyof typeof PlutoExport]) {
       ipcRenderer.send('PLUTO-EXPORT-NOTEBOOK', id, type);
     },
   },

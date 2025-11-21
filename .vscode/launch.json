@@ -1,6 +1,31 @@
 {
   "version": "0.2.0",
   "configurations": [
+        {
+        "name": "Debug via NPM Start",
+        "type": "node",
+        "request": "launch",
+        "cwd": "${workspaceFolder}",
+        "runtimeExecutable": "npm",
+        "runtimeArgs": [
+            "run-script",
+            "start" // Or whatever your script name is
+        ],
+        "outputCapture": "std"
+    },
+    {
+      "name": "Debug Main Process",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
+      "windows": {
+        "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
+      },
+      "program": "./src/main/main.ts",
+      "args" : ["."],
+      "outputCapture": "std"
+    },
     {
       "name": "Electron: Main",
       "type": "node",

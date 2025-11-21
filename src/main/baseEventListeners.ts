@@ -5,15 +5,15 @@
 
 import { ipcMain } from 'electron';
 
-import { PlutoExport } from '../../types/enums';
-import Pluto from './pluto';
-import { GlobalWindowManager } from './windowHelpers';
-import { generalLogger } from './logger';
+import { PlutoExport } from '../../types/enums.ts';
+import Pluto from './pluto.ts';
+import { GlobalWindowManager } from './windowHelpers.ts';
+import { generalLogger } from './logger.ts';
 
 ipcMain.on(
   'PLUTO-OPEN-NOTEBOOK',
   async (
-    event,
+   event,
     type: 'path' | 'url' | 'new' = 'new',
     pathOrURL?: string
   ): Promise<void> => {
@@ -46,7 +46,11 @@ ipcMain.on(
 
 ipcMain.on(
   'PLUTO-EXPORT-NOTEBOOK',
-  async (_event, id: string, type: PlutoExport): Promise<void> => {
+  async (
+    _event,
+    id: string,
+    type: typeof PlutoExport[keyof typeof PlutoExport]
+  ): Promise<void> => {
     await Pluto.notebook.export(id, type);
   }
 );

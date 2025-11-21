@@ -7,26 +7,31 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 
-import './baseEventListeners';
+import './baseEventListeners.ts';
 
 import chalk from 'chalk';
 import { app, ipcMain, session } from 'electron';
-import { autoUpdater } from 'electron-updater';
+// import { autoUpdater } from 'electron-updater';
 import { release } from 'os';
+
+import pkg from 'electron-updater';
+const {autoUpdater} = pkg;
+
 
 // import { Deeplink } from 'electron-deeplink';
 // import * as isDev from 'electron-is-dev';
-import { backgroundLogger, generalLogger } from './logger';
-import Pluto from './pluto';
-import { store } from './store';
-import { GlobalWindowManager } from './windowHelpers';
-import { initGlobals, startup } from './startup';
-import { Globals } from './globals';
+import { backgroundLogger, generalLogger } from './logger.ts';
+import Pluto from './pluto.ts';
+import { store } from './store.ts';
+import { GlobalWindowManager } from './windowHelpers.ts';
+import { initGlobals, startup } from './startup.ts';
+import { Globals } from './globals.ts';
 import axios from 'axios';
 
 generalLogger.verbose('---------- NEW SESSION ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
-generalLogger.verbose(chalk.green('CONFIG STORE:'), store.store);
+generalLogger.verbose(chalk.green('CONFIG STORE:'), (store as any).store);
+
 
 export default class AppUpdater {
   constructor() {
@@ -69,7 +74,7 @@ ipcMain.on('ipc-example', async (event, args) => {
  */
 
 const createWindow = () => {
-  generalLogger.announce('Creating a new window.');
+  generalLogger.verbose('Creating a new window.');
 
   const firstPluto = new Pluto();
   const window = firstPluto.getBrowserWindow();
@@ -105,7 +110,7 @@ app.on('open-file', async (_event, file) => {
 app
   .whenReady()
   .then(async () => {
-    store.set(
+    (store as any).set(
       'IMPORTANT-NOTE',
       'This file is used for internal configuration. Please refrain from editing or deleting this file.'
     );

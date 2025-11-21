@@ -1,15 +1,16 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { generalLogger, juliaLogger } from './logger';
-import { DEPOT_LOCATION, READONLY_DEPOT_LOCATION, getAssetPath } from './paths';
-import { findJulia, findPluto } from './plutoProcess';
-import { copyDirectoryRecursive, setAxiosDefaults } from './util';
-import { App, dialog } from 'electron';
+import { generalLogger, juliaLogger } from './logger.ts';
+import { DEPOT_LOCATION, READONLY_DEPOT_LOCATION, getAssetPath } from './paths.ts';
+import { findJulia, findPluto } from './plutoProcess.ts';
+import { copyDirectoryRecursive, setAxiosDefaults } from './util.ts';
+import type { App } from 'electron';
+import { dialog } from 'electron';
 import chalk from 'chalk';
 import { spawn } from 'node:child_process';
-import Pluto from './pluto';
-import { Globals } from './globals';
-import { GlobalWindowManager } from './windowHelpers';
+import Pluto from './pluto.ts';
+import { Globals } from './globals.ts';
+import { GlobalWindowManager } from './windowHelpers.ts';
 
 export async function initGlobals() {
   Globals.JULIA = findJulia();
@@ -87,7 +88,7 @@ export async function startup(app: App) {
           statusUpdate('loaded');
           setAxiosDefaults(Globals.PLUTO_URL);
 
-          generalLogger.announce('Entry url found:', Pluto.url);
+          generalLogger.verbose('Entry url found:', Pluto.url);
         } else if (
           plutoLog.includes(
             'failed to send request: The server name or address could not be resolved'

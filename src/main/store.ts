@@ -7,17 +7,17 @@ import Store from 'electron-store';
  */
 const store = new Store<SettingsStore>({
   migrations: {
-    '0.0.2-alpha': (s) => {
-      s.clear();
+    '0.0.2-alpha': (s: Store<SettingsStore>) => {
+      (s as any).clear();
     },
-    '0.0.2': (s) => {
-      s.clear();
+    '0.0.2': (s: Store<SettingsStore>) => {
+      (s as any).clear();
     },
-    '0.0.3': (s) => {
-      s.clear();
+    '0.0.3': (s: Store<SettingsStore>) => {
+      (s as any).clear();
     },
-    '0.1.0': (s) => {
-      s.clear();
+    '0.1.0': (s: Store<SettingsStore>) => {
+      (s as any).clear();
     },
   },
 });
