@@ -4,7 +4,6 @@
     "pluto",
     "julia"
   ],
-   
   "homepage": "https://github.com/JuliaPluto/PlutoDesktop",
   "bugs": {
     "url": "https://github.com/JuliaPluto/PlutoDesktop/issues"
@@ -18,7 +17,7 @@
     "name": "Pluto Developers",
     "url": "https://plutojl.org"
   },
-  "version": "0.19.40",
+  "version": "0.20.21",
   "contributors": [
     {
       "name": "Dhruv Tiwari",
