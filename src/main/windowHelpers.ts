@@ -1,6 +1,6 @@
-import Pluto from './pluto';
+import Pluto from './pluto.ts';
 import { randomUUID } from 'node:crypto';
-import { generalLogger } from './logger';
+import { generalLogger } from './logger.ts';
 
 type WindowList = { id: string; window: Pluto }[];
 export class GlobalWindowManager {

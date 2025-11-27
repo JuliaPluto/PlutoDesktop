@@ -4,7 +4,9 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { URL } from 'url';
 import { getRandomValues } from 'node:crypto';
-import { generalLogger } from './logger';
+import { generalLogger } from './logger.ts';
+
+
 
 const PLUTO_FILE_EXTENSIONS = [
   '.pluto.jl',
@@ -119,7 +121,7 @@ export const generateSecret = (length = 8) => {
     throw new Error('Invalid key length');
   }
 
-  const arr = new Uint32Array(Math.ceil((3 * length) / 4));
+  const arr = new Uint8Array(Math.ceil((3 * length) / 4));
   getRandomValues(arr);
   const secretBase64 = Buffer.from(arr).toString('base64').slice(0, length);
 

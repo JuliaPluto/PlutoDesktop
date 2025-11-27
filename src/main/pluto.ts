@@ -1,17 +1,24 @@
 import axios from 'axios';
 import { app, BrowserWindow, dialog, nativeTheme, shell } from 'electron';
 import fs from 'node:fs';
-import * as path from 'node:path';
+// import * as path from 'node:path';
 
-import { PlutoExport } from '../../types/enums';
-import { generalLogger } from './logger';
-import NotebookManager from './notebookManager';
-import { isExtMatch, Loader, PLUTO_FILE_EXTENSIONS } from './util';
+import { PlutoExport } from '../../types/enums.ts';
+import { generalLogger } from './logger.ts';
+import NotebookManager from './notebookManager.ts';
+import { isExtMatch, Loader, PLUTO_FILE_EXTENSIONS } from './util.ts';
 import msgpack from 'msgpack-lite';
-import { GlobalWindowManager } from './windowHelpers';
-import { Globals } from './globals';
-import MenuBuilder from './menu';
-import { getAssetPath } from './paths';
+import { GlobalWindowManager } from './windowHelpers.ts';
+import { Globals } from './globals.ts';
+import MenuBuilder from './menu.ts';
+import { getAssetPath } from './paths.ts';
+
+// const __dirname = path.resolve(process.cwd());
+import path from 'path';
+
+const __filename = process.argv[1] ?? '';
+const __dirname = path.resolve(__filename ? path.dirname(__filename) : process.cwd());
+
 
 class Pluto {
   /**
@@ -219,7 +226,7 @@ class Pluto {
    * @param type type of export, see type declarations
    * @returns nothing
    */
-  private static exportNotebook = async (id: string, type: PlutoExport) => {
+  private static exportNotebook = async (id: string, type: (typeof PlutoExport)[keyof typeof PlutoExport]) => {
     if (!Globals.PLUTO_STARTED) {
       dialog.showErrorBox(
         'Pluto not intialized',
@@ -515,9 +522,11 @@ function _createPlutoBrowserWindow() {
     webPreferences: {
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
-        : path.join(__dirname, '../../.erb/dll/preload.js'),
+        : path.join(__dirname, 'release/app/dist/main/preload.js'),
     },
   });
+  console.log('__dirname:', __dirname);
+  // console.log('webpackPaths.distMainPath:', webpackPaths.distMainPath);
   win.webContents.setVisualZoomLevelLimits(1, 3);
   win.setMenuBarVisibility(false);
 

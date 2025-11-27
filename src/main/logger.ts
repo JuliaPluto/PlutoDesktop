@@ -38,9 +38,9 @@ const format = '{y}-{m}-{d} {h}:{i}:{s}.{ms} {level} {label} > {text}';
  * **generalLogger** is the logger that logs the electron main process.
  */
 
-const generalLogger = log.create('general-log');
+const generalLogger = log.create({ logId: 'general-log' });
 generalLogger.variables.label = 'general';
-generalLogger.levels.add('announce');
+generalLogger.levels.push('announce');
 generalLogger.transports.file.format = format;
 // @ts-ignore
 generalLogger.transports.console = (message) => {
@@ -86,7 +86,7 @@ generalLogger.transports.console.useStyles = true;
  * **juliaLogger** logs the julia and pluto console.
  */
 
-const juliaLogger = log.create('julia-log');
+const juliaLogger = log.create({ logId: 'julia-log' });
 juliaLogger.variables.label = 'julia';
 juliaLogger.transports.file.format = format;
 // @ts-ignore
@@ -139,7 +139,7 @@ axios.interceptors.response.use(responseLogger, errorLogger);
  * **backgroundLogger** logs about the things happening in the background, like autoUpdate.
  */
 
-const backgroundLogger = log.create('background-log');
+const backgroundLogger = log.create({ logId: 'background-log' });
 backgroundLogger.variables.label = 'background';
 backgroundLogger.transports.file.level = 'info';
 backgroundLogger.transports.file.fileName = 'background.log';

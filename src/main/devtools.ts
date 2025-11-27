@@ -1,5 +1,3 @@
-import { generalLogger } from './logger';
-
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
   sourceMapSupport.install();
@@ -11,17 +9,7 @@ const isDebug =
 const installExtensionsAndOpenDevtools = async () => {
   if (isDebug) {
     require('electron-debug')();
-
-    const installer = require('electron-devtools-installer');
-    const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
-    const extensions = ['REACT_DEVELOPER_TOOLS'];
-
-    installer
-      .default(
-        extensions.map((name) => installer[name]),
-        forceDownload
-      )
-      .catch(generalLogger.error);
+    // no devtools extensions needed
   }
 };
 

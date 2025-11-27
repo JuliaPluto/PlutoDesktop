@@ -1,14 +1,12 @@
-import {
+import { Menu, dialog, shell } from 'electron';
+import type {
   BrowserWindow,
-  dialog,
-  Menu,
   MenuItemConstructorOptions,
-  shell,
 } from 'electron';
 import { URL } from 'node:url';
 
-import { PlutoExport } from '../../types/enums';
-import Pluto from './pluto';
+import { PlutoExport } from '../../types/enums.ts';
+import Pluto from './pluto.ts';
 
 export default class MenuBuilder {
   private pluto: Pluto;
