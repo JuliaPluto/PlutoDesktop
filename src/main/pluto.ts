@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { app, BrowserWindow, dialog, nativeTheme, shell } from 'electron';
 import fs from 'node:fs';
-import * as path from 'node:path';
+// import * as path from 'node:path';
 
 import { PlutoExport } from '../../types/enums.ts';
 import { generalLogger } from './logger.ts';
@@ -13,7 +13,12 @@ import { Globals } from './globals.ts';
 import MenuBuilder from './menu.ts';
 import { getAssetPath } from './paths.ts';
 
-const __dirname = path.resolve(process.cwd());
+// const __dirname = path.resolve(process.cwd());
+import path from 'path';
+
+const __filename = process.argv[1] ?? '';
+const __dirname = path.resolve(__filename ? path.dirname(__filename) : process.cwd());
+
 
 class Pluto {
   /**
@@ -517,9 +522,11 @@ function _createPlutoBrowserWindow() {
     webPreferences: {
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
-        : path.join(__dirname, '../../.erb/dll/preload.js'),
+        : path.join(__dirname, 'release/app/dist/main/preload.js'),
     },
   });
+  console.log('__dirname:', __dirname);
+  // console.log('webpackPaths.distMainPath:', webpackPaths.distMainPath);
   win.webContents.setVisualZoomLevelLimits(1, 3);
   win.setMenuBarVisibility(false);
 

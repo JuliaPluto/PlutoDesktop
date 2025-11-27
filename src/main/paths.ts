@@ -1,7 +1,12 @@
 import { app } from 'electron';
-import * as path from 'node:path';
+// import * as path from 'node:path';
 
-const __dirname = path.resolve(process.cwd());
+// const __dirname = path.resolve(process.cwd());
+
+import path from 'path';
+
+const __filename = process.argv[1] ?? '';
+const __dirname = path.resolve(__filename ? path.dirname(__filename) : process.cwd());
 
 export const RESOURCES_PATH = app.isPackaged
   ? path.join(process.resourcesPath, 'assets')
