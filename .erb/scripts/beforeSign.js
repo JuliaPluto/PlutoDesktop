@@ -1,3 +1,17 @@
+/*
+
+
+
+
+
+🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖
+
+This file is completely written by AI and not really reviewed. It's not working super well.
+
+
+
+*/
+
 const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');

@@ -25,15 +25,15 @@ const arch = process.arch === 'arm64' ? 'aarch64' : 'x64';
 let JULIA_URL, ZIP_NAME, JULIA_DIR_NAME, JULIA_EXECUTABLE;
 
 if (platform === 'win32') {
-  JULIA_URL = `https://julialang-s3.julialang.org/bin/winnt/x64/${JULIA_VERSION_MINOR}/julia-${JULIA_VERSION}-win64.zip`;
   ZIP_NAME = `julia-${JULIA_VERSION}-win64.zip`;
+  JULIA_URL = `https://julialang-s3.julialang.org/bin/winnt/x64/${JULIA_VERSION_MINOR}/${ZIP_NAME}`;
   JULIA_DIR_NAME = `julia-${JULIA_VERSION}`;
   JULIA_EXECUTABLE = 'julia.exe';
 } else if (platform === 'darwin') {
   // macOS
   const macArch = arch === 'aarch64' ? 'aarch64' : 'x64';
-  JULIA_URL = `https://julialang-s3.julialang.org/bin/mac/${macArch}/${JULIA_VERSION_MINOR}/julia-${JULIA_VERSION}-mac${macArch === 'aarch64' ? 'aarch64' : 'x64'}.dmg`;
-  ZIP_NAME = `julia-${JULIA_VERSION}-mac${macArch === 'aarch64' ? 'aarch64' : 'x64'}.dmg`;
+  ZIP_NAME = `julia-${JULIA_VERSION}-mac${arch === 'aarch64' ? 'aarch64' : '64'}.dmg`;
+  JULIA_URL = `https://julialang-s3.julialang.org/bin/mac/${macArch}/${JULIA_VERSION_MINOR}/${ZIP_NAME}`;
   JULIA_DIR_NAME = `julia-${JULIA_VERSION}`;
   JULIA_EXECUTABLE = 'julia';
 } else {
@@ -173,6 +173,7 @@ const prepareJuliaDepot = async ({ julia_path }) => {
 
   // Fix file permissions on macOS to prevent code signing issues
   if (platform === 'darwin') {
+    // (🤖🤖 This if block is AI written and not reviewed.)
     try {
       // First, make files writable so we can remove extended attributes
       execSync(`find "${DEPOT_LOCATION}" -type f -exec chmod u+w {} +`, {
@@ -203,6 +204,7 @@ const prepareJuliaDepot = async ({ julia_path }) => {
   console.info('DEPOT preparation success', DEPOT_LOCATION);
 };
 
+/**  (🤖🤖 This function is AI written and not reviewed.) */
 const extractJulia = async () => {
   const spinner1 = createSpinner(`\tExtracting: ${ZIP_NAME}`).start();
   fs.rmSync(path.join(assetPath, JULIA_DIR_NAME), {
