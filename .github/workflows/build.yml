@@ -18,6 +18,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
+      fail-fast: false
       matrix:
         os: [windows-latest, macos-latest]
 
@@ -47,12 +48,8 @@ jobs:
           zip -r mac-unpacked.zip mac
 
       - name: List Artifacts
-        run: |
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            ls .\release\build
-          else
-            ls release/build
-          fi
+        shell: bash
+        run: ls -lha release/build
 
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v5
