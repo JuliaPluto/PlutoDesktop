@@ -2,11 +2,16 @@ import { app } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const dirname = path.dirname(fileURLToPath(import.meta.url));
+const root_path = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+);
 
 export const RESOURCES_PATH = app.isPackaged
   ? path.join(process.resourcesPath, 'assets')
-  : path.join(dirname, 'assets'); // this was previously ../../assets - how do setup the path correctly?
+  : path.join(root_path, 'assets'); // this was previously ../../assets - how do setup the path correctly?
+
 export const APPDATA_PATH = app.getPath('appData');
 
 export const getAssetPath = (...paths: string[]): string => {

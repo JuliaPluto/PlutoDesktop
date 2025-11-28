@@ -1,3 +1,9 @@
+/*
+
+🤖 This is AI written code I didnt review this. -f
+
+*/
+
 import webpack from 'webpack';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
