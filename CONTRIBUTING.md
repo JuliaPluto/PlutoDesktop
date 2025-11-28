@@ -2,15 +2,18 @@
 This project is linked to the [Pluto.jl project](https://github.com/fonsp/Pluto.jl), please refer to its [contribution guidelines](https://github.com/fonsp/Pluto.jl/blob/main/CONTRIBUTING.md) as well.
 
 # Building from source
-- Download and install [NodeJS](https://nodejs.org/en/) v18 or v19
+- Download and install [NodeJS](https://nodejs.org/en/) v22 or later
 - Run `npm i` and then `npm run package`. This should provide you with an installer execuatble in `release/build` folder.
+  - MacOS is currently only supported in development mode (`npm run start`), because Code Signing is broken. We could get it to work with a Developer ID certificate?
 
 # Development setup
 Just a couple of steps!
-- Download and install [NodeJS](https://nodejs.org/en/) v18 or v19
+- Download and install [NodeJS](https://nodejs.org/en/) v22 or later
 - cd into the folder
 - run `npm install`
 - run `npm run package` (this will download Julia into the right location)
+
+After the initial setup:
 
 ## Run in development mode
 - run `npm run start`
