@@ -1,8 +1,5 @@
 import { Menu, dialog, shell } from 'electron';
-import type {
-  BrowserWindow,
-  MenuItemConstructorOptions,
-} from 'electron';
+import type { BrowserWindow, MenuItemConstructorOptions } from 'electron';
 import { URL } from 'node:url';
 
 import { PlutoExport } from '../../types/enums.ts';
@@ -22,7 +19,7 @@ export default class MenuBuilder {
   buildMenu = () => {
     this.setupContextMenu(
       process.env.NODE_ENV === 'development' ||
-        process.env.DEBUG_PROD === 'true'
+        process.env.DEBUG_PROD === 'true',
     );
 
     const menu = Menu.buildFromTemplate(this.buildDefaultTemplate());
@@ -116,7 +113,7 @@ export default class MenuBuilder {
                   else
                     dialog.showErrorBox(
                       'FILE NOT FOUND',
-                      'The file you are looking for was not found on local system.'
+                      'The file you are looking for was not found on local system.',
                     );
                 });
               },
@@ -225,7 +222,7 @@ export default class MenuBuilder {
     } else {
       dialog.showErrorBox(
         'Invalid ID',
-        'Invalid ID in the url, cannot export.'
+        'Invalid ID in the url, cannot export.',
       );
     }
   }

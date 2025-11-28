@@ -19,7 +19,7 @@ node_modules
 
 release/app/dist
 release/build
-.erb/dll
+bundler/dll
 
 .idea
 npm-debug.log.*

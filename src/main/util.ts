@@ -6,8 +6,6 @@ import { URL } from 'url';
 import { getRandomValues } from 'node:crypto';
 import { generalLogger } from './logger.ts';
 
-
-
 const PLUTO_FILE_EXTENSIONS = [
   '.pluto.jl',
   '.Pluto.jl',
@@ -78,7 +76,7 @@ class Loader {
 
   startLoading = async () => {
     this._key = await this._window.webContents.insertCSS(
-      Loader.POINTER_LOADING_CSS
+      Loader.POINTER_LOADING_CSS,
     );
   };
 

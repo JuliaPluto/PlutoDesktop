@@ -44,7 +44,7 @@ export class GlobalWindowManager {
   }
   getWindowByWebContentsId(webContentsId: number): Pluto | undefined {
     return this.windowList.find(
-      (x) => x.window.getBrowserWindow().webContents.id === webContentsId
+      (x) => x.window.getBrowserWindow().webContents.id === webContentsId,
     )?.window;
   }
 

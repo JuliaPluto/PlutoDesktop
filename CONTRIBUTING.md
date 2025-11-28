@@ -31,7 +31,7 @@ In a Windows terminal, go to `assets/env_for_julia`, run Julia (of the same vers
 
 ### Julia version
 
-Modify the Julia version in the `.erb/scripts/beforePack.js` file. Git commit and push.
+Modify the Julia version in the `bundler/scripts/beforePack.js` file. Git commit and push.
 
 ### npm versions
 

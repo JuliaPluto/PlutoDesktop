@@ -13,27 +13,27 @@ import { generalLogger } from './logger.ts';
 ipcMain.on(
   'PLUTO-OPEN-NOTEBOOK',
   async (
-   event,
+    event,
     type: 'path' | 'url' | 'new' = 'new',
-    pathOrURL?: string
+    pathOrURL?: string,
   ): Promise<void> => {
     const plutoWindow =
       GlobalWindowManager.getInstance().getWindowByWebContentsId(
-        event.sender.id
+        event.sender.id,
       );
     if (!plutoWindow) {
       generalLogger.error(
-        'Could not find Pluto window with matching webContentsId'
+        'Could not find Pluto window with matching webContentsId',
       );
       return;
     }
     plutoWindow.open(type, pathOrURL);
-  }
+  },
 );
 
 ipcMain.on(
   'PLUTO-SHUTDOWN-NOTEBOOK',
-  async (_event, id?: string): Promise<void> => Pluto.notebook.shutdown(id)
+  async (_event, id?: string): Promise<void> => Pluto.notebook.shutdown(id),
 );
 
 ipcMain.on(
@@ -41,7 +41,7 @@ ipcMain.on(
   async (_event, id?: string): Promise<void> => {
     const loc = await Pluto.notebook.move(id);
     _event.sender.send('PLUTO-MOVE-NOTEBOOK', loc);
-  }
+  },
 );
 
 ipcMain.on(
@@ -49,8 +49,8 @@ ipcMain.on(
   async (
     _event,
     id: string,
-    type: typeof PlutoExport[keyof typeof PlutoExport]
+    type: (typeof PlutoExport)[keyof typeof PlutoExport],
   ): Promise<void> => {
     await Pluto.notebook.export(id, type);
-  }
+  },
 );

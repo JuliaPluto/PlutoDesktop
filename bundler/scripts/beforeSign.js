@@ -8,6 +8,8 @@
 
 This file is completely written by AI and not really reviewed. It's not working super well.
 
+See https://github.com/JuliaPluto/PlutoDesktop/pull/91
+
 
 
 */

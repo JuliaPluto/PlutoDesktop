@@ -5,7 +5,7 @@
   "javascript.validate.enable": false,
   "search.exclude": {
     ".git": true,
-    ".erb/dll": true,
+    "bundler/dll": true,
     "release/{build,app/dist}": true,
     "node_modules": true,
     "npm-debug.log.*": true,

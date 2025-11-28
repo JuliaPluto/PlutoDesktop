@@ -24,5 +24,5 @@
     "types": ["node"],
     "skipLibCheck": true
   },
-  "exclude": ["test", "release/build", "release/app/dist", ".erb/dll"]
+  "exclude": ["test", "release/build", "release/app/dist", "bundler/dll"]
 }

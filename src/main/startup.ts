@@ -1,7 +1,11 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { generalLogger, juliaLogger } from './logger.ts';
-import { DEPOT_LOCATION, READONLY_DEPOT_LOCATION, getAssetPath } from './paths.ts';
+import {
+  DEPOT_LOCATION,
+  READONLY_DEPOT_LOCATION,
+  getAssetPath,
+} from './paths.ts';
 import { findJulia, findPluto } from './plutoProcess.ts';
 import { copyDirectoryRecursive, setAxiosDefaults } from './util.ts';
 import type { App } from 'electron';
@@ -29,7 +33,7 @@ export async function initGlobals() {
 export async function startup(app: App) {
   const statusUpdate = (status: string) =>
     GlobalWindowManager.all((p) =>
-      p.getBrowserWindow().webContents.send('pluto-url', status)
+      p.getBrowserWindow().webContents.send('pluto-url', status),
     );
 
   statusUpdate('loading');
@@ -47,7 +51,7 @@ export async function startup(app: App) {
   if (fs.existsSync(SYSIMAGE_LOCATION))
     options.push(`--sysimage=${SYSIMAGE_LOCATION}`);
   generalLogger.info(
-    `System image found at ${SYSIMAGE_LOCATION}. Julia will use this instead of the default`
+    `System image found at ${SYSIMAGE_LOCATION}. Julia will use this instead of the default`,
   );
   // }
 
@@ -62,7 +66,7 @@ export async function startup(app: App) {
       'Executing',
       chalk.bold(Globals.JULIA),
       'with options',
-      chalk.bold(options.toLocaleString().replace(',', ' '))
+      chalk.bold(options.toLocaleString().replace(',', ' ')),
     );
     const res = spawn(Globals.JULIA, options, {
       env: { ...process.env, JULIA_DEPOT_PATH: DEPOT_LOCATION },
@@ -91,16 +95,16 @@ export async function startup(app: App) {
           generalLogger.verbose('Entry url found:', Pluto.url);
         } else if (
           plutoLog.includes(
-            'failed to send request: The server name or address could not be resolved'
+            'failed to send request: The server name or address could not be resolved',
           )
         ) {
           generalLogger.error(
             'INTERNET-CONNECTION-ERROR',
-            'Pluto install failed, no internet connection.'
+            'Pluto install failed, no internet connection.',
           );
           dialog.showErrorBox(
             'CANNOT-INSTALL-PLUTO',
-            'Please check your internet connection!'
+            'Please check your internet connection!',
           );
           app.exit();
         }

@@ -12,5 +12,4 @@ const PlutoExport = {
   PDF: 'pdf',
 } as const;
 
-
 export { PlutoExport };

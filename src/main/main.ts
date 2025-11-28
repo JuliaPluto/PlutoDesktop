@@ -15,8 +15,7 @@ import { app, ipcMain, session } from 'electron';
 import { release } from 'os';
 
 import pkg from 'electron-updater';
-const {autoUpdater} = pkg;
-
+const { autoUpdater } = pkg;
 
 // import { Deeplink } from 'electron-deeplink';
 // import * as isDev from 'electron-is-dev';
@@ -31,7 +30,6 @@ import axios from 'axios';
 generalLogger.verbose('---------- NEW SESSION ----------');
 generalLogger.verbose('Application Version:', app.getVersion());
 generalLogger.verbose(chalk.green('CONFIG STORE:'), (store as any).store);
-
 
 export default class AppUpdater {
   constructor() {
@@ -112,7 +110,7 @@ app
   .then(async () => {
     (store as any).set(
       'IMPORTANT-NOTE',
-      'This file is used for internal configuration. Please refrain from editing or deleting this file.'
+      'This file is used for internal configuration. Please refrain from editing or deleting this file.',
     );
 
     await initGlobals();
@@ -142,14 +140,14 @@ app
             'Successfully downloaded',
             fileName,
             'to',
-            item.getSavePath()
+            item.getSavePath(),
           );
         else
           generalLogger.error(
             'Download failed',
             fileName,
             'because of',
-            chalk.underline(state)
+            chalk.underline(state),
           );
       });
     });
@@ -170,7 +168,7 @@ function createRequestListener() {
 
     const plutoWindow =
       GlobalWindowManager.getInstance().getWindowByWebContentsId(
-        details.webContentsId
+        details.webContentsId,
       );
 
     if (!plutoWindow) {
@@ -186,7 +184,7 @@ function createRequestListener() {
 
       generalLogger.verbose(
         'Triggered Pluto.jl server-side route detection!',
-        details.url
+        details.url,
       );
 
       if (url.pathname.endsWith('/')) {
@@ -220,7 +218,7 @@ function createRequestListener() {
         next({
           redirectURL: new URL(
             `notebookupload?secret=${Globals.PLUTO_SECRET}`,
-            Globals.PLUTO_URL
+            Globals.PLUTO_URL,
           ).toString(),
         });
       }

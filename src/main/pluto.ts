@@ -17,8 +17,9 @@ import { getAssetPath } from './paths.ts';
 import path from 'path';
 
 const __filename = process.argv[1] ?? '';
-const __dirname = path.resolve(__filename ? path.dirname(__filename) : process.cwd());
-
+const __dirname = path.resolve(
+  __filename ? path.dirname(__filename) : process.cwd(),
+);
 
 class Pluto {
   /**
@@ -85,7 +86,7 @@ class Pluto {
    */
   public open = async (
     type: 'url' | 'path' | 'new' = 'new',
-    pathOrURL?: string | null
+    pathOrURL?: string | null,
   ) => {
     const focusedWindow = BrowserWindow.getFocusedWindow()!;
 
@@ -98,7 +99,7 @@ class Pluto {
       if (type === 'path' && pathOrURL && !isExtMatch(pathOrURL)) {
         dialog.showErrorBox(
           'PLUTO-CANNOT-OPEN-NOTEBOOK',
-          'Not a supported file type.'
+          'Not a supported file type.',
         );
         return;
       }
@@ -122,7 +123,7 @@ class Pluto {
         } else if (type !== 'url') {
           dialog.showErrorBox(
             'PLUTO-CANNOT-OPEN-NOTEBOOK',
-            'Empty URL Passed.'
+            'Empty URL Passed.',
           );
           return;
         }
@@ -144,7 +145,7 @@ class Pluto {
               setBlockScreenText(pathOrURL);
               window.webContents.send(
                 'pluto-url',
-                `Trying to open ${newURL.searchParams.get('path')}`
+                `Trying to open ${newURL.searchParams.get('path')}`,
               );
               params = {
                 secret: Globals.PLUTO_SECRET,
@@ -154,7 +155,7 @@ class Pluto {
               setBlockScreenText('new notebook');
               window.webContents.send(
                 'pluto-url',
-                `Trying to open ${pathOrURL}`
+                `Trying to open ${pathOrURL}`,
               );
               params = {
                 secret: Globals.PLUTO_SECRET,
@@ -184,13 +185,13 @@ class Pluto {
               {},
               {
                 params,
-              }
+              },
             );
 
         if (res.status === 200) {
           const notebookId = res.data;
           await window.loadURL(
-            Pluto.resolveHtmlPath('editor.html') + `&id=${notebookId}`
+            Pluto.resolveHtmlPath('editor.html') + `&id=${notebookId}`,
           );
           loader.stopLoading();
           return;
@@ -201,20 +202,20 @@ class Pluto {
         loader.stopLoading();
         dialog.showErrorBox(
           'PLUTO-CANNOT-OPEN-NOTEBOOK',
-          'Please check if you are using the correct secret.'
+          'Please check if you are using the correct secret.',
         );
         return;
       }
       loader.stopLoading();
       dialog.showErrorBox(
         'PLUTO-CANNOT-OPEN-NOTEBOOK',
-        'Please wait for pluto to initialize.'
+        'Please wait for pluto to initialize.',
       );
     } catch (error) {
       generalLogger.error('PLUTO-NOTEBOOK-OPEN-ERROR', error);
       dialog.showErrorBox(
         'PLUTO-NOTEBOOK-OPEN-ERROR',
-        'Cannot open this notebook found on this path/url.'
+        'Cannot open this notebook found on this path/url.',
       );
     } finally {
       setBlockScreenText(null);
@@ -226,11 +227,14 @@ class Pluto {
    * @param type type of export, see type declarations
    * @returns nothing
    */
-  private static exportNotebook = async (id: string, type: (typeof PlutoExport)[keyof typeof PlutoExport]) => {
+  private static exportNotebook = async (
+    id: string,
+    type: (typeof PlutoExport)[keyof typeof PlutoExport],
+  ) => {
     if (!Globals.PLUTO_STARTED) {
       dialog.showErrorBox(
         'Pluto not intialized',
-        'Please wait for pluto to initialize first'
+        'Please wait for pluto to initialize first',
       );
       return;
     }
@@ -240,7 +244,7 @@ class Pluto {
     if (!window) {
       dialog.showErrorBox(
         'Pluto Export Error',
-        'No Exportable window in focus.'
+        'No Exportable window in focus.',
       );
       return;
     }
@@ -276,7 +280,7 @@ class Pluto {
       if (!Globals.PLUTO_STARTED) {
         dialog.showErrorBox(
           'Pluto not intialized',
-          'Please wait for pluto to initialize first'
+          'Please wait for pluto to initialize first',
         );
         return;
       }
@@ -299,7 +303,7 @@ class Pluto {
         } else {
           dialog.showErrorBox(
             'PLUTO-FILE-SHUTDOWN-ERROR',
-            'Could not shutdown file for some reason'
+            'Could not shutdown file for some reason',
           );
         }
       }
@@ -319,7 +323,7 @@ class Pluto {
       if (!Globals.PLUTO_STARTED) {
         dialog.showErrorBox(
           'Pluto not intialized',
-          'Please wait for pluto to initialize first'
+          'Please wait for pluto to initialize first',
         );
         return undefined;
       }
@@ -349,7 +353,7 @@ class Pluto {
             id,
             newpath: filePath,
           },
-        }
+        },
       );
 
       if (res.status === 200) {
@@ -361,7 +365,7 @@ class Pluto {
       generalLogger.error(error);
       dialog.showErrorBox(
         'Cannot move file',
-        'Please check if you are using a valid file name.'
+        'Please check if you are using a valid file name.',
       );
     }
 
@@ -382,7 +386,7 @@ class Pluto {
       if (!Globals.PLUTO_STARTED) {
         dialog.showErrorBox(
           'Pluto not intialized',
-          'Please wait for pluto to initialize first'
+          'Please wait for pluto to initialize first',
         );
         return;
       }
@@ -421,7 +425,7 @@ class Pluto {
       if (!Globals.PLUTO_STARTED) {
         dialog.showErrorBox(
           'Pluto not intialized',
-          'Please wait for pluto to initialize first'
+          'Please wait for pluto to initialize first',
         );
         return;
       }
@@ -466,7 +470,7 @@ class Pluto {
     return `file:///${plutoLocation}/frontend/${htmlFileName}?secret=${
       Globals.PLUTO_SECRET
     }&pluto_server_url=${encodeURIComponent(
-      `http://localhost:7122?secret=${Globals.PLUTO_SECRET}`
+      `http://localhost:7122?secret=${Globals.PLUTO_SECRET}`,
     )}`;
   };
 
