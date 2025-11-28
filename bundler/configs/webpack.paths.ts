@@ -1,8 +1,10 @@
-const path = require('path');
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const rootPath = path.join(__dirname, '../..');
+const dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const dllPath = path.join(__dirname, '../dll');
+const rootPath = path.join(dirname, '../..');
+const dllPath = path.join(dirname, '../dll');
 
 const srcPath = path.join(rootPath, 'src');
 const srcMainPath = path.join(srcPath, 'main');

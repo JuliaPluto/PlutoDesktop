@@ -1,7 +1,7 @@
 import process from 'process';
 import path from 'node:path';
 import fs from 'node:fs';
-import webpackPaths from '../configs/webpack.paths';
+import webpackPaths from '../configs/webpack.paths.ts';
 
 const args = process.argv.slice(2);
 const commandMap = {
