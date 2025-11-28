@@ -23,12 +23,12 @@ jobs:
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v1
+        uses: actions/checkout@v6
 
       - name: Install Node.js, NPM and Yarn
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v6
         with:
-          node-version: 18
+          node-version: 22
 
       - run: npm ci
       - run: npm run package
@@ -55,7 +55,7 @@ jobs:
           fi
 
       - name: Upload a Build Artifact
-        uses: actions/upload-artifact@v3.1.0
+        uses: actions/upload-artifact@v5
         with:
           name: Build Outputs (${{ matrix.os }})
           path: |
