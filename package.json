@@ -94,7 +94,7 @@
     "productName": "Pluto",
     "appId": "org.pluto.desktop",
     "asar": true,
-    "asarUnpack": "**\\*.{node,dll}",
+    "asarUnpack": "**/*.{node,dll,dylib,so}",
     "fileAssociations": [
       {
         "name": "Pluto Notebook",
@@ -130,6 +130,7 @@
       "package.json"
     ],
     "beforePack": ".erb/scripts/beforePack.js",
+    "beforeSign": ".erb/scripts/beforeSign.js",
     "afterSign": ".erb/scripts/notarize.js",
     "mac": {
       "target": {
