@@ -7,7 +7,7 @@ import {
   getAssetPath,
 } from './paths.ts';
 import { findJulia, findPluto } from './plutoProcess.ts';
-import { copyDirectoryRecursive, setAxiosDefaults } from './util.ts';
+import { copyDirectoryRecursive } from './util.ts';
 import type { App } from 'electron';
 import { dialog } from 'electron';
 import chalk from 'chalk';
@@ -87,10 +87,13 @@ export async function startup(app: App) {
           const entryUrl = urlMatch[0];
 
           const tempURL = new URL(entryUrl);
-          Globals.PLUTO_URL = new URL(`${tempURL.protocol}//${tempURL.host}`);
+          if (tempURL.hostname === 'localhost')
+            // there are issues with IPv6 and Node.JS on certain hardware / operating systems
+            // the loopback IP is generally safer
+            tempURL.hostname = '127.0.0.1';
 
+          Globals.PLUTO_URL = new URL(`${tempURL.protocol}//${tempURL.host}`);
           statusUpdate('loaded');
-          setAxiosDefaults(Globals.PLUTO_URL);
 
           generalLogger.verbose('Entry url found:', Pluto.url);
         } else if (

@@ -3,7 +3,7 @@
  */
 
 import webpack from 'webpack';
-import webpackPaths from './webpack.paths';
+import webpackPaths from './webpack.paths.ts';
 
 const configuration: webpack.Configuration = {
   externals: [],

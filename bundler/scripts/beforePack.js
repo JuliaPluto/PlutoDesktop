@@ -1,15 +1,21 @@
-const process = require('process');
-const { spawn } = require('node:child_process');
-const path = require('node:path');
-const fs = require('node:fs');
-const unzip = require('extract-zip');
-const chalk = require('chalk');
-const { execSync } = require('child_process');
-const { createSpinner } = require('nanospinner');
-const { default: axios } = require('axios');
-const { exit } = require('process');
+import process from 'process';
+import { spawn } from 'node:child_process';
+import path from 'node:path';
+import fs from 'node:fs';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import unzip from 'extract-zip';
+import chalk from 'chalk';
+import { execSync } from 'child_process';
+import { createSpinner } from 'nanospinner';
+import { exit } from 'process';
+import { fileURLToPath } from 'node:url';
 
-const assetPath = path.join(__dirname, '../..', 'assets');
+const assetPath = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../..',
+  'assets',
+);
 
 // YOU CAN EDIT ME
 const JULIA_VERSION_PARTS = [1, 10, 10];
@@ -47,41 +53,21 @@ const downloadJulia = async () => {
   const spinner = createSpinner(
     `\tDownloading Julia ${JULIA_VERSION} for ${platform}`,
   ).start();
-  const writer = fs.createWriteStream(path.join(assetPath, ZIP_NAME));
 
-  const response = await axios.get(JULIA_URL, {
-    responseType: 'stream',
-    onDownloadProgress: (progressEvent) => {
-      const percentage = Math.round(
-        (progressEvent.loaded * 100) / progressEvent.total,
-      );
-      spinner
-        .update({ text: `\tDownloading Julia ${JULIA_VERSION} ${percentage}%` })
-        .spin();
-    },
-  });
+  const response = await fetch(JULIA_URL);
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
 
-  response.data.pipe(writer);
+  const filePath = path.join(assetPath, ZIP_NAME);
+  const writeStream = fs.createWriteStream(filePath);
+  const readStream = Readable.fromWeb(response.body);
 
-  return new Promise((resolve, reject) => {
-    if (response.status > 399) {
-      reject(response.statusText);
-    }
-    response.data.on('error', (e) => {
-      console.log();
-      reject(e);
-    });
-    writer.on('error', (e) => {
-      console.log();
-      reject(e);
-    });
-    writer.on('finish', (args) => {
-      spinner.success({
-        text: `\tDownloaded Julia (for ${platform}) (size: ${(response.data.length / 1024 / 1024).toFixed(2)} MB)`,
-        mark: '✓',
-      });
-      resolve(args);
-    });
+  await pipeline(readStream, writeStream);
+
+  spinner.success({
+    text: `\tDownloaded Julia (for ${platform})`,
+    mark: '✓',
   });
 };
 
@@ -274,7 +260,7 @@ const extractJulia = async () => {
   spinner1.success({ text: '\tExtracted!', mark: '✓' });
 };
 
-exports.default = async (context) => {
+export default async (context) => {
   let files = fs.readdirSync(assetPath);
 
   if (!files.includes(JULIA_DIR_NAME)) {

@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { app, BrowserWindow, dialog, nativeTheme, shell } from 'electron';
 import fs from 'node:fs';
 // import * as path from 'node:path';
@@ -6,20 +5,19 @@ import fs from 'node:fs';
 import { PlutoExport } from '../../types/enums.ts';
 import { generalLogger } from './logger.ts';
 import NotebookManager from './notebookManager.ts';
-import { isExtMatch, Loader, PLUTO_FILE_EXTENSIONS } from './util.ts';
+import {
+  isExtMatch,
+  Loader,
+  PLUTO_FILE_EXTENSIONS,
+  fetchPluto,
+  withSearchParams,
+} from './util.ts';
 import msgpack from 'msgpack-lite';
 import { GlobalWindowManager } from './windowHelpers.ts';
 import { Globals } from './globals.ts';
 import MenuBuilder from './menu.ts';
-import { getAssetPath } from './paths.ts';
-
-// const __dirname = path.resolve(process.cwd());
+import { getAssetPath, source_root_dir } from './paths.ts';
 import path from 'path';
-
-const __filename = process.argv[1] ?? '';
-const __dirname = path.resolve(
-  __filename ? path.dirname(__filename) : process.cwd(),
-);
 
 class Pluto {
   /**
@@ -178,20 +176,25 @@ class Pluto {
             id = await Pluto.checkNotebook(pathOrURL);
           }
         }
-        const res = id
-          ? { status: 200, data: id }
-          : await axios.post(
-              type === 'new' ? 'new' : 'open',
-              {},
-              {
-                params,
-              },
-            );
+        let res;
+        if (id) {
+          res = { status: 200, data: id };
+        } else {
+          const response = await fetchPluto(
+            withSearchParams(type === 'new' ? 'new' : 'open', params),
+            {
+              method: 'POST',
+            },
+          );
+          res = { status: response.status, data: await response.text() };
+        }
 
         if (res.status === 200) {
           const notebookId = res.data;
           await window.loadURL(
-            Pluto.resolveHtmlPath('editor.html') + `&id=${notebookId}`,
+            withSearchParams(Pluto.resolveHtmlPath('editor.html'), {
+              id: notebookId,
+            }).toString(),
           );
           loader.stopLoading();
           return;
@@ -249,23 +252,24 @@ class Pluto {
       return;
     }
 
-    let url: string | null;
-    switch (type) {
-      case PlutoExport.FILE:
-        url = `http://localhost:${Globals.PLUTO_URL.port}/notebookfile?secret=${Globals.PLUTO_SECRET}&id=${id}`;
-        break;
-      case PlutoExport.HTML:
-        url = `http://localhost:${Globals.PLUTO_URL.port}/notebookexport?secret=${Globals.PLUTO_SECRET}&id=${id}`;
-        break;
-      case PlutoExport.STATE:
-        url = `http://localhost:${Globals.PLUTO_URL.port}/statefile?secret=${Globals.PLUTO_SECRET}&id=${id}`;
-        break;
-      default:
-        window.webContents.print();
-        return;
+    if (type === PlutoExport.PDF) {
+      window.webContents.print();
+    } else {
+      const url = withSearchParams(
+        type === PlutoExport.FILE
+          ? 'notebookfile'
+          : type === PlutoExport.HTML
+            ? 'notebookexport'
+            : type === PlutoExport.STATE
+              ? 'statefile'
+              : 'unkown_export_type',
+        {
+          secret: Globals.PLUTO_SECRET,
+          id,
+        },
+      ).toString();
+      window.webContents.downloadURL(url);
     }
-
-    window.webContents.downloadURL(url);
   };
 
   /**
@@ -290,14 +294,10 @@ class Pluto {
         const id =
           _id ?? new URL(window.webContents.getURL()).searchParams.get('id');
 
-        const res = await axios.get('shutdown', {
-          params: {
-            secret: Globals.PLUTO_SECRET,
-            id,
-          },
-        });
-
-        if (res.status === 200) {
+        const response = await fetchPluto(
+          withSearchParams('shutdown', { secret: Globals.PLUTO_SECRET, id }),
+        );
+        if (response.status === 200) {
           generalLogger.info(`File ${id} has been shutdown.`);
           if (!window.isDestroyed()) window.loadURL(Pluto.url!.url);
         } else {
@@ -344,23 +344,21 @@ class Pluto {
 
       if (canceled) return undefined;
 
-      const res = await axios.post(
-        'move',
-        {},
-        {
-          params: {
-            secret: Globals.PLUTO_SECRET,
-            id,
-            newpath: filePath,
-          },
-        },
-      );
+      const url = withSearchParams('move', {
+        secret: Globals.PLUTO_SECRET,
+        id,
+        newpath: filePath,
+      });
+      const response = await fetchPluto(url, {
+        method: 'POST',
+      });
+      const data = await response.json();
 
-      if (res.status === 200) {
+      if (response.status === 200) {
         generalLogger.info(`File ${id} has been moved to ${filePath}.`);
         return filePath;
       }
-      dialog.showErrorBox(res.statusText, res.data);
+      dialog.showErrorBox(response.statusText, data);
     } catch (error) {
       generalLogger.error(error);
       dialog.showErrorBox(
@@ -391,19 +389,18 @@ class Pluto {
         return;
       }
 
-      const res = await axios.get('notebooklist', {
-        responseType: 'arraybuffer',
-        params: {
-          secret: Globals.PLUTO_SECRET,
-        },
-      });
+      const response = await fetchPluto(
+        withSearchParams('notebooklist', { secret: Globals.PLUTO_SECRET }),
+      );
+      const arrayBuffer = await response.arrayBuffer();
+      const data = Buffer.from(arrayBuffer);
 
-      if (res.status === 200) {
-        this.notebookManager = new NotebookManager(msgpack.decode(res.data));
+      if (response.status === 200) {
+        this.notebookManager = new NotebookManager(msgpack.decode(data));
         if (this.notebookManager.hasFile(key))
           result = this.notebookManager.getId(key);
       } else {
-        dialog.showErrorBox(res.statusText, res.data);
+        dialog.showErrorBox(response.statusText, String(data));
       }
     } catch (error: { message: string } | any) {
       generalLogger.error('PLUTO-CHECK-NOTEBOOK-ERROR', error);
@@ -427,18 +424,17 @@ class Pluto {
           'Pluto not intialized',
           'Please wait for pluto to initialize first',
         );
-        return;
+        return result;
       }
 
-      const res = await axios.get('notebooklist', {
-        responseType: 'arraybuffer',
-        params: {
-          secret: Globals.PLUTO_SECRET,
-        },
-      });
+      const response = await fetchPluto(
+        withSearchParams('notebooklist', { secret: Globals.PLUTO_SECRET }),
+      );
+      const arrayBuffer = await response.arrayBuffer();
+      const data = Buffer.from(arrayBuffer);
 
-      if (res.status === 200) {
-        this.notebookManager = new NotebookManager(msgpack.decode(res.data));
+      if (response.status === 200) {
+        this.notebookManager = new NotebookManager(msgpack.decode(data));
         if (this.notebookManager.hasId(key)) {
           const temp = this.notebookManager.getFile(key)!;
           if (isExtMatch(temp)) {
@@ -446,7 +442,7 @@ class Pluto {
           }
         }
       } else {
-        dialog.showErrorBox(res.statusText, res.data);
+        dialog.showErrorBox(response.statusText, String(data));
       }
     } catch (error: { message: string } | any) {
       generalLogger.error('PLUTO-CHECK-NOTEBOOK-ERROR', error);
@@ -525,11 +521,11 @@ function _createPlutoBrowserWindow() {
     icon: getAssetPath('icon.png'),
     webPreferences: {
       preload: app.isPackaged
-        ? path.join(__dirname, 'preload.js')
-        : path.join(__dirname, 'release/app/dist/main/preload.js'),
+        ? path.join(source_root_dir, 'preload.js')
+        : path.join(source_root_dir, 'release/app/dist/main/preload.js'),
     },
   });
-  console.log('__dirname:', __dirname);
+  console.log('source_root_dir:', source_root_dir);
   // console.log('webpackPaths.distMainPath:', webpackPaths.distMainPath);
   win.webContents.setVisualZoomLevelLimits(1, 3);
   win.setMenuBarVisibility(false);

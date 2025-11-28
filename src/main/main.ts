@@ -17,15 +17,12 @@ import { release } from 'os';
 import pkg from 'electron-updater';
 const { autoUpdater } = pkg;
 
-// import { Deeplink } from 'electron-deeplink';
-// import * as isDev from 'electron-is-dev';
 import { backgroundLogger, generalLogger } from './logger.ts';
 import Pluto from './pluto.ts';
 import { store } from './store.ts';
 import { GlobalWindowManager } from './windowHelpers.ts';
 import { initGlobals, startup } from './startup.ts';
 import { Globals } from './globals.ts';
-import axios from 'axios';
 
 generalLogger.verbose('---------- NEW SESSION ----------');
 generalLogger.verbose('Application Version:', app.getVersion());

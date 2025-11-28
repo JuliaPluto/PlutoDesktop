@@ -45,7 +45,7 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: |
           cd release/build
-          zip -r mac-unpacked.zip mac
+          zip -r mac-arm64-unpacked.zip mac-arm64
 
       - name: List Artifacts
         shell: bash

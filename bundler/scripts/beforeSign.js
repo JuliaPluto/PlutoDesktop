@@ -14,16 +14,16 @@ See https://github.com/JuliaPluto/PlutoDesktop/pull/91
 
 */
 
-const { execSync } = require('child_process');
-const path = require('path');
-const fs = require('fs');
+import { execSync } from 'child_process';
+import path from 'path';
+import fs from 'fs';
 
 /**
  * Ensures all components of the macOS app are signed consistently with ad-hoc signature
  * This is necessary when no Developer ID certificate is available
  * This runs in the afterPack hook, which executes after packaging but before electron-builder's signing step
  */
-exports.default = async function afterPack(context) {
+export default async function afterPack(context) {
   const { electronPlatformName, appOutDir } = context;
 
   if (electronPlatformName !== 'darwin') {
@@ -149,4 +149,4 @@ exports.default = async function afterPack(context) {
   } catch (error) {
     console.warn('Failed to sign app bundle:', error.message);
   }
-};
+}

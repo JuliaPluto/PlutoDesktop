@@ -29,10 +29,11 @@
     }
   ],
   "main": "./src/main/main.ts",
+  "type": "module",
   "scripts": {
-    "postinstall": "ts-node bundler/scripts/check-native-dep.js && electron-builder install-app-deps",
-    "package": "ts-node ./bundler/scripts/clean.js dist && npm run build && electron-builder build --publish never",
-    "build": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true webpack --config ./bundler/configs/webpack.config.main.prod.ts",
+    "postinstall": "tsx bundler/scripts/check-native-dep.js && electron-builder install-app-deps",
+    "package": "tsx ./bundler/scripts/clean.js dist && npm run build && electron-builder build --publish never",
+    "build": "cross-env NODE_ENV=production tsx bundler/scripts/run-webpack.ts --config ./bundler/configs/webpack.config.main.prod.ts",
     "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir release/app",
     "start": "cross-env NODE_ENV=development electronmon -r ts-node/register/transpile-only ./src/main/main.ts"
   },
@@ -51,11 +52,11 @@
   },
   "dependencies": {
     "@electron/notarize": "^3.1.1",
-    "axios": "^1.13.2",
     "electron-debug": "^4.1.0",
     "electron-log": "^5.4.3",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.6.2",
+    "electronmon": "^2.0.4",
     "fs-extra": "^11.3.2",
     "msgpack-lite": "^0.1.26",
     "util": "^0.12.5"
@@ -66,28 +67,23 @@
     "@types/msgpack-lite": "^0.1.12",
     "@types/node": "^24.10.1",
     "@types/webpack-bundle-analyzer": "^4.7.0",
-    "axios-logger": "^2.8.1",
     "chalk": "5.6.2",
-    "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "detect-port": "^2.1.0",
-    "electron": "^39.2.1",
+    "electron": "^39.2.4",
     "electron-builder": "^26.0.12",
-    "electron-devtools-installer": "^4.0.0",
-    "electron-is-dev": "^3.0.1",
     "electron-rebuild": "^3.2.9",
-    "electronmon": "^2.0.4",
     "extract-zip": "^2.0.1",
-    "identity-obj-proxy": "^3.0.0",
     "nanospinner": "^1.2.2",
-    "prettier": "^3.6.2",
-    "rimraf": "^2.7.1",
+    "prettier": "^3.7.1",
+    "rimraf": "^6.1.2",
     "ts-loader": "^9.5.4",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "webpack": "^5.102.1",
-    "webpack-bundle-analyzer": "^4.10.2",
+    "webpack": "^5.103.0",
+    "webpack-bundle-analyzer": "^5.0.1",
     "webpack-cli": "^6.0.1"
   },
   "build": {
@@ -136,8 +132,7 @@
       "target": {
         "target": "default",
         "arch": [
-          "arm64",
-          "x64"
+          "arm64"
         ]
       },
       "type": "distribution",
