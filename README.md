@@ -32,6 +32,7 @@ are looking for.
 ## Supported Platforms
 
 - Windows 64 bit only, as of now.
+- MacOS only works in development mode (`npm run start`), because Code Signing is broken. We could get it to work with a Developer ID certificate?
 
 ## Installation
 

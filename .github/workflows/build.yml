@@ -18,37 +18,47 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest]
+        os: [windows-latest, macos-latest]
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v1
+        uses: actions/checkout@v6
 
       - name: Install Node.js, NPM and Yarn
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v6
         with:
-          node-version: 18
+          node-version: 22
 
       - run: npm ci
       - run: npm run package
 
-      - name: Compress Portable Folder
+      - name: Compress Portable Folder (Windows)
+        if: matrix.os == 'windows-latest'
         uses: vimtor/action-zip@v1
         with:
           files: .\release\build\win-unpacked
           dest: .\release\build\win-unpacked.zip
 
+      - name: Compress Portable Folder (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          cd release/build
+          zip -r mac-unpacked.zip mac
+
       - name: List Artifacts
-        run: ls
-        working-directory: .\release\build
+        shell: bash
+        run: ls -lha release/build
 
       - name: Upload a Build Artifact
-        uses: actions/upload-artifact@v3.1.0
+        uses: actions/upload-artifact@v5
         with:
-          name: Build Outputs
+          name: Build Outputs (${{ matrix.os }})
           path: |
-            .\release\build\*.zip
-            .\release\build\*.yml
-            .\release\build\*.exe
-            .\release\build\*.exe.*
+            release/build/*.zip
+            release/build/*.yml
+            release/build/*.exe
+            release/build/*.exe.*
+            release/build/*.dmg
+            release/build/*.app

@@ -20,11 +20,14 @@ export const findJulia = () => {
 
   if (julia_dir == null) {
     generalLogger.error(
-      "Couldn't find Julia in assets, falling back to the `julia` command."
+      "Couldn't find Julia in assets, falling back to the `julia` command.",
     );
     result = `julia`;
   } else {
-    result = getAssetPath(julia_dir, 'bin', 'julia.exe');
+    // Use platform-specific executable name
+    const juliaExecutable =
+      process.platform === 'win32' ? 'julia.exe' : 'julia';
+    result = getAssetPath(julia_dir, 'bin', juliaExecutable);
   }
 
   // cache the result

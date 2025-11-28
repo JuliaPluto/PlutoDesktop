@@ -94,7 +94,7 @@
     "productName": "Pluto",
     "appId": "org.pluto.desktop",
     "asar": true,
-    "asarUnpack": "**\\*.{node,dll}",
+    "asarUnpack": "**/*.{node,dll,dylib,so}",
     "fileAssociations": [
       {
         "name": "Pluto Notebook",
@@ -130,6 +130,7 @@
       "package.json"
     ],
     "beforePack": ".erb/scripts/beforePack.js",
+    "afterPack": ".erb/scripts/beforeSign.js",
     "afterSign": ".erb/scripts/notarize.js",
     "mac": {
       "target": {
@@ -187,8 +188,8 @@
     }
   },
   "engines": {
-    "node": ">=14.x",
-    "npm": ">=7.x"
+    "node": ">=22.x",
+    "npm": ">=10.x"
   },
   "electronmon": {
     "patterns": [
