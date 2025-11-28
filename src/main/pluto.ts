@@ -16,11 +16,8 @@ import msgpack from 'msgpack-lite';
 import { GlobalWindowManager } from './windowHelpers.ts';
 import { Globals } from './globals.ts';
 import MenuBuilder from './menu.ts';
-import { getAssetPath } from './paths.ts';
+import { getAssetPath, source_root_dir } from './paths.ts';
 import path from 'path';
-import { fileURLToPath } from 'node:url';
-
-const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 class Pluto {
   /**
@@ -524,11 +521,11 @@ function _createPlutoBrowserWindow() {
     icon: getAssetPath('icon.png'),
     webPreferences: {
       preload: app.isPackaged
-        ? path.join(dirname, 'preload.js')
-        : path.join(dirname, 'release/app/dist/main/preload.js'),
+        ? path.join(source_root_dir, 'preload.js')
+        : path.join(source_root_dir, 'release/app/dist/main/preload.js'),
     },
   });
-  console.log('dirname:', dirname);
+  console.log('source_root_dir:', source_root_dir);
   // console.log('webpackPaths.distMainPath:', webpackPaths.distMainPath);
   win.webContents.setVisualZoomLevelLimits(1, 3);
   win.setMenuBarVisibility(false);
