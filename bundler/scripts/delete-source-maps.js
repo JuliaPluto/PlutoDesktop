@@ -4,5 +4,5 @@ import fs from 'node:fs';
 import webpackPaths from '../configs/webpack.paths.ts';
 
 export default function deleteSourceMaps() {
-  rimraf.sync(path.join(webpackPaths.distMainPath, '*.js.map'));
+  rimraf.sync(path.join(webpackPaths.distMainPath, '*.js.map'), { glob: true });
 }
