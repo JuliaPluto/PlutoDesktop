@@ -1,12 +1,37 @@
-import axios from 'axios';
 import { BrowserWindow } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { URL } from 'url';
 import { getRandomValues } from 'node:crypto';
-import { generalLogger } from './logger.ts';
+import { Globals } from './globals.ts';
 
-const PLUTO_FILE_EXTENSIONS = [
+/**
+ * Just like `fetch`, but with the Pluto URL as the base URL. It also adds the `Connection: keep-alive` header.
+ */
+export const fetchPluto = (path, init: RequestInit = {}) => {
+  return fetch(new URL(path, Globals.PLUTO_URL), {
+    ...init,
+    headers: {
+      ...init.headers,
+      Connection: 'keep-alive',
+    },
+  });
+};
+
+export const withSearchParams = (
+  input: string | URL,
+  params: Record<string, string>,
+) => {
+  const url = new URL(input, Globals.PLUTO_URL);
+
+  Object.entries(params).forEach(([key, value]) => {
+    url.searchParams.set(key, value);
+  });
+
+  return url;
+};
+
+export const PLUTO_FILE_EXTENSIONS = [
   '.pluto.jl',
   '.Pluto.jl',
   '.nb.jl',
@@ -23,10 +48,10 @@ const PLUTO_FILE_EXTENSIONS = [
  * @param file location
  * @returns whether the current file is a supported file or not
  */
-const isExtMatch = (file: string) =>
+export const isExtMatch = (file: string) =>
   PLUTO_FILE_EXTENSIONS.some((ext) => file.endsWith(ext));
 
-function copyDirectoryRecursive(source: string, destination: string) {
+export function copyDirectoryRecursive(source: string, destination: string) {
   // Check if source directory exists
   if (!fs.existsSync(source)) {
     console.error(`Source directory ${source} does not exist.`);
@@ -61,7 +86,7 @@ function copyDirectoryRecursive(source: string, destination: string) {
  * This is a loader, it simply inserts custom cursor
  * loading css into the window, and can also remove it.
  */
-class Loader {
+export class Loader {
   private _window: BrowserWindow;
 
   private _key: string | null;
@@ -89,48 +114,8 @@ class Loader {
  * @param text location of the file
  * @returns type of location
  */
-const isUrlOrPath = (text: string) => {
+export const isUrlOrPath = (text: string) => {
   if (text.startsWith('http')) return 'url';
   if (isExtMatch(text)) return 'path';
   return 'none';
-};
-
-const setAxiosDefaults = (url: URL) => {
-  if (url.hostname === 'localhost') {
-    // there are issues with IPv6 and Node.JS on certain hardware / operating systems
-    // the loopback IP is generally safer
-    url.hostname = '127.0.0.1';
-  }
-  axios.defaults.baseURL = url.origin;
-  axios.defaults.headers.common.Connection = 'keep-alive';
-  generalLogger.verbose('Base URL set to', axios.defaults.baseURL);
-};
-
-// adapted from PlutoHash.js in fonsp/Pluto.jl
-export const urlSafeBase64 = (original: string) => {
-  return original.replaceAll(/[\+\/\=]/g, (s) => {
-    const c = s.charCodeAt(0);
-    return c === 43 ? '-' : c === 47 ? '_' : '';
-  });
-};
-
-export const generateSecret = (length = 8) => {
-  if (length <= 0 || !Number.isInteger(length)) {
-    throw new Error('Invalid key length');
-  }
-
-  const arr = new Uint8Array(Math.ceil((3 * length) / 4));
-  getRandomValues(arr);
-  const secretBase64 = Buffer.from(arr).toString('base64').slice(0, length);
-
-  return urlSafeBase64(secretBase64);
-};
-
-export {
-  isExtMatch,
-  PLUTO_FILE_EXTENSIONS,
-  Loader,
-  isUrlOrPath,
-  setAxiosDefaults,
-  copyDirectoryRecursive,
 };

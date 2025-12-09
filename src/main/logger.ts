@@ -1,10 +1,3 @@
-import axios from 'axios';
-import {
-  errorLogger,
-  requestLogger,
-  responseLogger,
-  setGlobalConfig,
-} from 'axios-logger';
 import chalk from 'chalk';
 import log from 'electron-log';
 import util from 'util';
@@ -124,16 +117,6 @@ juliaLogger.transports.console = (message) => {
   }
 };
 juliaLogger.transports.console.useStyles = true;
-
-/**
- * Logger setup for axios
- */
-setGlobalConfig({
-  dateFormat: 'HH:MM:ss',
-  params: true,
-});
-axios.interceptors.request.use(requestLogger, errorLogger);
-axios.interceptors.response.use(responseLogger, errorLogger);
 
 /**
  * **backgroundLogger** logs about the things happening in the background, like autoUpdate.

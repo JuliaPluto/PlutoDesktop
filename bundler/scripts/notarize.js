@@ -1,7 +1,7 @@
-const { notarize } = require('@electron/notarize');
-const { build } = require('../../package.json');
+import { notarize } from '@electron/notarize';
+import packageJson from '../../package.json' with { type: 'json' };
 
-exports.default = async function notarizeMacos(context) {
+export default async function notarizeMacos(context) {
   const { electronPlatformName, appOutDir } = context;
   if (electronPlatformName !== 'darwin') {
     return;
@@ -22,9 +22,9 @@ exports.default = async function notarizeMacos(context) {
   const appName = context.packager.appInfo.productFilename;
 
   await notarize({
-    appBundleId: build.appId,
+    appBundleId: packageJson.build.appId,
     appPath: `${appOutDir}/${appName}.app`,
     appleId: process.env.APPLE_ID,
     appleIdPassword: process.env.APPLE_ID_PASS,
   });
-};
+}
