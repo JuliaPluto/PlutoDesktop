@@ -22,8 +22,12 @@ export default class MenuBuilder {
         process.env.DEBUG_PROD === 'true',
     );
 
+    // const menu = Menu.buildFromTemplate(this.buildDefaultTemplate());
+    // this.pluto.getBrowserWindow().setMenu(menu);
+
     const menu = Menu.buildFromTemplate(this.buildDefaultTemplate());
-    this.pluto.getBrowserWindow().setMenu(menu);
+    Menu.setApplicationMenu(menu); // Works on macOS + Windows
+
 
     this.hasbuilt = true;
   };
@@ -182,7 +186,27 @@ export default class MenuBuilder {
       },
     ];
 
+    const isMac = process.platform === 'darwin';
+    const appName = "Pluto Desktop";
+
     return [
+      ...(isMac? [
+          {
+            label: appName,
+            submenu: [
+              { role: 'about' },
+              { type: 'separator' },
+              { role: 'services' },
+              { type: 'separator' },
+              { role: 'hide' },
+              { role: 'hideothers' },
+              { role: 'unhide' },
+              { type: 'separator' },
+              { role: 'quit' },
+            ],
+          },
+        ]
+      : []),
       {
         label: '&File',
         submenu: file,

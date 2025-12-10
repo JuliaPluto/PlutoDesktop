@@ -35,7 +35,8 @@
     "package": "tsx ./bundler/scripts/clean.js dist && npm run build && electron-builder build --publish never",
     "build": "cross-env NODE_ENV=production tsx bundler/scripts/run-webpack.ts --config ./bundler/configs/webpack.config.main.prod.ts",
     "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir release/app",
-    "start": "cross-env NODE_ENV=development electronmon -r ts-node/register/transpile-only ./src/main/main.ts"
+    "start": "cross-env NODE_ENV=development electronmon -r ts-node/register/transpile-only ./src/main/main.ts",
+    "make:mac": "electron-packager ./release/app PlutoDesktop --platform=darwin --out=release/build --overwrite --app-bundle-id=org.pluto.desktop --app-category-type=public.app-category.productivity --icon=assets/icons/mac/icon.icns"
   },
   "prettier": {
     "singleQuote": true,
@@ -72,6 +73,7 @@
     "detect-port": "^2.1.0",
     "electron": "^39.2.4",
     "electron-builder": "^26.0.12",
+    "electron-packager": "^17.1.2",
     "electron-rebuild": "^3.2.9",
     "extract-zip": "^2.0.1",
     "nanospinner": "^1.2.2",
@@ -87,7 +89,7 @@
     "webpack-cli": "^6.0.1"
   },
   "build": {
-    "productName": "Pluto",
+    "productName": "Pluto Desktop",
     "appId": "org.pluto.desktop",
     "asar": true,
     "asarUnpack": "**/*.{node,dll,dylib,so}",
