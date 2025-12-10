@@ -50,6 +50,17 @@ class Pluto {
     });
 
     this.win.once('close', async () => {
+      // Shutdown the Pluto notebook when the window closes
+      const url = new URL(this.win.webContents.getURL());
+      const notebookId = url.searchParams.get('id');
+      
+      if (notebookId) {
+        generalLogger.info(`Shutting down notebook ${notebookId}`);
+        await Pluto.notebook.shutdown(notebookId).catch((err) => {
+          generalLogger.error('Error shutting down notebook:', err);
+        });
+      }
+      
       GlobalWindowManager.getInstance().unregisterWindow(this);
     });
 
