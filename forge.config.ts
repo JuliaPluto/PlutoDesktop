@@ -10,12 +10,16 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
+import generateAssets from './scripts/generateAssets.js';
 
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
   },
   rebuildConfig: {},
+  hooks: {
+    generateAssets: generateAssets,
+  },
   makers: [
     new MakerSquirrel({}),
     new MakerZIP({}, ['darwin']),
