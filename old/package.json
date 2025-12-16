@@ -1,0 +1,198 @@
+{
+  "description": "Pluto.jl Desktop",
+  "keywords": [
+    "pluto",
+    "julia"
+  ],
+  "homepage": "https://github.com/JuliaPluto/PlutoDesktop",
+  "bugs": {
+    "url": "https://github.com/JuliaPluto/PlutoDesktop/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JuliaPluto/PlutoDesktop.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Pluto Developers",
+    "url": "https://plutojl.org"
+  },
+  "version": "0.20.21",
+  "contributors": [
+    {
+      "name": "Dhruv Tiwari",
+      "url": "https://github.com/illusion47586"
+    },
+    {
+      "name": "Connor Burns",
+      "url": "https://github.com/ctrekker"
+    }
+  ],
+  "main": "./src/main/main.ts",
+  "type": "module",
+  "scripts": {
+    "postinstall": "tsx bundler/scripts/check-native-dep.js && electron-builder install-app-deps",
+    "package": "tsx ./bundler/scripts/clean.js dist && npm run build && electron-builder build --publish never",
+    "build": "cross-env NODE_ENV=production tsx bundler/scripts/run-webpack.ts --config ./bundler/configs/webpack.config.main.prod.ts",
+    "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir release/app",
+    "start": "cross-env NODE_ENV=development electronmon -r ts-node/register/transpile-only ./src/main/main.ts",
+    "make:mac": "electron-packager ./release/app PlutoDesktop --platform=darwin --out=release/build --overwrite --app-bundle-id=org.pluto.desktop --app-category-type=public.app-category.productivity --icon=assets/icons/mac/icon.icns"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "overrides": [
+      {
+        "files": [
+          ".prettierrc"
+        ],
+        "options": {
+          "parser": "json"
+        }
+      }
+    ]
+  },
+  "dependencies": {
+    "@electron/notarize": "^3.1.1",
+    "electron-debug": "^4.1.0",
+    "electron-log": "^5.4.3",
+    "electron-store": "^11.0.2",
+    "electron-updater": "^6.6.2",
+    "electronmon": "^2.0.4",
+    "fs-extra": "^11.3.2",
+    "msgpack-lite": "^0.1.26",
+    "util": "^0.12.5"
+  },
+  "devDependencies": {
+    "@cspotcode/source-map-support": "^0.8.1",
+    "@types/detect-port": "^2.0.0",
+    "@types/msgpack-lite": "^0.1.12",
+    "@types/node": "^24.10.1",
+    "@types/webpack-bundle-analyzer": "^4.7.0",
+    "chalk": "5.6.2",
+    "cross-env": "^10.1.0",
+    "detect-port": "^2.1.0",
+    "electron": "^39.2.4",
+    "electron-builder": "^26.0.12",
+    "electron-packager": "^17.1.2",
+    "electron-rebuild": "^3.2.9",
+    "extract-zip": "^2.0.1",
+    "nanospinner": "^1.2.2",
+    "prettier": "^3.7.1",
+    "rimraf": "^6.1.2",
+    "ts-loader": "^9.5.4",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "webpack": "^5.103.0",
+    "webpack-bundle-analyzer": "^5.0.1",
+    "webpack-cli": "^6.0.1"
+  },
+  "build": {
+    "productName": "Pluto Desktop",
+    "appId": "org.pluto.desktop",
+    "asar": true,
+    "asarUnpack": "**/*.{node,dll,dylib,so}",
+    "fileAssociations": [
+      {
+        "name": "Pluto Notebook",
+        "ext": [
+          "pluto.jl",
+          "Pluto.jl",
+          "nb.jl",
+          "jl",
+          "plutojl",
+          "pluto",
+          "nbjl",
+          "pljl",
+          "pluto.jl.txt",
+          "jl.txt"
+        ],
+        "role": "Editor"
+      }
+    ],
+    "nsis": {
+      "oneClick": true,
+      "perMachine": true,
+      "runAfterFinish": true
+    },
+    "protocols": {
+      "name": "pluto-desktop",
+      "schemes": [
+        "pluto"
+      ]
+    },
+    "files": [
+      "dist",
+      "node_modules",
+      "package.json"
+    ],
+    "beforePack": "bundler/scripts/beforePack.js",
+    "afterPack": "bundler/scripts/beforeSign.js",
+    "afterSign": "bundler/scripts/notarize.js",
+    "mac": {
+      "target": {
+        "target": "default",
+        "arch": [
+          "arm64"
+        ]
+      },
+      "type": "distribution",
+      "hardenedRuntime": true,
+      "entitlements": "assets/entitlements.mac.plist",
+      "entitlementsInherit": "assets/entitlements.mac.plist",
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Development"
+    },
+    "directories": {
+      "app": "release/app",
+      "buildResources": "assets",
+      "output": "release/build"
+    },
+    "extraResources": [
+      "./assets/**",
+      "./!assets/*.zip",
+      "./!assets/pluto_precompile.jl"
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "JuliaPluto",
+      "repo": "PlutoDesktop"
+    }
+  },
+  "engines": {
+    "node": ">=22.x",
+    "npm": ">=10.x"
+  },
+  "electronmon": {
+    "patterns": [
+      "!**/**",
+      "src/main/*"
+    ],
+    "logLevel": "quiet"
+  }
+}
