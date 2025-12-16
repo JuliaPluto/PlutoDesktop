@@ -10,11 +10,15 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
+// @ts-ignore - generateAssets.js is an ES module
 import generateAssets from './scripts/generateAssets.js';
 
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    extraResource: [
+      './generated_assets',
+    ],
   },
   rebuildConfig: {},
   hooks: {
