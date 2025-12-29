@@ -28,7 +28,7 @@ const JULIA_VERSION_MINOR = JULIA_VERSION_PARTS.slice(0, 2).join('.');
 
 // Detect platform
 const platform = process.platform;
-const arch = process.arch === 'arm64' ? 'aarch64' : 'x64';
+const resolvedArch = process.arch === 'arm64' ? 'aarch64' : 'x64';
 
 let JULIA_URL, ZIP_NAME, JULIA_DIR_NAME, JULIA_EXECUTABLE;
 
@@ -39,8 +39,8 @@ if (platform === 'win32') {
   JULIA_EXECUTABLE = 'julia.exe';
 } else if (platform === 'darwin') {
   // macOS
-  const macArch = arch === 'aarch64' ? 'aarch64' : 'x64';
-  ZIP_NAME = `julia-${JULIA_VERSION}-mac${arch === 'aarch64' ? 'aarch64' : '64'}.dmg`;
+  const macArch = resolvedArch === 'aarch64' ? 'aarch64' : 'x64';
+  ZIP_NAME = `julia-${JULIA_VERSION}-mac${resolvedArch === 'aarch64' ? 'aarch64' : '64'}.dmg`;
   JULIA_URL = `https://julialang-s3.julialang.org/bin/mac/${macArch}/${JULIA_VERSION_MINOR}/${ZIP_NAME}`;
   JULIA_DIR_NAME = `julia-${JULIA_VERSION}`;
   JULIA_EXECUTABLE = 'julia';
@@ -310,6 +310,14 @@ export default async (config, platform, arch) => {
   
   if (!fs.existsSync(generatedAssetsDir)) 
     fs.mkdirSync(generatedAssetsDir, { recursive: true });
+
+  const architectureFilePath = path.join(generatedAssetsDir, 'architecture.txt');
+  try {
+    fs.writeFileSync(architectureFilePath, `${resolvedArch}\n`, 'utf8');
+    console.log('Recorded architecture to', architectureFilePath);
+  } catch (error) {
+    console.warn('Could not write architecture.txt:', error?.message ?? error);
+  }
   
   let files = fs.readdirSync(generatedAssetsDir);
 

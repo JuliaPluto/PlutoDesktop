@@ -11,6 +11,8 @@
     "outDir": "dist",
     "moduleResolution": "node",
     "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
     "paths": {
       "*": ["node_modules/*"]
     }

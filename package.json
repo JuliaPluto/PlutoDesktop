@@ -44,7 +44,9 @@
     "typescript": "~5.9.3"
   },
   "dependencies": {
-    "electron-squirrel-startup": "^1.0.1"
+    "electron-log": "^5.4.3",
+    "electron-squirrel-startup": "^1.0.1",
+    "electron-store": "^11.0.2"
   },
   "overrides": {
     "tmp": "^0.2.5",
