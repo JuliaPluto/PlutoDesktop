@@ -1,28 +1,21 @@
 {
   "compilerOptions": {
-    "target": "es2022",
-    "module": "es2022",
-    "lib": ["dom", "es2022"],
-    "declaration": true,
-    "declarationMap": true,
-    "strict": false,
-    "pretty": true,
-    "sourceMap": true,
-    "baseUrl": "./src",
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "moduleResolution": "node",
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
+    "target": "ES6",
     "allowJs": true,
-    "outDir": "release/app/dist",
+    "module": "commonjs",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "noImplicitAny": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "outDir": "dist",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "noEmit": true,
-    "types": ["node"],
-    "skipLibCheck": true
+    "paths": {
+      "*": ["node_modules/*"]
+    }
   },
-  "exclude": ["test", "release/build", "release/app/dist", "bundler/dll"]
+  "include": ["src/**/*"]
 }
