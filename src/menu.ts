@@ -4,6 +4,7 @@ import { URL } from 'node:url';
 
 import { PlutoExport } from './enums.ts';
 import Pluto from './pluto.ts';
+import { createPlutoWindow } from './index.ts';
 
 export default class MenuBuilder {
   private pluto: Pluto;
@@ -52,7 +53,7 @@ export default class MenuBuilder {
         template.push({
           label: 'Open in new window',
           click: () => {
-            new Pluto(linkURL);
+            createPlutoWindow(linkURL);
           },
         });
 
@@ -70,7 +71,7 @@ export default class MenuBuilder {
       {
         label: 'New window',
         click: async () => {
-          new Pluto();
+          createPlutoWindow();
         },
       },
       // {

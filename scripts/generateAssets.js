@@ -44,9 +44,15 @@ if (platform === 'win32') {
   JULIA_URL = `https://julialang-s3.julialang.org/bin/mac/${macArch}/${JULIA_VERSION_MINOR}/${ZIP_NAME}`;
   JULIA_DIR_NAME = `julia-${JULIA_VERSION}`;
   JULIA_EXECUTABLE = 'julia';
+} else if (platform === 'linux') {
+  const linuxArch = process.arch === 'arm64' ? 'aarch64' : 'x86_64';
+  const linuxArchDir = linuxArch === 'aarch64' ? 'aarch64' : 'x64';
+  ZIP_NAME = `julia-${JULIA_VERSION}-linux-${linuxArch}.tar.gz`;
+  JULIA_URL = `https://julialang-s3.julialang.org/bin/linux/${linuxArchDir}/${JULIA_VERSION_MINOR}/${ZIP_NAME}`;
+  JULIA_DIR_NAME = `julia-${JULIA_VERSION}`;
+  JULIA_EXECUTABLE = 'julia';
 } else {
-  // Linux
-  throw new Error('Linux is not supported');
+  throw new Error(`Unsupported platform: ${platform}`);
 }
 
 const DEPOT_NAME = `julia_depot`;
@@ -233,6 +239,8 @@ const extractJulia = async () => {
   if (platform === 'win32') {
     // Windows: extract zip
     await unzip(path.join(generatedAssetsDir, ZIP_NAME), { dir: generatedAssetsDir });
+  } else if (platform === 'linux') {
+    execSync(`tar -xzf "${path.join(generatedAssetsDir, ZIP_NAME)}" -C "${generatedAssetsDir}"`);
   } else if (platform === 'darwin') {
     // macOS: mount DMG and copy contents
     const dmgPath = path.join(generatedAssetsDir, ZIP_NAME);
@@ -281,9 +289,7 @@ const extractJulia = async () => {
       }
     }
   } else {
-    throw new Error('Linux is not supported');
-    // Linux: extract tar.gz
-    execSync(`tar -xzf "${path.join(generatedAssetsDir, ZIP_NAME)}" -C "${generatedAssetsDir}"`);
+    throw new Error(`Unsupported platform: ${platform}`);
   }
 
   fs.rmSync(path.join(generatedAssetsDir, ZIP_NAME), {
@@ -303,13 +309,16 @@ const extractJulia = async () => {
  */
 export default async (config, platform, arch) => {
   console.log('Running generateAssets hook...');
-  console.log('Config:', config);
   console.log('Platform:', platform);
   console.log('Arch:', arch);
-  
-  
-  if (!fs.existsSync(generatedAssetsDir)) 
+
+  if (!fs.existsSync(generatedAssetsDir))
     fs.mkdirSync(generatedAssetsDir, { recursive: true });
+
+  if (process.env.SKIP_GENERATE_ASSETS) {
+    console.log('SKIP_GENERATE_ASSETS is set; skipping Julia download & depot preparation.');
+    return;
+  }
 
   const architectureFilePath = path.join(generatedAssetsDir, 'architecture.txt');
   try {
