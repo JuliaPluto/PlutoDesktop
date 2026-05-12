@@ -9,6 +9,12 @@ import { PlutoExport } from './enums.ts';
 import Pluto from './pluto.ts';
 import { GlobalWindowManager } from './windowHelpers.ts';
 import { generalLogger } from './logger.ts';
+import { Globals } from './globals.ts';
+
+ipcMain.handle(
+  'pluto-desktop:is-backend-loaded',
+  async (): Promise<boolean> => Globals.PLUTO_STARTED,
+);
 
 ipcMain.on(
   'PLUTO-OPEN-NOTEBOOK',

@@ -2,16 +2,22 @@
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
-import * as path from 'path';
-
-// import { PlutoExport } from '../../types/enums';
-
-// const __filename = process.argv[1];
-// const __dirname = path.dirname(process.argv[1]);
 
 export type Channels = 'ipc-example';
 
 contextBridge.exposeInMainWorld('plutoDesktop', {
+  /**
+   * Returns true once the wrapper has detected that the Pluto server is
+   * accepting requests at the URL embedded in this page's `pluto_server_url`
+   * query parameter, using the secret in `secret`.
+   *
+   * Use this in the frontend before showing the "lost authentication"
+   * dialog: if the backend hasn't reported ready yet, the auth failure is
+   * just a startup race and the existing retry/polling will resolve it.
+   */
+  isBackendLoaded: (): Promise<boolean> =>
+    ipcRenderer.invoke('pluto-desktop:is-backend-loaded'),
+
   ipcRenderer: {
     sendMessage(channel: Channels, args: unknown[]) {
       ipcRenderer.send(channel, args);
