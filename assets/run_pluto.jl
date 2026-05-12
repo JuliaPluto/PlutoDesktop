@@ -1,8 +1,9 @@
 
 # Parsing ARGS
-depot_input, unsaved_notebooks_dir, secret = ARGS
+depot_input, unsaved_notebooks_dir, secret, port_input = ARGS
 
 depot = isempty(depot_input) ? nothing : depot_input
+port = parse(Int, port_input)
 
 # https://github.com/fonsp/Pluto.jl/commit/7bbdc7b55bd5149a9eb92cdfc2b540464dc32626
 ENV["JULIA_PLUTO_NEW_NOTEBOOKS_DIR"] = unsaved_notebooks_dir
@@ -35,7 +36,7 @@ end
 options = Pluto.Configuration.from_flat_kwargs(;
     host = "127.0.0.1",
     launch_browser = false,
-    port_hint = 7122,
+    port = port,
     dismiss_update_notification = true
 )
 session = Pluto.ServerSession(; secret, options)

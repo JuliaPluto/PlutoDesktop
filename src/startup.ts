@@ -12,6 +12,7 @@ import type { App } from 'electron';
 import { dialog } from 'electron';
 // import chalk from 'chalk';
 import { spawn } from 'node:child_process';
+import { detect } from 'detect-port';
 import Pluto from './pluto.ts';
 import { Globals } from './globals.ts';
 import { GlobalWindowManager } from './windowHelpers.ts';
@@ -28,6 +29,9 @@ export async function initGlobals() {
   console.log(loc);
   Globals.PLUTO_LOCATION = loc;
   generalLogger.log(`Pluto found at: ${Globals.PLUTO_LOCATION}`);
+
+  Globals.PLUTO_PORT = await detect(7122);
+  generalLogger.log(`Pluto will run on port: ${Globals.PLUTO_PORT}`);
 }
 
 export async function startup(app: App) {
@@ -60,6 +64,7 @@ export async function startup(app: App) {
   options.push(DEPOT_LOCATION ?? '');
   options.push(path.join(app.getPath('userData'), 'unsaved_notebooks'));
   options.push(Globals.PLUTO_SECRET);
+  options.push(String(Globals.PLUTO_PORT));
 
   try {
     // generalLogger.verbose(
