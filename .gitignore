@@ -92,3 +92,6 @@ typings/
 out/
 
 generated_assets/
+
+# Compiled TS output (not used by Forge, but the TS compiler may produce it)
+dist/
