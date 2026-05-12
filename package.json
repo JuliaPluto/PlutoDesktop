@@ -31,7 +31,7 @@
     "@typescript-eslint/parser": "^8.50.0",
     "@vercel/webpack-asset-relocator-loader": "^1.10.0",
     "css-loader": "^7.1.2",
-    "electron": "39.2.7",
+    "electron": "39.8.10",
     "eslint": "^9.39.2",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.32.0",
@@ -51,6 +51,10 @@
   },
   "overrides": {
     "tmp": "^0.2.5",
-    "webpack-dev-server": "^5.2.2"
+    "webpack-dev-server": "^5.2.2",
+    "tar": "^7.5.15",
+    "brace-expansion": "^2.0.2",
+    "node-forge": "^1.4.0",
+    "@tootallnate/once": "^3.0.1"
   }
 }
