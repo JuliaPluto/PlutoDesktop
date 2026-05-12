@@ -93,6 +93,7 @@ export async function startup(app: App) {
             tempURL.hostname = '127.0.0.1';
 
           Globals.PLUTO_URL = new URL(`${tempURL.protocol}//${tempURL.host}`);
+          Globals.markReady();
           statusUpdate('loaded');
 
           generalLogger.verbose('Entry url found:', Pluto.url);
