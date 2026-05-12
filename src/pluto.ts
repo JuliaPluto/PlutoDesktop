@@ -32,18 +32,12 @@ class Pluto {
 
   private id: string | undefined;
 
-  constructor(win: BrowserWindow, landingUrl: string | null = null) {
-    this.win = win;
-    // Show a loading screen while waiting for the Pluto server to come up.
-    // If we loaded Pluto's frontend directly before the server was ready, the
-    // frontend would show "This window has lost authentication to the Pluto
-    // server." until the user dismissed it.
-    this.win.loadURL(Pluto.loadingScreenDataUrl());
-    Globals.ready.then(() => {
-      if (this.win.isDestroyed()) return;
-      const target = landingUrl ?? Pluto.resolveHtmlPath('index.html');
-      this.win.loadURL(target);
-    });
+  constructor(win: BrowserWindow, landingUrl: string | null = Pluto.resolveHtmlPath('index.html')) {
+    this.win = win; //_createPlutoBrowserWindow();
+    if (landingUrl) {
+      this.win.loadURL(landingUrl);
+  }
+    // What does this do? do we need it?
     GlobalWindowManager.getInstance().registerWindow(this);
 
     this.win.on('ready-to-show', () => {
@@ -466,18 +460,6 @@ class Pluto {
 
     return result;
   };
-
-  private static loadingScreenDataUrl(): string {
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>⚡ Pluto ⚡</title>
-<style>
-html,body{height:100%;margin:0;background:#1f1f1f;color:#eee;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;}
-.wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:1rem;}
-.spinner{width:48px;height:48px;border:4px solid #444;border-top-color:#dddd00;border-radius:50%;animation:spin 1s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
-@media (prefers-color-scheme: light){html,body{background:#fff;color:#222;} .spinner{border-color:#ddd;border-top-color:#dddd00;}}
-</style></head><body><div class="wrap"><div class="spinner"></div><div>Starting Julia and Pluto…</div></div></body></html>`;
-    return 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
-  }
 
   public static resolveHtmlPath = (htmlFileName: string) => {
     let plutoLocation = Globals.PLUTO_LOCATION;

@@ -29,12 +29,4 @@ export class Globals {
   public static get PLUTO_STARTED(): boolean {
     return !!this.PLUTO_URL;
   }
-
-  private static _resolveReady: () => void;
-  public static readonly ready: Promise<void> = new Promise((resolve) => {
-    Globals._resolveReady = resolve;
-  });
-  public static markReady(): void {
-    Globals._resolveReady?.();
-  }
 }
