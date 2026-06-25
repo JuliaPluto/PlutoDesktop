@@ -5,6 +5,7 @@ import { URL } from 'node:url';
 import { PlutoExport } from './enums.ts';
 import Pluto from './pluto.ts';
 import { createPlutoWindow } from './index.ts';
+import { getLogsFolder } from './logger.ts';
 
 export default class MenuBuilder {
   private pluto: Pluto;
@@ -160,6 +161,15 @@ export default class MenuBuilder {
         accelerator: 'Alt+Ctrl+I',
         click: () => {
           this.browser.webContents.toggleDevTools();
+        },
+      },
+      {
+        label: 'Open Logs Folder',
+        click: async () => {
+          const errorMessage = await shell.openPath(getLogsFolder());
+          if (errorMessage) {
+            dialog.showErrorBox('Could not open logs folder', errorMessage);
+          }
         },
       },
     ];

@@ -1,4 +1,6 @@
 import log from 'electron-log';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import util from 'util';
 
 // ANSI color codes
@@ -46,6 +48,7 @@ const format = '{y}-{m}-{d} {h}:{i}:{s}.{ms} {level} {label} > {text}';
 const generalLogger = log.create({ logId: 'general-log' });
 generalLogger.variables.label = 'general';
 generalLogger.levels.push('announce');
+generalLogger.transports.file.fileName = 'general.log';
 generalLogger.transports.file.format = format;
 // @ts-ignore
 generalLogger.transports.console = (message) => {
@@ -92,6 +95,7 @@ generalLogger.transports.console.useStyles = true;
  */
 const juliaLogger = log.create({ logId: 'julia-log' });
 juliaLogger.variables.label = 'julia';
+juliaLogger.transports.file.fileName = 'julia.log';
 juliaLogger.transports.file.format = format;
 // @ts-ignore
 juliaLogger.transports.console = (message) => {
@@ -173,4 +177,10 @@ backgroundLogger.transports.console = (message) => {
 };
 backgroundLogger.transports.console.useStyles = true;
 
-export { generalLogger, juliaLogger, backgroundLogger };
+const getLogsFolder = (): string => {
+  const logsFolder = path.dirname(generalLogger.transports.file.getFile().path);
+  fs.mkdirSync(logsFolder, { recursive: true });
+  return logsFolder;
+};
+
+export { generalLogger, juliaLogger, backgroundLogger, getLogsFolder };
