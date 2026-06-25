@@ -93,18 +93,26 @@ class Pluto {
 
     const menuBuilder = new MenuBuilder(this);
 
-    let first = true;
-    this.win.on('page-title-updated', (_e, title) => {
-      generalLogger.verbose('Window', this.win.id, 'moved to page:', title);
-      if (this.win?.webContents.getTitle().includes('index.html')) return;
-      const pageUrl = new URL(this.win!.webContents.getURL());
-      const isPluto = pageUrl.href.includes('localhost:');
-      if (first || isPluto) {
-        first = false;
-        this.win?.setMenuBarVisibility(true);
+    let lastShowExport: boolean | undefined;
+    const refreshMenu = () => {
+      if (this.win.isDestroyed()) return;
+
+      const showExport = menuBuilder.showExport();
+      if (!menuBuilder.hasbuilt || showExport !== lastShowExport) {
+        lastShowExport = showExport;
+        this.win.setMenuBarVisibility(true);
         menuBuilder.buildMenu();
       }
+    };
+
+    this.win.on('page-title-updated', (_e, title) => {
+      generalLogger.verbose('Window', this.win.id, 'moved to page:', title);
+      refreshMenu();
     });
+    this.win.webContents.on('did-finish-load', refreshMenu);
+    this.win.webContents.on('did-navigate', refreshMenu);
+    this.win.webContents.on('did-navigate-in-page', refreshMenu);
+    this.win.on('focus', refreshMenu);
 
     // Open urls in the user's browser
     this.win.webContents.setWindowOpenHandler((edata) => {
