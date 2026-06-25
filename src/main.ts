@@ -1,12 +1,15 @@
 import Electrobun, {
   ApplicationMenu,
+  BrowserView,
   BrowserWindow,
   Updater,
   Utils,
 } from "electrobun/bun";
 import path from "node:path";
 
+import type { DesktopRPCSchema } from "./desktop/rpc";
 import { PlutoExport } from "./enums";
+import { Globals } from "./globals";
 import { generalLogger } from "./logger";
 import { registerWindowsFileAssociations } from "./windowsAssociations";
 import { initGlobals, startup } from "./startup";
@@ -17,12 +20,44 @@ const windows = new Set<Pluto>();
 let startupComplete = false;
 const pendingFiles: string[] = [];
 
+type DesktopRPC = {
+  setTransport(transport: unknown): void;
+  send: {
+    "set-block-screen-text"(text: string | null): void;
+  };
+};
+
 export function createPlutoWindow(landingUrl?: string | null): Pluto {
   console.log("Pluto Desktop: creating window");
-  const pluto = new Pluto(
+  let pluto: Pluto | null = null;
+  const rpc = BrowserView.defineRPC<DesktopRPCSchema>({
+    handlers: {
+      requests: {
+        isBackendLoaded: async () => Globals.PLUTO_STARTED,
+        openNotebook: async (params) => {
+          await (pluto ?? createPlutoWindow()).open(
+            params?.type ?? "new",
+            params?.pathOrURL,
+          );
+        },
+        shutdownNotebook: async (params) => {
+          await pluto?.shutdownNotebook(params?.id);
+        },
+        moveNotebook: async (params) => (await pluto?.moveNotebook(params?.id)) ?? null,
+        exportNotebook: async (params) => {
+          await pluto?.exportNotebook(params.id, params.type);
+        },
+      },
+      messages: {},
+    },
+    maxRequestTime: 60_000,
+  }) as unknown as DesktopRPC;
+
+  pluto = new Pluto(
     new BrowserWindow({
       title: "Pluto.jl Desktop",
       url: landingUrl ?? "views://loading/index.html",
+      preload: "views://desktop/preload.js",
       frame: {
         x: 80,
         y: 80,
@@ -35,7 +70,9 @@ export function createPlutoWindow(landingUrl?: string | null): Pluto {
         "http://localhost:*/*",
         "https://*/*",
       ]),
+      rpc,
     }),
+    (status) => rpc.send["set-block-screen-text"](status),
   );
 
   windows.add(pluto);

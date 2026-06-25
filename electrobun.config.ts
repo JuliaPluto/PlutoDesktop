@@ -26,6 +26,12 @@ export default {
       entrypoint: "src/index.ts",
       sourcemap: "linked",
     },
+    views: {
+      desktop: {
+        entrypoint: "src/desktop/preload.ts",
+        sourcemap: "linked",
+      },
+    },
     copy: {
       "src/loading/index.html": "views/loading/index.html",
       assets: "assets",

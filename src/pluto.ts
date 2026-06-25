@@ -1,5 +1,6 @@
 import { BrowserWindow, Utils } from "electrobun/bun";
 
+import type { OpenKind as DesktopOpenKind, PlutoExportValue } from "./desktop/rpc";
 import { PlutoExport } from "./enums";
 import { Globals } from "./globals";
 import { generalLogger } from "./logger";
@@ -15,8 +16,6 @@ import {
   showError,
 } from "./windowsDialogs";
 
-type OpenKind = "url" | "path" | "new";
-
 const plutoWindows = new Set<Pluto>();
 let focusedPluto: Pluto | null = null;
 
@@ -24,7 +23,10 @@ class Pluto {
   static closePlutoFunction: (() => void) | undefined;
   private currentUrlValue: string | null;
 
-  constructor(public readonly window: BrowserWindow) {
+  constructor(
+    public readonly window: BrowserWindow,
+    private readonly sendBlockScreenText: (status: string | null) => void = () => {},
+  ) {
     this.currentUrlValue = this.window.webview.url;
     plutoWindows.add(this);
     focusedPluto = this;
@@ -114,7 +116,7 @@ class Pluto {
     }
   }
 
-  async open(type: OpenKind = "new", pathOrURL?: string | null) {
+  async open(type: DesktopOpenKind = "new", pathOrURL?: string | null) {
     try {
       if (type === "path" && pathOrURL && !isExtMatch(pathOrURL)) {
         await showError("Cannot open notebook", "Not a supported file type.");
@@ -138,12 +140,18 @@ class Pluto {
 
       if (pathOrURL) {
         if (type === "path") {
+          this.sendBlockScreenText(pathOrURL);
           params.path = pathOrURL;
         } else if (type === "url") {
           const url = new URL(pathOrURL);
           const path = url.searchParams.get("path");
-          if (path) params.path = path;
-          else params.url = pathOrURL;
+          if (path) {
+            this.sendBlockScreenText(path);
+            params.path = path;
+          } else {
+            this.sendBlockScreenText(pathOrURL);
+            params.url = pathOrURL;
+          }
         }
       }
 
@@ -169,6 +177,8 @@ class Pluto {
         "Cannot open notebook",
         "Please check the path or URL and try again.",
       );
+    } finally {
+      this.sendBlockScreenText(null);
     }
   }
 
@@ -179,6 +189,10 @@ class Pluto {
       return;
     }
 
+    await this.exportNotebook(id, type);
+  }
+
+  async exportNotebook(id: string, type: PlutoExportValue) {
     if (type === PlutoExport.PDF) {
       await showError(
         "PDF export is not available yet",
@@ -226,10 +240,13 @@ class Pluto {
   }
 
   async moveCurrentNotebook() {
-    const id = this.currentNotebookId();
+    await this.moveNotebook();
+  }
+
+  async moveNotebook(id = this.currentNotebookId()) {
     if (!id) {
       await showError("Cannot move notebook", "The current window is not a notebook.");
-      return;
+      return null;
     }
 
     const newPath = await chooseSavePath({
@@ -238,7 +255,7 @@ class Pluto {
       filterName: "Pluto Notebook",
       filterExtensions: PLUTO_FILE_EXTENSIONS.map((ext) => ext.replace(/^\./, "")),
     });
-    if (!newPath) return;
+    if (!newPath) return null;
 
     const response = await fetchPluto(
       withSearchParams("/move", {
@@ -251,7 +268,10 @@ class Pluto {
 
     if (!response.ok) {
       await showError("Cannot move notebook", await response.text());
+      return null;
     }
+
+    return newPath;
   }
 
   async revealCurrentNotebook() {
@@ -267,7 +287,10 @@ class Pluto {
   }
 
   async shutdownCurrentNotebook() {
-    const id = this.currentNotebookId();
+    await this.shutdownNotebook();
+  }
+
+  async shutdownNotebook(id = this.currentNotebookId()) {
     if (!id || !Globals.PLUTO_STARTED) return;
 
     try {

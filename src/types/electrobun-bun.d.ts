@@ -1,4 +1,37 @@
 declare module "electrobun/bun" {
+  export type RPCWithTransport = {
+    setTransport(transport: unknown): void;
+  };
+
+  export type ElectrobunRPCSchema = {
+    bun: {
+      requests: Record<string, { params: unknown; response: unknown }>;
+      messages: Record<string, unknown>;
+    };
+    webview: {
+      requests: Record<string, { params: unknown; response: unknown }>;
+      messages: Record<string, unknown>;
+    };
+  };
+
+  type RequestHandlers<Requests> = {
+    [K in keyof Requests]?: Requests[K] extends { params: infer Params; response: infer Response }
+      ? (params: Params) => Response | Promise<Response>
+      : never;
+  };
+
+  type MessageHandlers<Messages> = {
+    [K in keyof Messages]?: (payload: Messages[K]) => void;
+  };
+
+  type RPCConfig<Schema extends ElectrobunRPCSchema, Side extends keyof Schema> = {
+    maxRequestTime?: number;
+    handlers: {
+      requests?: RequestHandlers<Schema[Side]["requests"]>;
+      messages?: MessageHandlers<Schema[Side]["messages"]>;
+    };
+  };
+
   export type ElectrobunConfig = {
     app: {
       name: string;
@@ -33,17 +66,19 @@ declare module "electrobun/bun" {
 
   type EventHandler = (event: unknown) => void | Promise<void>;
 
-  export class BrowserWindow {
+  export class BrowserWindow<T extends RPCWithTransport = RPCWithTransport> {
     id: number;
-    webview: BrowserView;
+    webview: BrowserView<T>;
     constructor(options: {
       title?: string;
       url?: string | null;
       html?: string | null;
+      preload?: string | null;
       frame?: { x?: number; y?: number; width?: number; height?: number };
       renderer?: "native" | "cef";
       navigationRules?: string | null;
       hidden?: boolean;
+      rpc?: T;
     });
     on(name: string, handler: EventHandler): void;
     close(): void;
@@ -53,13 +88,17 @@ declare module "electrobun/bun" {
     isFullScreen(): boolean;
   }
 
-  export class BrowserView {
+  export class BrowserView<T extends RPCWithTransport = RPCWithTransport> {
     id: number;
+    rpc?: T;
     url: string | null;
     on(name: string, handler: EventHandler): void;
     loadURL(url: string): void;
     loadHTML(html: string): void;
     toggleDevTools(): void;
+    static defineRPC<Schema extends ElectrobunRPCSchema>(
+      config: RPCConfig<Schema, "bun">,
+    ): RPCWithTransport;
   }
 
   export const ApplicationMenu: {
