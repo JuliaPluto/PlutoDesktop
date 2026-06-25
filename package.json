@@ -9,7 +9,14 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "start:inspect": "cross-env SKIP_GENERATE_ASSETS=1 electron-forge start -- --remote-debugging-port=9333",
+    "start:inspect:assets": "electron-forge start -- --remote-debugging-port=9333",
+    "inspect:tabs": "node scripts/listCdpTargets.mjs 9333",
+    "inspect:targets": "node scripts/listCdpTargets.mjs 9333",
+    "inspect:snapshot": "agent-browser --cdp 9333 snapshot",
+    "inspect:snapshot:interactive": "agent-browser --cdp 9333 snapshot -i",
+    "inspect:screenshot": "agent-browser --cdp 9333 --screenshot-dir .agent-browser screenshot"
   },
   "keywords": [],
   "author": {
@@ -30,6 +37,8 @@
     "@typescript-eslint/eslint-plugin": "^8.62.0",
     "@typescript-eslint/parser": "^8.62.0",
     "@vercel/webpack-asset-relocator-loader": "^1.10.0",
+    "agent-browser": "^0.30.1",
+    "cross-env": "^10.1.0",
     "css-loader": "^7.1.4",
     "electron": "42.5.0",
     "eslint": "^9.39.4",

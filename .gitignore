@@ -96,3 +96,6 @@ generated_assets/
 # Compiled TS output (not used by Forge, but the TS compiler may produce it)
 dist/
 /.claude/worktrees
+
+# Agent-browser screenshots and local browser automation state
+.agent-browser/
