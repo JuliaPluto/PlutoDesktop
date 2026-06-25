@@ -1,21 +1,23 @@
 {
   "compilerOptions": {
-    "target": "ES6",
+    "target": "ES2022",
     "allowJs": true,
-    "module": "commonjs",
+    "module": "ESNext",
     "skipLibCheck": true,
     "esModuleInterop": true,
     "noImplicitAny": true,
     "sourceMap": true,
     "baseUrl": ".",
     "outDir": "dist",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "allowImportingTsExtensions": true,
+    "allowImportingTsExtensions": false,
     "noEmit": true,
+    "types": ["bun-types"],
     "paths": {
-      "*": ["node_modules/*"]
+      "electrobun": ["src/types/electrobun.d.ts"],
+      "electrobun/bun": ["src/types/electrobun-bun.d.ts"]
     }
   },
-  "include": ["src/**/*"]
+  "include": ["electrobun.config.ts", "src/index.ts", "src/main.ts", "src/enums.ts", "src/globals.ts", "src/logger.ts", "src/paths.ts", "src/pluto.ts", "src/plutoProcess.ts", "src/startup.ts", "src/util.ts", "src/windowsAssociations.ts", "src/windowsDialogs.ts", "src/types/**/*.d.ts"]
 }

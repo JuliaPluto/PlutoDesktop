@@ -2,7 +2,7 @@ import { getRandomValues } from 'node:crypto';
 
 // adapted from PlutoHash.js in fonsp/Pluto.jl
 const urlSafeBase64 = (original: string) => {
-  return original.replace(/[\+\/\=]/g, (s) => {
+  return original.replace(/[+/=]/g, (s) => {
     const c = s.charCodeAt(0);
     return c === 43 ? '-' : c === 47 ? '_' : '';
   });

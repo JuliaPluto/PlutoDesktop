@@ -1,69 +1,56 @@
-/**
- * File for managing a local backend process which notebooks are run on
- */
+import fs from "node:fs";
 
-import * as fs from 'node:fs';
-import { DEPOT_LOCATION, getAssetPath } from './paths.ts';
-import { generalLogger, juliaLogger } from './logger.ts';
-import { spawn } from 'node:child_process';
+import { DEPOT_LOCATION, getAssetPath, getGeneratedAssetPath } from "./paths";
+import { generalLogger, juliaLogger } from "./logger";
 
 export const plutoProject =
-  process.env.DEBUG_PROJECT_PATH ?? getAssetPath('env_for_julia');
+  process.env.DEBUG_PROJECT_PATH ?? getAssetPath("env_for_julia");
 
-let _julia: string | null = null;
-export const findJulia = () => {
-  if (_julia !== null) return _julia;
-  const files = fs.readdirSync(getAssetPath('.'));
+let juliaExecutable: string | null = null;
 
-  let julia_dir = files.find((s) => /^julia-\d+.\d+.\d+$/.test(s));
-  let result;
+export function findJulia() {
+  if (juliaExecutable) return juliaExecutable;
 
-  if (julia_dir == null) {
-    generalLogger.error(
-      "Couldn't find Julia in assets, falling back to the `julia` command.",
+  const files = fs.existsSync(getGeneratedAssetPath("."))
+    ? fs.readdirSync(getGeneratedAssetPath("."))
+    : [];
+  const juliaDir = files.find((name) => /^julia-\d+\.\d+\.\d+$/.test(name));
+
+  if (!juliaDir) {
+    generalLogger.warn(
+      "Could not find bundled Julia in generated assets; falling back to `julia`.",
     );
-    result = `julia`;
+    juliaExecutable = "julia";
   } else {
-    // Use platform-specific executable name
-    const juliaExecutable =
-      process.platform === 'win32' ? 'julia.exe' : 'julia';
-    result = getAssetPath(julia_dir, 'bin', juliaExecutable);
+    juliaExecutable = getGeneratedAssetPath(juliaDir, "bin", "julia.exe");
   }
 
-  // cache the result
-  _julia = result;
+  return juliaExecutable;
+}
 
-  return result;
-};
+let plutoLocation: string | null = null;
 
-let _plutoLocation: string | null = null;
-export function findPluto(): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (_plutoLocation !== null) resolve(String(_plutoLocation));
+export async function findPluto(): Promise<string> {
+  if (plutoLocation) return plutoLocation;
 
-    const juliaCmd = findJulia();
-    let resolved = false;
-
-    const options = [
-      `--project=${plutoProject}`,
-      getAssetPath('locate_pluto.jl'),
-    ];
-    const proc = spawn(juliaCmd, options, {
+  const proc = Bun.spawn(
+    [findJulia(), `--project=${plutoProject}`, getAssetPath("locate_pluto.jl")],
+    {
       env: { ...process.env, JULIA_DEPOT_PATH: DEPOT_LOCATION },
-    });
-    proc.stdout.on('data', (chunk) => {
-      _plutoLocation = chunk.toString();
-      resolved = true;
-      resolve(String(_plutoLocation));
-    });
-    proc.stderr.on('error', (err) => {
-      juliaLogger.error('Error determining Pluto.jl package location:', err);
-      reject();
-    });
-    proc.on('close', () => {
-      if (!resolved) {
-        reject('Pluto could not be found with `locate_pluto.jl`!');
-      }
-    });
-  });
+      stdout: "pipe",
+      stderr: "pipe",
+    },
+  );
+
+  const stdout = await new Response(proc.stdout).text();
+  const stderr = await new Response(proc.stderr).text();
+  const code = await proc.exited;
+
+  if (stderr.trim()) juliaLogger.warn(stderr.trim());
+  if (code !== 0 || !stdout.trim()) {
+    throw new Error("Pluto could not be found with locate_pluto.jl.");
+  }
+
+  plutoLocation = stdout.trim();
+  return plutoLocation;
 }
