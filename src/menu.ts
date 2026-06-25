@@ -9,26 +9,30 @@ import { createPlutoWindow } from './index.ts';
 export default class MenuBuilder {
   private pluto: Pluto;
   private browser: BrowserWindow;
+  private contextMenuSetup: boolean;
   public hasbuilt: boolean;
 
   constructor(pluto: Pluto) {
     this.hasbuilt = false;
+    this.contextMenuSetup = false;
     this.pluto = pluto;
     this.browser = this.pluto.getBrowserWindow();
   }
 
   buildMenu = () => {
-    this.setupContextMenu(
-      process.env.NODE_ENV === 'development' ||
-        process.env.DEBUG_PROD === 'true',
-    );
+    if (!this.contextMenuSetup) {
+      this.setupContextMenu(
+        process.env.NODE_ENV === 'development' ||
+          process.env.DEBUG_PROD === 'true',
+      );
+      this.contextMenuSetup = true;
+    }
 
     // const menu = Menu.buildFromTemplate(this.buildDefaultTemplate());
     // this.pluto.getBrowserWindow().setMenu(menu);
 
     const menu = Menu.buildFromTemplate(this.buildDefaultTemplate());
     Menu.setApplicationMenu(menu); // Works on macOS + Windows
-
 
     this.hasbuilt = true;
   };
