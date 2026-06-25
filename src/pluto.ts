@@ -32,11 +32,14 @@ class Pluto {
 
   private id: string | undefined;
 
-  constructor(win: BrowserWindow, landingUrl: string | null = Pluto.resolveHtmlPath('index.html')) {
+  constructor(
+    win: BrowserWindow,
+    landingUrl: string | null = Pluto.resolveHtmlPath('index.html'),
+  ) {
     this.win = win; //_createPlutoBrowserWindow();
     if (landingUrl) {
       this.win.loadURL(landingUrl);
-  }
+    }
     // What does this do? do we need it?
     GlobalWindowManager.getInstance().registerWindow(this);
 
@@ -48,18 +51,25 @@ class Pluto {
       }
     });
 
-    this.win.once('close', async () => {
-      // Shutdown the Pluto notebook when the window closes
-      const url = new URL(this.win.webContents.getURL());
-      const notebookId = url.searchParams.get('id');
-      
+    let notebookIdOnClose: string | null = null;
+    this.win.on('close', () => {
+      notebookIdOnClose = Pluto.getNotebookIdFromWindow(this.win);
+    });
+
+    this.win.once('closed', async () => {
+      // Shutdown only after the close is final, so cancelled unsaved-edit
+      // closes keep running.
+      const notebookId = notebookIdOnClose;
+
       if (notebookId) {
         generalLogger.info(`Shutting down notebook ${notebookId}`);
-        await Pluto.notebook.shutdown(notebookId).catch((err: unknown) => {
-          generalLogger.error('Error shutting down notebook:', err);
-        });
+        await Pluto.shutdownNotebook(notebookId, false).catch(
+          (err: unknown) => {
+            generalLogger.error('Error shutting down notebook:', err);
+          },
+        );
       }
-      
+
       GlobalWindowManager.getInstance().unregisterWindow(this);
     });
 
@@ -282,6 +292,23 @@ class Pluto {
     }
   };
 
+  private static getNotebookIdFromWindow = (
+    window: BrowserWindow | null | undefined,
+  ): string | null => {
+    try {
+      if (!window || window.isDestroyed()) return null;
+      return new URL(window.webContents.getURL()).searchParams.get('id');
+    } catch (error) {
+      generalLogger.verbose('Could not read notebook id from window URL', error);
+      return null;
+    }
+  };
+
+  private static loadHome = async (window: BrowserWindow): Promise<void> => {
+    if (window.isDestroyed()) return;
+    await window.loadURL(Pluto.resolveHtmlPath('index.html'));
+  };
+
   /**
    * shuts down the notebook of given id, and if the
    * window is still open after the shutdown, it changes
@@ -289,7 +316,10 @@ class Pluto {
    * @param _id id of notebook to be shutdown
    * @returns nothing
    */
-  private static shutdownNotebook = async (_id?: string) => {
+  private static shutdownNotebook = async (
+    _id?: string,
+    reloadWindow = true,
+  ) => {
     try {
       if (!Globals.PLUTO_STARTED) {
         dialog.showErrorBox(
@@ -300,23 +330,24 @@ class Pluto {
       }
 
       const window = BrowserWindow.getFocusedWindow();
-      if (window) {
-        const id =
-          _id ?? new URL(window.webContents.getURL()).searchParams.get('id');
-        if (!id) return;
+      const id = _id ?? Pluto.getNotebookIdFromWindow(window);
 
-        const response = await fetchPluto(
-          withSearchParams('shutdown', { secret: Globals.PLUTO_SECRET, id }),
+      if (!id) {
+        generalLogger.warn('PLUTO-FILE-SHUTDOWN-ERROR No notebook id found');
+        return;
+      }
+
+      const response = await fetchPluto(
+        withSearchParams('shutdown', { secret: Globals.PLUTO_SECRET, id }),
+      );
+      if (response.status === 200) {
+        generalLogger.info(`File ${id} has been shutdown.`);
+        if (reloadWindow && window) await Pluto.loadHome(window);
+      } else {
+        dialog.showErrorBox(
+          'PLUTO-FILE-SHUTDOWN-ERROR',
+          'Could not shutdown file for some reason',
         );
-        if (response.status === 200) {
-          generalLogger.info(`File ${id} has been shutdown.`);
-          if (!window.isDestroyed()) window.loadURL(Pluto.url!.url);
-        } else {
-          dialog.showErrorBox(
-            'PLUTO-FILE-SHUTDOWN-ERROR',
-            'Could not shutdown file for some reason',
-          );
-        }
       }
     } catch (error: { message: string } | any) {
       generalLogger.error('PLUTO-FILE-SHUTDOWN-ERROR', error);
