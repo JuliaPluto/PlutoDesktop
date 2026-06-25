@@ -34,14 +34,7 @@ export async function initGlobals() {
   generalLogger.log(`Pluto will run on port: ${Globals.PLUTO_PORT}`);
 }
 
-export async function startup(app: App) {
-  const statusUpdate = (status: string) =>
-    GlobalWindowManager.all((p) =>
-      p.getBrowserWindow().webContents.send('pluto-url', status),
-    );
-
-  statusUpdate('loading');
-
+export async function startup(app: App, loadingUrl: string) {
   const SYSIMAGE_LOCATION = getAssetPath('pluto.so');
 
   // ensure depot has been copied from read-only installation directory to writable directory
@@ -80,11 +73,6 @@ export async function startup(app: App) {
     const loggerListener = (data: any) => {
       const dataString = data.toString();
 
-      if (dataString.includes('Updating')) statusUpdate('updating');
-
-      if (dataString.includes('Loading') || dataString.includes('loading'))
-        statusUpdate('loading');
-
       if (!Globals.PLUTO_URL) {
         const plutoLog = dataString;
         if (plutoLog.includes('?secret=')) {
@@ -98,9 +86,15 @@ export async function startup(app: App) {
             tempURL.hostname = '127.0.0.1';
 
           Globals.PLUTO_URL = new URL(`${tempURL.protocol}//${tempURL.host}`);
-          statusUpdate('loaded');
+          GlobalWindowManager.all((p) => {
+            const window = p.getBrowserWindow();
+            const currentUrl = window.webContents.getURL();
+            if (currentUrl === '' || currentUrl === loadingUrl) {
+              void window.loadURL(Pluto.resolveHtmlPath('index.html'));
+            }
+          });
 
-          generalLogger.verbose('Entry url found:', Pluto.url);
+          generalLogger.verbose('Entry url found:', Globals.PLUTO_URL);
         } else if (
           plutoLog.includes(
             'failed to send request: The server name or address could not be resolved',

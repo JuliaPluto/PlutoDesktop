@@ -1,6 +1,5 @@
-import { app, BrowserWindow, dialog, nativeTheme, shell } from 'electron';
+import { BrowserWindow, dialog, shell } from 'electron';
 import fs from 'node:fs';
-// import * as path from 'node:path';
 import { decode } from '@msgpack/msgpack';
 
 import { PlutoExport } from './enums.ts';
@@ -16,7 +15,6 @@ import {
 import { GlobalWindowManager } from './windowHelpers.ts';
 import { Globals } from './globals.ts';
 import MenuBuilder from './menu.ts';
-import { getAssetPath, source_root_dir } from './paths.ts';
 import path from 'path';
 
 const decodeNotebookList = (data: Uint8Array): Record<string, string> => {
@@ -42,19 +40,14 @@ class Pluto {
    */
   private win: BrowserWindow;
 
-  public static url: PlutoURL | null;
-
   private static notebookManager: NotebookManager;
 
   static closePlutoFunction: (() => void) | undefined;
 
   private id: string | undefined;
 
-  constructor(
-    win: BrowserWindow,
-    landingUrl: string | null = Pluto.resolveHtmlPath('index.html'),
-  ) {
-    this.win = win; //_createPlutoBrowserWindow();
+  constructor(win: BrowserWindow, landingUrl: string | null) {
+    this.win = win;
     if (landingUrl) {
       this.win.loadURL(landingUrl);
     }
@@ -332,11 +325,6 @@ class Pluto {
     }
   };
 
-  private static loadHome = async (window: BrowserWindow): Promise<void> => {
-    if (window.isDestroyed()) return;
-    await window.loadURL(Pluto.resolveHtmlPath('index.html'));
-  };
-
   private static getNotebookLookupKey = (
     type: 'url' | 'path' | 'new',
     pathOrURL: string,
@@ -384,7 +372,8 @@ class Pluto {
       );
       if (response.status === 200) {
         generalLogger.info(`File ${id} has been shutdown.`);
-        if (reloadWindow && window) await Pluto.loadHome(window);
+        if (reloadWindow && window)
+          await window.loadURL(Pluto.resolveHtmlPath('index.html'));
       } else {
         dialog.showErrorBox(
           'PLUTO-FILE-SHUTDOWN-ERROR',
@@ -593,41 +582,6 @@ class Pluto {
     this.win.close(); // will trigger callback in constructor to do more cleanup
   };
 
-//   /**
-//    * Gets the current running info if it is running.
-//    */
-//   public static get runningInfo() {
-//     return Pluto.url;
-//   }
-// }
-
-// function _createPlutoBrowserWindow() {
-//   const win = new BrowserWindow({
-//     title: '⚡ Pluto ⚡',
-//     height: 800,
-//     width: 700,
-//     resizable: true,
-//     show: true,
-//     backgroundColor: nativeTheme.shouldUseDarkColors ? '#1F1F1F' : 'white',
-//     icon: getAssetPath('icon.png'),
-//     webPreferences: {
-//       preload: app.isPackaged
-//         ? path.join(source_root_dir, 'preload.js')
-//         : path.join(source_root_dir, 'release/app/dist/main/preload.js'),
-//     },
-//   });
-//   console.log('source_root_dir:', source_root_dir);
-//   // console.log('webpackPaths.distMainPath:', webpackPaths.distMainPath);
-//   win.webContents.setVisualZoomLevelLimits(1, 3);
-//   win.setMenuBarVisibility(false);
-
-//   return win;
-// }
-
-// function delay(ms: number) {
-//   return new Promise((resolve) => {
-//     setTimeout(resolve, ms);
-//   });
 }
 
 export default Pluto;
