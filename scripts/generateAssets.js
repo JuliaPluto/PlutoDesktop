@@ -7,7 +7,6 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import unzip from 'extract-zip';
 import { execSync } from 'child_process';
-import { exit } from 'process';
 
 
 
@@ -71,51 +70,6 @@ const downloadJulia = async () => {
 
   await pipeline(readStream, writeStream);
   console.log(`\tDownloaded Julia ${JULIA_VERSION} for ${platform}`);
-};
-
-const precompilePluto = async ({ julia_path }) => {
-  // TODO: You need to add PackageCompiler to some environment for this to work.
-
-  const SYSIMAGE_LOCATION = path.join(
-    generatedAssetsDir,
-    // TODO: auto version number
-    'pluto.so',
-  );
-
-  // immediately return if the sysimage has already been compiled
-  if (fs.existsSync(SYSIMAGE_LOCATION)) {
-    return new Promise((resolve) => resolve());
-  }
-
-  const PRECOMPILE_SCRIPT_LOCATION = path.join(generatedAssetsDir, 'precompile.jl');
-  const PRECOMPILE_EXECUTION_LOCATION = path.join(
-    generatedAssetsDir,
-    'precompile_execution.jl',
-  );
-
-  const res = spawn(julia_path, [
-    `--project=${path.join(generatedAssetsDir, 'env_for_julia')}`,
-    PRECOMPILE_SCRIPT_LOCATION,
-    SYSIMAGE_LOCATION,
-    PRECOMPILE_EXECUTION_LOCATION,
-  ]);
-
-  // stderr includes precompile status text
-  res.stderr.on('data', (data) => {
-    process.stdout.write(data?.toString?.());
-  });
-
-  return new Promise((resolve) => {
-    res.once('close', (exit_code) => {
-      if (exit_code === 0) {
-        console.info('Pluto has been precompiled to', SYSIMAGE_LOCATION);
-      } else {
-        console.error('Pluto precompile failed');
-        exit(exit_code);
-      }
-      resolve(SYSIMAGE_LOCATION);
-    });
-  });
 };
 
 const prepareJuliaDepot = async ({ julia_path }) => {
@@ -304,13 +258,10 @@ const extractJulia = async () => {
 
 
 
-/**
- * @type {import("@electron-forge/shared-types").ForgeSimpleHookFn<"generateAssets">}
- */
-export default async (config, platform, arch) => {
+async function generateAssets() {
   console.log('Running generateAssets hook...');
   console.log('Platform:', platform);
-  console.log('Arch:', arch);
+  console.log('Arch:', resolvedArch);
 
   if (!fs.existsSync(generatedAssetsDir))
     fs.mkdirSync(generatedAssetsDir, { recursive: true });
@@ -350,5 +301,10 @@ export default async (config, platform, arch) => {
   // await precompilePluto({
   //   julia_path: juliaPath,
   // });
-};
+}
 
+export default generateAssets;
+
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  await generateAssets();
+}

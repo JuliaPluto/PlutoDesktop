@@ -1,9 +1,9 @@
-const js = require('@eslint/js');
-const tseslint = require('@typescript-eslint/eslint-plugin');
-const tsparser = require('@typescript-eslint/parser');
-const importPlugin = require('eslint-plugin-import');
+import js from '@eslint/js';
+import tseslint from '@typescript-eslint/eslint-plugin';
+import tsparser from '@typescript-eslint/parser';
+import importPlugin from 'eslint-plugin-import';
 
-module.exports = [
+export default [
   js.configs.recommended,
   {
     files: ['**/*.{js,mjs,cjs,ts,tsx}'],
@@ -23,6 +23,14 @@ module.exports = [
         require: 'readonly',
         exports: 'readonly',
         global: 'readonly',
+        Bun: 'readonly',
+        URL: 'readonly',
+        RequestInit: 'readonly',
+        fetch: 'readonly',
+        Response: 'readonly',
+        TextDecoder: 'readonly',
+        ReadableStream: 'readonly',
+        setTimeout: 'readonly',
         window: 'readonly',
         document: 'readonly',
       },
@@ -34,6 +42,7 @@ module.exports = [
     rules: {
       ...tseslint.configs.recommended.rules,
       '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/no-this-alias': 'off',
       'import/no-unresolved': 'off',
       'import/namespace': 'off',
       'import/default': 'off',
@@ -48,7 +57,16 @@ module.exports = [
     },
   },
   {
-    ignores: ['node_modules/**', 'dist/**', '.webpack/**', 'out/**', 'old/**'],
+    ignores: [
+      'node_modules/**',
+      'dist/**',
+      'build/**',
+      'artifacts/**',
+      'out/**',
+      'old/**',
+      '.claude/**',
+      '.webpack/**',
+      'generated_assets/**',
+    ],
   },
 ];
-
