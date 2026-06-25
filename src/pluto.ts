@@ -373,6 +373,8 @@ class Pluto {
       const window = BrowserWindow.getFocusedWindow()!;
       const id =
         _id ?? new URL(window.webContents.getURL()).searchParams.get('id');
+      if (!id) return undefined;
+
       const { canceled, filePath } = await dialog.showSaveDialog(window, {
         title: 'Select location to move your file',
         buttonLabel: 'Select',
