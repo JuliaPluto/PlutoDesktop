@@ -3,7 +3,15 @@
 
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 
-export type Channels = 'ipc-example';
+export type Channels =
+  | 'ipc-example'
+  | 'PLUTO-OPEN-NOTEBOOK'
+  | 'PLUTO-SHUTDOWN-NOTEBOOK'
+  | 'PLUTO-MOVE-NOTEBOOK'
+  | 'PLUTO-EXPORT-NOTEBOOK'
+  | 'set-block-screen-text';
+
+type PlutoExport = 'file' | 'html' | 'state' | 'pdf';
 
 contextBridge.exposeInMainWorld('plutoDesktop', {
   /**
@@ -31,6 +39,24 @@ contextBridge.exposeInMainWorld('plutoDesktop', {
     },
     once(channel: Channels, func: (...args: unknown[]) => void) {
       ipcRenderer.once(channel, (_event, ...args) => func(...args));
+    },
+  },
+
+  fileSystem: {
+    openNotebook(
+      type: 'path' | 'url' | 'new' = 'new',
+      pathOrURL?: string,
+    ): void {
+      ipcRenderer.send('PLUTO-OPEN-NOTEBOOK', type, pathOrURL);
+    },
+    shutdownNotebook(id?: string): void {
+      ipcRenderer.send('PLUTO-SHUTDOWN-NOTEBOOK', id);
+    },
+    moveNotebook(id?: string): void {
+      ipcRenderer.send('PLUTO-MOVE-NOTEBOOK', id);
+    },
+    exportNotebook(id: string, type: PlutoExport): void {
+      ipcRenderer.send('PLUTO-EXPORT-NOTEBOOK', id, type);
     },
   },
 });

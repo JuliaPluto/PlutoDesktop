@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, nativeTheme, shell } from 'electron';
 import fs from 'node:fs';
 // import * as path from 'node:path';
+import { decode } from '@msgpack/msgpack';
 
 import { PlutoExport } from './enums.ts';
 import { generalLogger } from './logger.ts';
@@ -17,6 +18,23 @@ import { Globals } from './globals.ts';
 import MenuBuilder from './menu.ts';
 import { getAssetPath, source_root_dir } from './paths.ts';
 import path from 'path';
+
+const decodeNotebookList = (data: Uint8Array): Record<string, string> => {
+  const decoded = decode(data);
+
+  if (
+    !decoded ||
+    typeof decoded !== 'object' ||
+    Array.isArray(decoded) ||
+    !Object.entries(decoded).every(
+      ([key, value]) => typeof key === 'string' && typeof value === 'string',
+    )
+  ) {
+    throw new Error('Unexpected notebook list response from Pluto');
+  }
+
+  return decoded as Record<string, string>;
+};
 
 class Pluto {
   /**
@@ -193,7 +211,9 @@ class Pluto {
             // is a local url
             id = new URL(pathOrURL).searchParams.get('id');
           } else {
-            id = await Pluto.checkNotebook(pathOrURL);
+            id = await Pluto.checkNotebook(
+              Pluto.getNotebookLookupKey(type, pathOrURL),
+            );
           }
         }
         let res;
@@ -309,6 +329,20 @@ class Pluto {
     await window.loadURL(Pluto.resolveHtmlPath('index.html'));
   };
 
+  private static getNotebookLookupKey = (
+    type: 'url' | 'path' | 'new',
+    pathOrURL: string,
+  ) => {
+    if (type !== 'url') return pathOrURL;
+
+    try {
+      return new URL(pathOrURL).searchParams.get('path') ?? pathOrURL;
+    } catch (error) {
+      generalLogger.verbose('Could not parse notebook URL', error);
+      return pathOrURL;
+    }
+  };
+
   /**
    * shuts down the notebook of given id, and if the
    * window is still open after the shutdown, it changes
@@ -396,7 +430,7 @@ class Pluto {
       const response = await fetchPluto(url, {
         method: 'POST',
       });
-      const data = await response.json();
+      const data = await response.text();
 
       if (response.status === 200) {
         generalLogger.info(`File ${id} has been moved to ${filePath}.`);
@@ -440,7 +474,9 @@ class Pluto {
       const data = Buffer.from(arrayBuffer);
 
       if (response.status === 200) {
-        // this.notebookManager = new NotebookManager(msgpack.decode(data));
+        this.notebookManager = new NotebookManager(
+          decodeNotebookList(data),
+        );
         if (this.notebookManager.hasFile(key))
           result = this.notebookManager.getId(key);
       } else {
@@ -478,7 +514,9 @@ class Pluto {
       const data = Buffer.from(arrayBuffer);
 
       if (response.status === 200) {
-        // this.notebookManager = new NotebookManager(msgpack.decode(data));
+        this.notebookManager = new NotebookManager(
+          decodeNotebookList(data),
+        );
         if (this.notebookManager.hasId(key)) {
           const temp = this.notebookManager.getFile(key)!;
           if (isExtMatch(temp)) {
