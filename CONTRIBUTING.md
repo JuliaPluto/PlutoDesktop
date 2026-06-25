@@ -19,6 +19,29 @@ After the initial setup:
 - run `npm run start`
 > Node: Currently the code has some Windows-specific parts, such as checking for admin rights etc.
 
+## Inspect the Electron UI
+
+This project includes [agent-browser](https://agent-browser.dev/) so agents and contributors can inspect the running Electron renderer through Chrome DevTools Protocol.
+
+In one terminal, launch the app with CDP enabled:
+
+```sh
+npm run start:inspect
+```
+
+This skips the Julia asset-generation hook and assumes the normal development assets already exist. To run the full asset hook before launching, use `npm run start:inspect:assets`.
+
+Then, from another terminal:
+
+```sh
+npm run inspect:tabs
+npm run inspect:snapshot
+npm run inspect:snapshot:interactive
+npm run inspect:screenshot
+```
+
+The inspection port is `9333`. Screenshots are written to `.agent-browser/`, which is ignored by git.
+
 ## Working with Pluto.jl
 
 It is expected that those working on both Pluto.jl and PlutoDesktop will place them in the same parent directory. By default, PlutoDesktop will serve Pluto.jl assets from `../Pluto.jl/frontend` in development mode.
@@ -39,4 +62,3 @@ Modify the Julia version in the `bundler/scripts/beforePack.js` file. Git commit
 
 # Contributing
 See if there already exists and issue or an open PR against the issue you are trying to solve. If there isn't any, create a new issue.
-
