@@ -2,23 +2,46 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Hello World!</title>
-    
+    <title>Pluto.jl Desktop</title>
     <style>
+      :root {
+        color-scheme: light dark;
+      }
+
       body {
-        color: pink;
         font-family:
           -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
           sans-serif;
-        margin: auto;
-        max-width: 38rem;
+        display: grid;
+        min-height: 100vh;
+        margin: 0;
+        place-items: center;
+        background: Canvas;
+        color: CanvasText;
+      }
+
+      main {
+        display: grid;
+        gap: 1rem;
+        justify-items: center;
         padding: 2rem;
+        text-align: center;
+      }
+
+      p {
+        margin: 0;
+        font-size: 1rem;
+      }
+
+      progress {
+        width: min(18rem, 70vw);
       }
     </style>
-
   </head>
   <body>
-    <h1>💖 Hello World!</h1>
-    <p>Welcome to your Electron application.</p>
+    <main>
+      <p>Loading the Pluto.jl Julia server...</p>
+      <progress aria-label="Loading the Pluto.jl Julia server"></progress>
+    </main>
   </body>
 </html>

@@ -55,7 +55,13 @@ export const createPlutoWindow = (landingUrl?: string | null): Pluto => {
     },
   });
 
-  const pluto = landingUrl === undefined ? new Pluto(win) : new Pluto(win, landingUrl);
+  const defaultLandingUrl = Globals.PLUTO_STARTED
+    ? Pluto.resolveHtmlPath('index.html')
+    : MAIN_WINDOW_WEBPACK_ENTRY;
+  const pluto = new Pluto(
+    win,
+    landingUrl === undefined ? defaultLandingUrl : landingUrl,
+  );
   win.focus();
 
   win.webContents.setVisualZoomLevelLimits(1, 3);
@@ -70,7 +76,7 @@ export const createPlutoWindow = (landingUrl?: string | null): Pluto => {
 app.whenReady().then(async () => {
   await initGlobals();
   createPlutoWindow();
-  startup(app);
+  startup(app, MAIN_WINDOW_WEBPACK_ENTRY);
 
   // This is set here because it required the app to be ready
   session.defaultSession.on('will-download', (_event, item) => {
