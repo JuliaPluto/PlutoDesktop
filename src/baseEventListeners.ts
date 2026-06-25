@@ -11,10 +11,17 @@ import { GlobalWindowManager } from './windowHelpers.ts';
 import { generalLogger } from './logger.ts';
 import { Globals } from './globals.ts';
 
+type OpenNotebookOptions = { newWindow?: boolean };
+
 ipcMain.handle(
   'pluto-desktop:is-backend-loaded',
   async (): Promise<boolean> => Globals.PLUTO_STARTED,
 );
+
+ipcMain.on('PLUTO-OPEN-MAIN-MENU', async (): Promise<void> => {
+  const { createPlutoWindow } = await import('./index.ts');
+  createPlutoWindow();
+});
 
 ipcMain.on(
   'PLUTO-OPEN-NOTEBOOK',
@@ -22,18 +29,20 @@ ipcMain.on(
     event,
     type: 'path' | 'url' | 'new' = 'new',
     pathOrURL?: string,
+    options?: OpenNotebookOptions,
   ): Promise<void> => {
-    const plutoWindow =
-      GlobalWindowManager.getInstance().getWindowByWebContentsId(
-        event.sender.id,
-      );
+    const plutoWindow = options?.newWindow
+      ? (await import('./index.ts')).createPlutoWindow(null)
+      : GlobalWindowManager.getInstance().getWindowByWebContentsId(
+          event.sender.id,
+        );
     if (!plutoWindow) {
       generalLogger.error(
         'Could not find Pluto window with matching webContentsId',
       );
       return;
     }
-    plutoWindow.open(type, pathOrURL);
+    await plutoWindow.open(type, pathOrURL);
   },
 );
 

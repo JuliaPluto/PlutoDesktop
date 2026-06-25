@@ -6,12 +6,14 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 export type Channels =
   | 'ipc-example'
   | 'PLUTO-OPEN-NOTEBOOK'
+  | 'PLUTO-OPEN-MAIN-MENU'
   | 'PLUTO-SHUTDOWN-NOTEBOOK'
   | 'PLUTO-MOVE-NOTEBOOK'
   | 'PLUTO-EXPORT-NOTEBOOK'
   | 'set-block-screen-text';
 
 type PlutoExport = 'file' | 'html' | 'state' | 'pdf';
+type OpenNotebookOptions = { newWindow?: boolean };
 
 contextBridge.exposeInMainWorld('plutoDesktop', {
   /**
@@ -25,6 +27,10 @@ contextBridge.exposeInMainWorld('plutoDesktop', {
    */
   isBackendLoaded: (): Promise<boolean> =>
     ipcRenderer.invoke('pluto-desktop:is-backend-loaded'),
+
+  openMainMenu(): void {
+    ipcRenderer.send('PLUTO-OPEN-MAIN-MENU');
+  },
 
   ipcRenderer: {
     sendMessage(channel: Channels, args: unknown[]) {
@@ -46,8 +52,9 @@ contextBridge.exposeInMainWorld('plutoDesktop', {
     openNotebook(
       type: 'path' | 'url' | 'new' = 'new',
       pathOrURL?: string,
+      options?: OpenNotebookOptions,
     ): void {
-      ipcRenderer.send('PLUTO-OPEN-NOTEBOOK', type, pathOrURL);
+      ipcRenderer.send('PLUTO-OPEN-NOTEBOOK', type, pathOrURL, options);
     },
     shutdownNotebook(id?: string): void {
       ipcRenderer.send('PLUTO-SHUTDOWN-NOTEBOOK', id);

@@ -1,5 +1,6 @@
 import { BrowserWindow, dialog, shell } from 'electron';
 import fs from 'node:fs';
+import { URL } from 'node:url';
 import { decode } from '@msgpack/msgpack';
 
 import { PlutoExport } from './enums.ts';
@@ -46,6 +47,8 @@ class Pluto {
 
   private id: string | undefined;
 
+  private viewedNotebookId: string | null = null;
+
   constructor(win: BrowserWindow, landingUrl: string | null) {
     this.win = win;
     if (landingUrl) {
@@ -62,17 +65,25 @@ class Pluto {
       }
     });
 
+    const updateViewedNotebookId = () => {
+      this.viewedNotebookId = Pluto.getNotebookIdFromWindow(this.win);
+    };
+
     let notebookIdOnClose: string | null = null;
     this.win.on('close', () => {
-      notebookIdOnClose = Pluto.getNotebookIdFromWindow(this.win);
+      updateViewedNotebookId();
+      notebookIdOnClose = this.viewedNotebookId;
     });
 
     this.win.once('closed', async () => {
       // Shutdown only after the close is final, so cancelled unsaved-edit
       // closes keep running.
-      const notebookId = notebookIdOnClose;
+      const notebookId = notebookIdOnClose ?? this.viewedNotebookId;
 
-      if (notebookId) {
+      if (
+        notebookId &&
+        !Pluto.isNotebookOpenInAnotherWindow(notebookId, this.win)
+      ) {
         generalLogger.info(`Shutting down notebook ${notebookId}`);
         await Pluto.shutdownNotebook(notebookId, false).catch(
           (err: unknown) => {
@@ -90,6 +101,7 @@ class Pluto {
     const refreshMenu = () => {
       if (this.win.isDestroyed()) return;
 
+      updateViewedNotebookId();
       const showExport = menuBuilder.showExport();
       if (!menuBuilder.hasbuilt || showExport !== lastShowExport) {
         lastShowExport = showExport;
@@ -129,6 +141,7 @@ class Pluto {
 
     let window: BrowserWindow = this.getBrowserWindow();
     const setBlockScreenText = (blockScreenText: string | null) => {
+      if (window.isDestroyed()) return;
       window.webContents.send('set-block-screen-text', blockScreenText);
     };
 
@@ -325,6 +338,23 @@ class Pluto {
     }
   };
 
+  private static isNotebookOpenInAnotherWindow = (
+    notebookId: string,
+    currentWindow: BrowserWindow,
+  ): boolean =>
+    GlobalWindowManager.getInstance().plutoWindows.some((pluto) => {
+      const window = pluto.getBrowserWindow();
+      return (
+        window !== currentWindow &&
+        Pluto.getNotebookIdFromWindow(window) === notebookId
+      );
+    });
+
+  private static loadHome = async (window: BrowserWindow): Promise<void> => {
+    if (window.isDestroyed()) return;
+    await window.loadURL(Pluto.resolveHtmlPath('index.html'));
+  };
+
   private static getNotebookLookupKey = (
     type: 'url' | 'path' | 'new',
     pathOrURL: string,
@@ -372,15 +402,14 @@ class Pluto {
       );
       if (response.status === 200) {
         generalLogger.info(`File ${id} has been shutdown.`);
-        if (reloadWindow && window)
-          await window.loadURL(Pluto.resolveHtmlPath('index.html'));
+        if (reloadWindow && window) await Pluto.loadHome(window);
       } else {
         dialog.showErrorBox(
           'PLUTO-FILE-SHUTDOWN-ERROR',
           'Could not shutdown file for some reason',
         );
       }
-    } catch (error: { message: string } | any) {
+    } catch (error: unknown) {
       generalLogger.error('PLUTO-FILE-SHUTDOWN-ERROR', error);
     }
   };
@@ -479,7 +508,7 @@ class Pluto {
       } else {
         dialog.showErrorBox(response.statusText, String(data));
       }
-    } catch (error: { message: string } | any) {
+    } catch (error: unknown) {
       generalLogger.error('PLUTO-CHECK-NOTEBOOK-ERROR', error);
     }
 
@@ -523,7 +552,7 @@ class Pluto {
       } else {
         dialog.showErrorBox(response.statusText, String(data));
       }
-    } catch (error: { message: string } | any) {
+    } catch (error: unknown) {
       generalLogger.error('PLUTO-CHECK-NOTEBOOK-ERROR', error);
     }
 
