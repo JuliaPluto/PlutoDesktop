@@ -73,6 +73,8 @@ const downloadJulia = async () => {
   console.log(`\tDownloaded Julia ${JULIA_VERSION} for ${platform}`);
 };
 
+// Currently disabled, see https://github.com/JuliaPluto/PlutoDesktop/issues/56
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const precompilePluto = async ({ julia_path }) => {
   // TODO: You need to add PackageCompiler to some environment for this to work.
 

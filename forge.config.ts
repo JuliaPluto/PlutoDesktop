@@ -10,7 +10,6 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
-// @ts-ignore - generateAssets.js is an ES module
 import generateAssets from './scripts/generateAssets.js';
 
 const config: ForgeConfig = {
@@ -33,6 +32,8 @@ const config: ForgeConfig = {
   plugins: [
     new AutoUnpackNativesPlugin({}),
     new WebpackPlugin({
+      // default port 3000 is popular and often taken by other dev servers
+      port: 3010,
       mainConfig,
       renderer: {
         config: rendererConfig,

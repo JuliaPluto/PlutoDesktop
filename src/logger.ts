@@ -12,170 +12,51 @@ const colors = {
   grey: '\x1b[90m',
   magenta: '\x1b[95m',
   yellow: '\x1b[33m',
-  bgYellowBlack: '\x1b[43m\x1b[30m',
 };
 
-const colorize = (color: string, text: string) => `${color}${text}${colors.reset}`;
+const colorize = (color: string, text: string) =>
+  `${color}${text}${colors.reset}`;
 
-const functions = {
-  debug: (prefix: string, ...params: any[]) =>
-    console.debug(prefix, '>', colorize(colors.white, params.join(' '))),
-  error: (prefix: string, ...params: any[]) =>
-    console.error(prefix, '>', colorize(colors.red, params.join(' '))),
-  info: (prefix: string, ...params: any[]) =>
-    console.info(prefix, '>', colorize(colors.blue, params.join(' '))),
-  log: (prefix: string, ...params: any[]) =>
-    console.log(prefix, '>', colorize(colors.grey, params.join(' '))),
-  silly: (prefix: string, ...params: any[]) =>
-    console.log(prefix, '>', colorize(colors.magenta, params.join(' '))),
-  verbose: (prefix: string, ...params: any[]) =>
-    console.log(prefix, '>', colorize(colors.grey, params.join(' '))),
-  warn: (prefix: string, ...params: any[]) =>
-    console.warn(prefix, '>', colorize(colors.yellow, params.join(' '))),
-  announce: (prefix: string, ...params: any[]) =>
-    console.warn(prefix, '>', colorize(colors.bgYellowBlack, ` ${params.join(' ')} `)),
-  request: (...params: any[]) =>
-    console.warn(colorize(colors.bgYellowBlack, ' request '), '>', params.join(' ')),
-  response: (...params: any[]) =>
-    console.warn(colorize(colors.bgYellowBlack, ' response '), '>', params.join(' ')),
+const levelStyles: Record<
+  string,
+  { color: string; print: (...args: unknown[]) => void }
+> = {
+  debug: { color: colors.white, print: console.debug },
+  error: { color: colors.red, print: console.error },
+  info: { color: colors.blue, print: console.info },
+  log: { color: colors.grey, print: console.log },
+  silly: { color: colors.magenta, print: console.log },
+  verbose: { color: colors.grey, print: console.log },
+  warn: { color: colors.yellow, print: console.warn },
 };
 
-const format = '{y}-{m}-{d} {h}:{i}:{s}.{ms} {level} {label} > {text}';
+const createLogger = (label: string, fileName: string) => {
+  const logger = log.create({ logId: `${label}-log` });
+  logger.variables.label = label;
+  logger.transports.file.fileName = fileName;
+  logger.transports.file.format =
+    '{y}-{m}-{d} {h}:{i}:{s}.{ms} {level} {label} > {text}';
+  // @ts-expect-error electron-log accepts a plain function as a transport
+  logger.transports.console = (message: log.LogMessage) => {
+    const text = util.format(...message.data);
+    const prefix = `${message.date.toLocaleDateString()} ${message.date.toLocaleTimeString()} ${
+      message.level
+    } ${label}`;
+    const { color, print } = levelStyles[message.level] ?? levelStyles.info;
+    print(prefix, '>', colorize(color, text));
+  };
+  return logger;
+};
 
 /**
  * **generalLogger** is the logger that logs the electron main process.
  */
-const generalLogger = log.create({ logId: 'general-log' });
-generalLogger.variables.label = 'general';
-generalLogger.levels.push('announce');
-generalLogger.transports.file.fileName = 'general.log';
-generalLogger.transports.file.format = format;
-// @ts-ignore
-generalLogger.transports.console = (message) => {
-  const text = util.format(...message.data);
-  const prefix = `${message.date.toLocaleDateString()} ${message.date.toLocaleTimeString()} ${
-    message.level
-  } general`;
-  switch (message.level) {
-    case 'debug':
-      functions.debug(prefix, text);
-      break;
-    case 'error':
-      functions.error(prefix, text);
-      break;
-    case 'info':
-      functions.info(prefix, text);
-      break;
-    // @ts-ignore
-    case 'log':
-      functions.log(prefix, text);
-      break;
-    case 'silly':
-      functions.silly(prefix, text);
-      break;
-    case 'verbose':
-      functions.verbose(prefix, text);
-      break;
-    case 'warn':
-      functions.warn(prefix, text);
-      break;
-    // @ts-ignore
-    case 'announce':
-      functions.announce(prefix, text);
-      break;
-    default:
-      functions.info(prefix, text);
-      break;
-  }
-};
-generalLogger.transports.console.useStyles = true;
+const generalLogger = createLogger('general', 'general.log');
 
 /**
  * **juliaLogger** logs the julia and pluto console.
  */
-const juliaLogger = log.create({ logId: 'julia-log' });
-juliaLogger.variables.label = 'julia';
-juliaLogger.transports.file.fileName = 'julia.log';
-juliaLogger.transports.file.format = format;
-// @ts-ignore
-juliaLogger.transports.console = (message) => {
-  const text = util.format(...message.data);
-  const prefix = `${message.date.toLocaleDateString()} ${message.date.toLocaleTimeString()} ${
-    message.level
-  } julia`;
-  switch (message.level) {
-    case 'debug':
-      functions.debug(prefix, text);
-      break;
-    case 'error':
-      functions.error(prefix, text);
-      break;
-    case 'info':
-      functions.info(prefix, text);
-      break;
-    // @ts-ignore
-    case 'log':
-      functions.log(prefix, text);
-      break;
-    case 'silly':
-      functions.silly(prefix, text);
-      break;
-    case 'verbose':
-      functions.verbose(prefix, text);
-      break;
-    case 'warn':
-      functions.warn(prefix, text);
-      break;
-    default:
-      functions.info(prefix, text);
-      break;
-  }
-};
-juliaLogger.transports.console.useStyles = true;
-
-/**
- * **backgroundLogger** logs about the things happening in the background, like autoUpdate.
- */
-const backgroundLogger = log.create({ logId: 'background-log' });
-backgroundLogger.variables.label = 'background';
-backgroundLogger.transports.file.level = 'info';
-backgroundLogger.transports.file.fileName = 'background.log';
-backgroundLogger.transports.file.format = format;
-// @ts-ignore
-backgroundLogger.transports.console = (message) => {
-  const text = util.format(...message.data);
-  const prefix = `${message.date.toLocaleDateString()} ${message.date.toLocaleTimeString()} ${
-    message.level
-  } background`;
-  switch (message.level) {
-    case 'debug':
-      functions.debug(prefix, text);
-      break;
-    case 'error':
-      functions.error(prefix, text);
-      break;
-    case 'info':
-      functions.info(prefix, text);
-      break;
-    // @ts-ignore
-    case 'log':
-      functions.log(prefix, text);
-      break;
-    case 'silly':
-      functions.silly(prefix, text);
-      break;
-    case 'verbose':
-      functions.verbose(prefix, text);
-      break;
-    case 'warn':
-      functions.warn(prefix, text);
-      break;
-    default:
-      functions.info(prefix, text);
-      break;
-  }
-};
-backgroundLogger.transports.console.useStyles = true;
+const juliaLogger = createLogger('julia', 'julia.log');
 
 const getLogsFolder = (): string => {
   const logsFolder = path.dirname(generalLogger.transports.file.getFile().path);
@@ -183,4 +64,4 @@ const getLogsFolder = (): string => {
   return logsFolder;
 };
 
-export { generalLogger, juliaLogger, backgroundLogger, getLogsFolder };
+export { generalLogger, juliaLogger, getLogsFolder };

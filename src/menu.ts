@@ -29,9 +29,6 @@ export default class MenuBuilder {
       this.contextMenuSetup = true;
     }
 
-    // const menu = Menu.buildFromTemplate(this.buildDefaultTemplate());
-    // this.pluto.getBrowserWindow().setMenu(menu);
-
     const menu = Menu.buildFromTemplate(this.buildDefaultTemplate());
     Menu.setApplicationMenu(menu); // Works on macOS + Windows
 
@@ -39,11 +36,11 @@ export default class MenuBuilder {
   };
 
   setupContextMenu(isDebug = false): void {
-    const window = this.pluto.getBrowserWindow();
+    const window = this.browser;
     window.webContents.on('context-menu', (_, props) => {
       const { x, y, linkURL } = props;
 
-      const template = isDebug
+      const template: MenuItemConstructorOptions[] = isDebug
         ? [
             {
               label: 'Inspect element',
@@ -68,9 +65,6 @@ export default class MenuBuilder {
 
   buildDefaultTemplate(): MenuItemConstructorOptions[] {
     const show_export = this.showExport();
-    const browser = this.pluto.getBrowserWindow();
-
-    /////////////////////////////
 
     const file: MenuItemConstructorOptions[] = [
       {
@@ -79,38 +73,6 @@ export default class MenuBuilder {
           createPlutoWindow();
         },
       },
-      // {
-      //   label: '&New',
-      //   accelerator: 'Ctrl+N',
-      //   click: async () => {
-      //     await Pluto.notebook.open();
-      //   },
-      // },
-      // {
-      //   label: '&Open',
-      //   accelerator: 'Ctrl+O',
-      //   click: async () => {
-      //     Pluto.open('path');
-      //   },
-      // },
-      // {
-      //   label: 'Copy current URL',
-      //   click: async () => {
-      //     let url = this.mainWindow.webContents.getURL();
-      //     if (!url.includes('secret'))
-      //       url += `&secret=${Pluto.runningInfo?.secret}`;
-      //     clipboard.writeText(url);
-      //   },
-      // },
-      // {
-      //   label: 'Open current URL in browser',
-      //   click: async () => {
-      //     let url = this.mainWindow.webContents.getURL();
-      //     if (!url.includes('secret'))
-      //       url += `&secret=${Pluto.runningInfo?.secret}`;
-      //     shell.openExternal(url);
-      //   },
-      // },
       ...(show_export
         ? [
             {
@@ -139,8 +101,6 @@ export default class MenuBuilder {
       },
     ];
 
-    /////////////////////////////
-
     const view: MenuItemConstructorOptions[] = [
       {
         label: '&Reload',
@@ -153,7 +113,7 @@ export default class MenuBuilder {
         label: 'Toggle &Full Screen',
         accelerator: 'F11',
         click: () => {
-          this.browser.setFullScreen(!browser.isFullScreen());
+          this.browser.setFullScreen(!this.browser.isFullScreen());
         },
       },
       {
@@ -187,12 +147,6 @@ export default class MenuBuilder {
           await this.executeIfID(Pluto.notebook.export, PlutoExport.HTML);
         },
       },
-      // {
-      //   label: 'Pluto Statefile',
-      //   click: async () => {
-      //     await this.executeIfID(Pluto.notebook.export, PlutoExport.STATE);
-      //   },
-      // },
       {
         label: 'PDF File',
         click: async () => {
@@ -201,27 +155,7 @@ export default class MenuBuilder {
       },
     ];
 
-    const isMac = process.platform === 'darwin';
-    const appName = "Pluto Desktop";
-
     return [
-      // ...(isMac? [
-      //     {
-      //       label: appName,
-      //       submenu: [
-      //         { role: 'about' },
-      //         { type: 'separator' },
-      //         { role: 'services' },
-      //         { type: 'separator' },
-      //         { role: 'hide' },
-      //         { role: 'hideothers' },
-      //         { role: 'unhide' },
-      //         { type: 'separator' },
-      //         { role: 'quit' },
-      //       ],
-      //     },
-      //   ]
-      // : []),
       {
         label: '&File',
         submenu: file,
@@ -245,14 +179,14 @@ export default class MenuBuilder {
     try {
       const url = new URL(this.browser.webContents.getURL());
       return url.searchParams.has('id');
-    } catch (error) {
+    } catch {
       return false;
     }
   }
 
-  private async executeIfID(
-    callback: (id: string, ...extra: any[]) => Promise<void> | void,
-    ...extraArgs: any[]
+  private async executeIfID<Extra extends unknown[]>(
+    callback: (id: string, ...extra: Extra) => Promise<void> | void,
+    ...extraArgs: Extra
   ) {
     const url = new URL(this.browser.webContents.getURL());
     const id = url.searchParams.get('id');
