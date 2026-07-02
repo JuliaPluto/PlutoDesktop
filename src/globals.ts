@@ -2,7 +2,7 @@ import { getRandomValues } from 'node:crypto';
 
 // adapted from PlutoHash.js in fonsp/Pluto.jl
 const urlSafeBase64 = (original: string) => {
-  return original.replace(/[\+\/\=]/g, (s) => {
+  return original.replace(/[+/=]/g, (s) => {
     const c = s.charCodeAt(0);
     return c === 43 ? '-' : c === 47 ? '_' : '';
   });
@@ -21,8 +21,6 @@ const generateSecret = (length = 8) => {
 };
 
 export class Globals {
-  public static JULIA: string;
-  public static JULIA_PROJECT: string;
   public static PLUTO_LOCATION: string;
   public static PLUTO_SECRET: string = generateSecret();
   public static PLUTO_PORT: number;
