@@ -1,54 +1,47 @@
 import Pluto from './pluto.ts';
-import { randomUUID } from 'node:crypto';
 import { generalLogger } from './logger.ts';
 
-type WindowList = { id: string; window: Pluto }[];
+/**
+ * Keeps track of all open Pluto windows. When the last window closes,
+ * the Pluto server process is shut down.
+ */
 export class GlobalWindowManager {
   private static instance: GlobalWindowManager;
-  /**
-   * Maps window identifier to its associated BrowserWindow
-   */
-  private windowList: WindowList;
-  private constructor() {
-    this.windowList = [];
-  }
+
+  private windows: Pluto[] = [];
+
   static getInstance(): GlobalWindowManager {
     if (!this.instance) {
       this.instance = new GlobalWindowManager();
     }
     return this.instance;
   }
-  get plutoWindows(): Pluto[] {
-    return this.windowList.map((x) => x.window);
-  }
-  getPlutoWindowById(id: string): Pluto | undefined {
-    return this.windowList.find((x) => x.id === id)?.window;
-  }
-  registerWindow(pluto: Pluto): string {
-    const id = randomUUID();
-    pluto.setId(id);
-    this.windowList.push({
-      id,
-      window: pluto,
-    });
-    generalLogger.info(`Window registered with id=${id}`);
-    return id;
-  }
-  unregisterWindow(pluto: Pluto) {
-    this.windowList = this.windowList.filter((x) => x.id !== pluto.getId());
-    generalLogger.info(`Window unregistered with id=${pluto.getId()}`);
 
-    if (this.windowList.length === 0) {
+  get plutoWindows(): Pluto[] {
+    return [...this.windows];
+  }
+
+  registerWindow(pluto: Pluto) {
+    this.windows.push(pluto);
+    generalLogger.info(`Window registered, ${this.windows.length} open`);
+  }
+
+  unregisterWindow(pluto: Pluto) {
+    this.windows = this.windows.filter((w) => w !== pluto);
+    generalLogger.info(`Window unregistered, ${this.windows.length} open`);
+
+    if (this.windows.length === 0) {
       Pluto.closePlutoFunction?.();
     }
   }
+
   getWindowByWebContentsId(webContentsId: number): Pluto | undefined {
-    return this.windowList.find(
-      (x) => x.window.getBrowserWindow().webContents.id === webContentsId,
-    )?.window;
+    return this.windows.find(
+      (p) => p.getBrowserWindow().webContents.id === webContentsId,
+    );
   }
 
   static all(f: (p: Pluto) => void) {
-    this.getInstance().plutoWindows.forEach(f);
+    this.getInstance().windows.forEach(f);
   }
 }

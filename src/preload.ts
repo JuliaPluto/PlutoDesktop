@@ -3,14 +3,9 @@
 
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 
-export type Channels =
-  | 'ipc-example'
-  | 'PLUTO-OPEN-NOTEBOOK'
-  | 'PLUTO-OPEN-MAIN-MENU'
-  | 'PLUTO-SHUTDOWN-NOTEBOOK'
-  | 'PLUTO-MOVE-NOTEBOOK'
-  | 'PLUTO-EXPORT-NOTEBOOK'
-  | 'set-block-screen-text';
+// Channels the renderer is allowed to listen on. This is the contract with
+// Pluto.jl's frontend/components/DesktopInterface.js.
+export type Channels = 'PLUTO-MOVE-NOTEBOOK' | 'set-block-screen-text';
 
 type PlutoExport = 'file' | 'html' | 'state' | 'pdf';
 type OpenNotebookOptions = { newWindow?: boolean };
@@ -28,14 +23,15 @@ contextBridge.exposeInMainWorld('plutoDesktop', {
   isBackendLoaded: (): Promise<boolean> =>
     ipcRenderer.invoke('pluto-desktop:is-backend-loaded'),
 
+  /**
+   * Opens the main menu (welcome page) in a new window. Pluto.jl's frontend
+   * calls this when the user clicks the Pluto logo in the editor.
+   */
   openMainMenu(): void {
     ipcRenderer.send('PLUTO-OPEN-MAIN-MENU');
   },
 
   ipcRenderer: {
-    sendMessage(channel: Channels, args: unknown[]) {
-      ipcRenderer.send(channel, args);
-    },
     on(channel: Channels, func: (...args: unknown[]) => void) {
       const subscription = (_event: IpcRendererEvent, ...args: unknown[]) =>
         func(...args);
@@ -55,9 +51,6 @@ contextBridge.exposeInMainWorld('plutoDesktop', {
       options?: OpenNotebookOptions,
     ): void {
       ipcRenderer.send('PLUTO-OPEN-NOTEBOOK', type, pathOrURL, options);
-    },
-    shutdownNotebook(id?: string): void {
-      ipcRenderer.send('PLUTO-SHUTDOWN-NOTEBOOK', id);
     },
     moveNotebook(id?: string): void {
       ipcRenderer.send('PLUTO-MOVE-NOTEBOOK', id);

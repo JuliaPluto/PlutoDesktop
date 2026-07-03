@@ -2,7 +2,6 @@
  * Main process of the Electron application.
  */
 import { app, BrowserWindow, nativeTheme, session } from 'electron';
-import * as fs from 'fs';
 import * as path from 'path';
 import Pluto from './pluto';
 import './baseEventListeners.ts';
@@ -28,21 +27,8 @@ if (require('electron-squirrel-startup')) {
  * Returns the Pluto instance. Exported so the menu can spawn new windows.
  */
 export const createPlutoWindow = (landingUrl?: string | null): Pluto => {
-  // Determine preload script path
-  let preloadPath: string | undefined;
-
-  if (typeof MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY !== 'undefined' && fs.existsSync(MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY)) {
-    preloadPath = MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY;
-  } else {
-    // In development, try the .webpack directory directly
-    const devPreloadPath = path.join(app.getAppPath(), '.webpack/renderer/main_window/preload.js');
-    if (fs.existsSync(devPreloadPath)) {
-      preloadPath = devPreloadPath;
-    }
-  }
-
   const win = new BrowserWindow({
-    title: '⚡ Pluto ⚡',
+    title: 'Pluto.jl',
     height: 800,
     width: 700,
     resizable: true,
@@ -50,7 +36,7 @@ export const createPlutoWindow = (landingUrl?: string | null): Pluto => {
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#1F1F1F' : 'white',
     icon: getAssetPath('icon.png'),
     webPreferences: {
-      preload: preloadPath,
+      preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       sandbox: false,
     },
   });
@@ -80,16 +66,19 @@ app.whenReady().then(async () => {
 
   // This is set here because it required the app to be ready
   session.defaultSession.on('will-download', (_event, item) => {
-      const fileName = item.getFilename();
-      const ext = fileName.split('.')[fileName.split('.').length - 1];
-      let fileType = 'Pluto Statefile';
-      if (ext.endsWith('html')) fileType = 'HTML file';
-      else if (ext.endsWith('jl')) fileType = 'Pluto Notebook';
+    const fileName = item.getFilename();
+    const ext = path.extname(fileName).slice(1);
+    const fileType =
+      ext === 'html'
+        ? 'HTML file'
+        : ext === 'jl'
+          ? 'Pluto Notebook'
+          : 'Pluto Statefile';
 
-      item.setSaveDialogOptions({
-        message: 'Select location to export file',
-        filters: [{ extensions: [ext], name: fileType }],
-      });
+    item.setSaveDialogOptions({
+      message: 'Select location to export file',
+      filters: [{ extensions: [ext], name: fileType }],
+    });
   });
 
   createRequestListener();
@@ -112,24 +101,21 @@ app.on('activate', async () => {
   }
 });
 
-// WHAT EXACTLY DOES THIS DO?
+// Kill the Julia/Pluto server process when the app quits.
 app.on('will-quit', () => {
-      Pluto.close();
+  Pluto.close();
 });
 
-app.on('open-file', async (_event, file) => {
-  // TODO: Implement filesystem open
-  _event.preventDefault();
-  console.log(file);
-  console.log(app.isReady());
-  console.log(GlobalWindowManager.getInstance().plutoWindows.length);
-  // await createWindow(file);
+app.on('open-file', (event, file) => {
+  // TODO: open the file in a window (macOS "Open With" support).
+  event.preventDefault();
+  generalLogger.info('open-file event received (not implemented):', file);
 });
 
 // This handles custom Pluto.jl routes by intercepting web requests
 function createRequestListener() {
   session.defaultSession.webRequest.onBeforeRequest(async (details, next) => {
-    let cancel = false;
+    const cancel = false;
 
     if (!details.webContentsId) {
       generalLogger.warn('Web request was made without defined webContentsId');
@@ -192,6 +178,7 @@ function createRequestListener() {
             Globals.PLUTO_URL,
           ).toString(),
         });
+        return;
       }
     }
 

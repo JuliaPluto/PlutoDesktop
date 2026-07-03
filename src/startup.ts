@@ -6,11 +6,10 @@ import {
   READONLY_DEPOT_LOCATION,
   getAssetPath,
 } from './paths.ts';
-import { findJulia, findPluto } from './plutoProcess.ts';
+import { findJulia, findPluto, plutoProject } from './plutoProcess.ts';
 import { copyDirectoryRecursive } from './util.ts';
 import type { App } from 'electron';
 import { dialog } from 'electron';
-// import chalk from 'chalk';
 import { spawn } from 'node:child_process';
 import { detect } from 'detect-port';
 import Pluto from './pluto.ts';
@@ -18,16 +17,10 @@ import { Globals } from './globals.ts';
 import { GlobalWindowManager } from './windowHelpers.ts';
 
 export async function initGlobals() {
-  Globals.JULIA = findJulia();
-  generalLogger.log(`Julia found at: ${Globals.JULIA}`);
-  Globals.JULIA_PROJECT =
-    process.env.DEBUG_PROJECT_PATH ?? getAssetPath('env_for_julia');
-  let loc = await findPluto();
-  if (loc.endsWith('/') || loc.endsWith('\\')) {
-    loc = loc.slice(0, loc.length - 1);
-  }
-  console.log(loc);
-  Globals.PLUTO_LOCATION = loc;
+  generalLogger.log(`Julia found at: ${findJulia()}`);
+
+  // strip a trailing path separator
+  Globals.PLUTO_LOCATION = (await findPluto()).replace(/[/\\]$/, '');
   generalLogger.log(`Pluto found at: ${Globals.PLUTO_LOCATION}`);
 
   Globals.PLUTO_PORT = await detect(7122);
@@ -43,58 +36,51 @@ export async function startup(app: App, loadingUrl: string) {
     copyDirectoryRecursive(READONLY_DEPOT_LOCATION, DEPOT_LOCATION);
   }
 
-  const options = [`--project=${Globals.JULIA_PROJECT}`];
-  // if (!process.env.DEBUG_PROJECT_PATH) {
-  if (fs.existsSync(SYSIMAGE_LOCATION))
+  const options = [`--project=${plutoProject}`];
+  if (fs.existsSync(SYSIMAGE_LOCATION)) {
     options.push(`--sysimage=${SYSIMAGE_LOCATION}`);
-  generalLogger.info(
-    `System image found at ${SYSIMAGE_LOCATION}. Julia will use this instead of the default`,
-  );
-  // }
+    generalLogger.info(
+      `System image found at ${SYSIMAGE_LOCATION}. Julia will use this instead of the default`,
+    );
+  }
 
   options.push(getAssetPath('run_pluto.jl'));
   // See run_pluto.jl for info about these command line arguments.
-  options.push(DEPOT_LOCATION ?? '');
+  options.push(DEPOT_LOCATION);
   options.push(path.join(app.getPath('userData'), 'unsaved_notebooks'));
   options.push(Globals.PLUTO_SECRET);
   options.push(String(Globals.PLUTO_PORT));
 
   try {
-    // generalLogger.verbose(
-    //   'Executing',
-    //   chalk.bold(Globals.JULIA),
-    //   'with options',
-    //   chalk.bold(options.toLocaleString().replace(',', ' ')),
-    // );
-    const res = spawn(Globals.JULIA, options, {
+    const res = spawn(findJulia(), options, {
       env: { ...process.env, JULIA_DEPOT_PATH: DEPOT_LOCATION },
     });
 
-    const loggerListener = (data: any) => {
-      const dataString = data.toString();
+    const loggerListener = (data: Buffer) => {
+      const plutoLog = data.toString();
 
       if (!Globals.PLUTO_URL) {
-        const plutoLog = dataString;
         if (plutoLog.includes('?secret=')) {
-          const urlMatch = plutoLog.match(/http\S+/g);
-          const entryUrl = urlMatch[0];
+          const entryUrl = plutoLog.match(/http\S+/g)?.[0];
 
-          const tempURL = new URL(entryUrl);
-          if (tempURL.hostname === 'localhost')
-            // there are issues with IPv6 and Node.JS on certain hardware / operating systems
-            // the loopback IP is generally safer
-            tempURL.hostname = '127.0.0.1';
+          if (entryUrl) {
+            const tempURL = new URL(entryUrl);
+            if (tempURL.hostname === 'localhost')
+              // there are issues with IPv6 and Node.JS on certain hardware / operating systems
+              // the loopback IP is generally safer
+              tempURL.hostname = '127.0.0.1';
 
-          Globals.PLUTO_URL = new URL(`${tempURL.protocol}//${tempURL.host}`);
-          GlobalWindowManager.all((p) => {
-            const window = p.getBrowserWindow();
-            const currentUrl = window.webContents.getURL();
-            if (currentUrl === '' || currentUrl === loadingUrl) {
-              void window.loadURL(Pluto.resolveHtmlPath('index.html'));
-            }
-          });
+            Globals.PLUTO_URL = new URL(`${tempURL.protocol}//${tempURL.host}`);
+            GlobalWindowManager.all((p) => {
+              const window = p.getBrowserWindow();
+              const currentUrl = window.webContents.getURL();
+              if (currentUrl === '' || currentUrl === loadingUrl) {
+                void window.loadURL(Pluto.resolveHtmlPath('index.html'));
+              }
+            });
 
-          generalLogger.verbose('Entry url found:', Globals.PLUTO_URL);
+            generalLogger.verbose('Entry url found:', Globals.PLUTO_URL);
+          }
         } else if (
           plutoLog.includes(
             'failed to send request: The server name or address could not be resolved',
@@ -112,28 +98,27 @@ export async function startup(app: App, loadingUrl: string) {
         }
       }
 
-      juliaLogger.info(dataString);
+      juliaLogger.info(plutoLog);
     };
 
     res.stdout.on('data', loggerListener);
     res.stderr.on('data', loggerListener);
 
-    res.once('close', (code: any) => {
-      if (code !== 0) {
-        dialog.showErrorBox(code, 'Pluto crashed');
-      }
-      juliaLogger.info(`child process exited with code ${code}`);
-    });
+    // An intentional kill (e.g. when the last window closes) exits with a
+    // non-zero code on Windows; only report unexpected exits as a crash.
+    let killedIntentionally = false;
 
-    res.once('exit', (code: any) => {
+    res.once('close', (code) => {
+      if (code !== 0 && !killedIntentionally) {
+        dialog.showErrorBox('Pluto crashed', `Exit code: ${code}`);
+      }
       juliaLogger.info(`child process exited with code ${code}`);
     });
 
     Pluto.closePlutoFunction = () => {
-      if (res) {
-        juliaLogger.verbose('Killing Pluto process.');
-        res?.kill();
-      }
+      juliaLogger.verbose('Killing Pluto process.');
+      killedIntentionally = true;
+      res.kill();
     };
   } catch (e) {
     generalLogger.error('PLUTO-RUN-ERROR', e);

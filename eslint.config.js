@@ -25,6 +25,9 @@ module.exports = [
         global: 'readonly',
         window: 'readonly',
         document: 'readonly',
+        fetch: 'readonly',
+        URL: 'readonly',
+        setTimeout: 'readonly',
       },
     },
     plugins: {
@@ -38,6 +41,14 @@ module.exports = [
       'import/namespace': 'off',
       'import/default': 'off',
     },
+  },
+  {
+    // TypeScript itself checks for undefined names (with type information,
+    // which eslint doesn't have) — no-undef only produces false positives here.
+    files: ['**/*.{ts,tsx}'],
+    rules: {
+      'no-undef': 'off',
+    },
     settings: {
       'import/resolver': {
         typescript: {
@@ -48,7 +59,15 @@ module.exports = [
     },
   },
   {
-    ignores: ['node_modules/**', 'dist/**', '.webpack/**', 'out/**', 'old/**'],
+    ignores: [
+      'node_modules/**',
+      'dist/**',
+      '.webpack/**',
+      'out/**',
+      'old/**',
+      'generated_assets/**',
+      '.agent-browser/**',
+    ],
   },
 ];
 

@@ -1,11 +1,11 @@
 /**
  * This files contains receivers for ipc commands
- * comming from preload process
+ * coming from the preload process.
  */
 
-import { ipcMain } from 'electron';
+import { BrowserWindow, ipcMain } from 'electron';
 
-import { PlutoExport } from './enums.ts';
+import type { PlutoExportType } from './enums.ts';
 import Pluto from './pluto.ts';
 import { GlobalWindowManager } from './windowHelpers.ts';
 import { generalLogger } from './logger.ts';
@@ -46,26 +46,21 @@ ipcMain.on(
   },
 );
 
-ipcMain.on(
-  'PLUTO-SHUTDOWN-NOTEBOOK',
-  async (_event, id?: string): Promise<void> => Pluto.notebook.shutdown(id),
-);
-
-ipcMain.on(
-  'PLUTO-MOVE-NOTEBOOK',
-  async (_event, id?: string): Promise<void> => {
-    const loc = await Pluto.notebook.move(id);
-    _event.sender.send('PLUTO-MOVE-NOTEBOOK', loc);
-  },
-);
+ipcMain.on('PLUTO-MOVE-NOTEBOOK', async (event, id?: string): Promise<void> => {
+  const loc = await Pluto.notebook.move(
+    id,
+    BrowserWindow.fromWebContents(event.sender),
+  );
+  event.sender.send('PLUTO-MOVE-NOTEBOOK', loc);
+});
 
 ipcMain.on(
   'PLUTO-EXPORT-NOTEBOOK',
-  async (
-    _event,
-    id: string,
-    type: (typeof PlutoExport)[keyof typeof PlutoExport],
-  ): Promise<void> => {
-    await Pluto.notebook.export(id, type);
+  async (event, id: string, type: PlutoExportType): Promise<void> => {
+    await Pluto.notebook.export(
+      id,
+      type,
+      BrowserWindow.fromWebContents(event.sender),
+    );
   },
 );

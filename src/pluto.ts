@@ -3,9 +3,8 @@ import fs from 'node:fs';
 import { URL } from 'node:url';
 import { decode } from '@msgpack/msgpack';
 
-import { PlutoExport } from './enums.ts';
+import { PlutoExport, type PlutoExportType } from './enums.ts';
 import { generalLogger } from './logger.ts';
-import NotebookManager from './notebookManager.ts';
 import {
   isExtMatch,
   Loader,
@@ -18,6 +17,10 @@ import { Globals } from './globals.ts';
 import MenuBuilder from './menu.ts';
 import path from 'path';
 
+/**
+ * The Pluto server's `notebooklist` endpoint returns a msgpack-encoded
+ * mapping from notebook id to file path.
+ */
 const decodeNotebookList = (data: Uint8Array): Record<string, string> => {
   const decoded = decode(data);
 
@@ -41,11 +44,7 @@ class Pluto {
    */
   private win: BrowserWindow;
 
-  private static notebookManager: NotebookManager;
-
   static closePlutoFunction: (() => void) | undefined;
-
-  private id: string | undefined;
 
   private viewedNotebookId: string | null = null;
 
@@ -54,7 +53,6 @@ class Pluto {
     if (landingUrl) {
       this.win.loadURL(landingUrl);
     }
-    // What does this do? do we need it?
     GlobalWindowManager.getInstance().registerWindow(this);
 
     this.win.on('ready-to-show', () => {
@@ -137,9 +135,7 @@ class Pluto {
     type: 'url' | 'path' | 'new' = 'new',
     pathOrURL?: string | null,
   ) => {
-    const focusedWindow = BrowserWindow.getFocusedWindow()!;
-
-    let window: BrowserWindow = this.getBrowserWindow();
+    const window = this.getBrowserWindow();
     const setBlockScreenText = (blockScreenText: string | null) => {
       if (window.isDestroyed()) return;
       window.webContents.send('set-block-screen-text', blockScreenText);
@@ -154,119 +150,99 @@ class Pluto {
         return;
       }
 
-      if (type !== 'new' && !pathOrURL) {
-        if (type === 'path') {
-          const r = await dialog.showOpenDialog(focusedWindow, {
-            message: 'Please select a Pluto Notebook.',
-            filters: [
-              {
-                name: 'Pluto Notebook',
-                extensions: PLUTO_FILE_EXTENSIONS.map((v) => v.slice(1)),
-              },
-            ],
-            properties: ['openFile'],
-          });
+      if (type === 'path' && !pathOrURL) {
+        const r = await dialog.showOpenDialog(window, {
+          message: 'Please select a Pluto Notebook.',
+          filters: [
+            {
+              name: 'Pluto Notebook',
+              extensions: PLUTO_FILE_EXTENSIONS.map((v) => v.slice(1)),
+            },
+          ],
+          properties: ['openFile'],
+        });
 
-          if (r.canceled) return;
+        if (r.canceled) return;
 
-          [pathOrURL] = r.filePaths;
-        } else if (type !== 'url') {
-          dialog.showErrorBox(
-            'PLUTO-CANNOT-OPEN-NOTEBOOK',
-            'Empty URL Passed.',
-          );
-          return;
-        }
+        [pathOrURL] = r.filePaths;
+      }
+
+      if (type === 'url' && !pathOrURL) {
+        dialog.showErrorBox('PLUTO-CANNOT-OPEN-NOTEBOOK', 'Empty URL Passed.');
+        return;
+      }
+
+      if (!Globals.PLUTO_STARTED) {
+        dialog.showErrorBox(
+          'PLUTO-CANNOT-OPEN-NOTEBOOK',
+          'Please wait for pluto to initialize.',
+        );
+        return;
       }
 
       const loader = new Loader(window);
 
-      if (Globals.PLUTO_URL) {
-        let params = {};
-        if (pathOrURL) {
-          generalLogger.log(`Trying to open ${pathOrURL}`);
-          if (type === 'path') {
+      const params: Record<string, string> = { secret: Globals.PLUTO_SECRET };
+      if (pathOrURL) {
+        generalLogger.log(`Trying to open ${pathOrURL}`);
+        if (type === 'path') {
+          setBlockScreenText(pathOrURL);
+          params.path = pathOrURL;
+        } else if (type === 'url') {
+          const remotePath = new URL(pathOrURL).searchParams.get('path');
+          if (remotePath) {
             setBlockScreenText(pathOrURL);
-            window.webContents.send('pluto-url', `Trying to open ${pathOrURL}`);
-            params = { secret: Globals.PLUTO_SECRET, path: pathOrURL };
-          } else if (type === 'url') {
-            const newURL = new URL(pathOrURL);
-            if (newURL.searchParams.has('path')) {
-              setBlockScreenText(pathOrURL);
-              window.webContents.send(
-                'pluto-url',
-                `Trying to open ${newURL.searchParams.get('path')}`,
-              );
-              params = {
-                secret: Globals.PLUTO_SECRET,
-                path: newURL.searchParams.get('path'),
-              };
-            } else {
-              setBlockScreenText('new notebook');
-              window.webContents.send(
-                'pluto-url',
-                `Trying to open ${pathOrURL}`,
-              );
-              params = {
-                secret: Globals.PLUTO_SECRET,
-                url: pathOrURL,
-              };
-            }
-          }
-        } else {
-          params = {
-            secret: Globals.PLUTO_SECRET,
-          };
-        }
-
-        let id;
-        if (pathOrURL) {
-          if (pathOrURL.includes('localhost') && pathOrURL.includes('edit')) {
-            // is a local url
-            id = new URL(pathOrURL).searchParams.get('id');
+            params.path = remotePath;
           } else {
-            id = await Pluto.checkNotebook(
-              Pluto.getNotebookLookupKey(type, pathOrURL),
-            );
+            setBlockScreenText('new notebook');
+            params.url = pathOrURL;
           }
         }
-        let res;
-        if (id) {
-          res = { status: 200, data: id };
+      }
+
+      // If this notebook is already running, navigate to it instead of
+      // asking the server to open it again.
+      let id: string | null | undefined;
+      if (pathOrURL) {
+        if (pathOrURL.includes('localhost') && pathOrURL.includes('edit')) {
+          // is a local url
+          id = new URL(pathOrURL).searchParams.get('id');
         } else {
-          const response = await fetchPluto(
-            withSearchParams(type === 'new' ? 'new' : 'open', params),
-            {
-              method: 'POST',
-            },
+          id = await Pluto.checkNotebook(
+            Pluto.getNotebookLookupKey(type, pathOrURL),
           );
-          res = { status: response.status, data: await response.text() };
         }
+      }
 
-        if (res.status === 200) {
-          const notebookId = res.data;
-          await window.loadURL(
-            withSearchParams(Pluto.resolveHtmlPath('editor.html'), {
-              id: notebookId,
-            }).toString(),
-          );
-          loader.stopLoading();
-          return;
-        }
-
-        window.webContents.send('set-block-screen-text', pathOrURL);
-
-        loader.stopLoading();
-        dialog.showErrorBox(
-          'PLUTO-CANNOT-OPEN-NOTEBOOK',
-          'Please check if you are using the correct secret.',
+      let res;
+      if (id) {
+        res = { status: 200, data: id };
+      } else {
+        const response = await fetchPluto(
+          withSearchParams(type === 'new' ? 'new' : 'open', params),
+          {
+            method: 'POST',
+          },
         );
+        res = { status: response.status, data: await response.text() };
+      }
+
+      if (res.status === 200) {
+        const notebookId = res.data;
+        await window.loadURL(
+          withSearchParams(Pluto.resolveHtmlPath('editor.html'), {
+            id: notebookId,
+          }).toString(),
+        );
+        loader.stopLoading();
         return;
       }
+
+      setBlockScreenText(pathOrURL ?? null);
       loader.stopLoading();
       dialog.showErrorBox(
         'PLUTO-CANNOT-OPEN-NOTEBOOK',
-        'Please wait for pluto to initialize.',
+        'Please check if you are using the correct secret.',
       );
     } catch (error) {
       generalLogger.error('PLUTO-NOTEBOOK-OPEN-ERROR', error);
@@ -282,21 +258,24 @@ class Pluto {
   /**
    * @param id id of notebook to be exported
    * @param type type of export, see type declarations
+   * @param requestingWindow the window showing the notebook. Falls back to
+   * the focused window, which can be null e.g. while a dialog is open.
    * @returns nothing
    */
   private static exportNotebook = async (
     id: string,
-    type: (typeof PlutoExport)[keyof typeof PlutoExport],
+    type: PlutoExportType,
+    requestingWindow?: BrowserWindow | null,
   ) => {
     if (!Globals.PLUTO_STARTED) {
       dialog.showErrorBox(
-        'Pluto not intialized',
+        'Pluto not initialized',
         'Please wait for pluto to initialize first',
       );
       return;
     }
 
-    const window = BrowserWindow.getFocusedWindow();
+    const window = requestingWindow ?? BrowserWindow.getFocusedWindow();
 
     if (!window) {
       dialog.showErrorBox(
@@ -308,22 +287,20 @@ class Pluto {
 
     if (type === PlutoExport.PDF) {
       window.webContents.print();
-    } else {
-      const url = withSearchParams(
-        type === PlutoExport.FILE
-          ? 'notebookfile'
-          : type === PlutoExport.HTML
-            ? 'notebookexport'
-            : type === PlutoExport.STATE
-              ? 'statefile'
-              : 'unkown_export_type',
-        {
-          secret: Globals.PLUTO_SECRET,
-          id,
-        },
-      ).toString();
-      window.webContents.downloadURL(url);
+      return;
     }
+
+    const endpoint =
+      type === PlutoExport.FILE
+        ? 'notebookfile'
+        : type === PlutoExport.HTML
+          ? 'notebookexport'
+          : 'statefile';
+    const url = withSearchParams(endpoint, {
+      secret: Globals.PLUTO_SECRET,
+      id,
+    }).toString();
+    window.webContents.downloadURL(url);
   };
 
   private static getNotebookIdFromWindow = (
@@ -383,7 +360,7 @@ class Pluto {
     try {
       if (!Globals.PLUTO_STARTED) {
         dialog.showErrorBox(
-          'Pluto not intialized',
+          'Pluto not initialized',
           'Please wait for pluto to initialize first',
         );
         return;
@@ -418,21 +395,26 @@ class Pluto {
    * opens a location selection dialog and if a location
    * is selected the file is moved to that location
    * @param _id id of notebook to be moved
+   * @param requestingWindow the window showing the notebook. Falls back to
+   * the focused window, which can be null e.g. while a dialog is open.
    * @returns nothing
    */
-  private static moveNotebook = async (_id?: string) => {
+  private static moveNotebook = async (
+    _id?: string,
+    requestingWindow?: BrowserWindow | null,
+  ) => {
     try {
       if (!Globals.PLUTO_STARTED) {
         dialog.showErrorBox(
-          'Pluto not intialized',
+          'Pluto not initialized',
           'Please wait for pluto to initialize first',
         );
         return undefined;
       }
 
-      const window = BrowserWindow.getFocusedWindow()!;
-      const id =
-        _id ?? new URL(window.webContents.getURL()).searchParams.get('id');
+      const window = requestingWindow ?? BrowserWindow.getFocusedWindow();
+      if (!window) return undefined;
+      const id = _id ?? Pluto.getNotebookIdFromWindow(window);
       if (!id) return undefined;
 
       const { canceled, filePath } = await dialog.showSaveDialog(window, {
@@ -475,93 +457,72 @@ class Pluto {
   };
 
   /**
-   * Communicates with the pluto process and gets the
-   * currently open notebooks. It also creates the
-   * `notebookManager` that stores this data
-   * @param key location/url of the notebook to be checked
-   * @returns id of the notebook if it is currently open
+   * Asks the Pluto server which notebooks are currently running.
+   * @returns mapping from notebook id to file path, or null on failure
    */
-  private static checkNotebook = async (key: string) => {
-    let result;
-
-    try {
-      if (!Globals.PLUTO_STARTED) {
-        dialog.showErrorBox(
-          'Pluto not intialized',
-          'Please wait for pluto to initialize first',
-        );
-        return;
-      }
-
-      const response = await fetchPluto(
-        withSearchParams('notebooklist', { secret: Globals.PLUTO_SECRET }),
+  private static fetchRunningNotebooks = async (): Promise<Record<
+    string,
+    string
+  > | null> => {
+    if (!Globals.PLUTO_STARTED) {
+      dialog.showErrorBox(
+        'Pluto not initialized',
+        'Please wait for pluto to initialize first',
       );
-      const arrayBuffer = await response.arrayBuffer();
-      const data = Buffer.from(arrayBuffer);
-
-      if (response.status === 200) {
-        this.notebookManager = new NotebookManager(
-          decodeNotebookList(data),
-        );
-        if (this.notebookManager.hasFile(key))
-          result = this.notebookManager.getId(key);
-      } else {
-        dialog.showErrorBox(response.statusText, String(data));
-      }
-    } catch (error: unknown) {
-      generalLogger.error('PLUTO-CHECK-NOTEBOOK-ERROR', error);
+      return null;
     }
 
-    return result;
+    const response = await fetchPluto(
+      withSearchParams('notebooklist', { secret: Globals.PLUTO_SECRET }),
+    );
+    const data = new Uint8Array(await response.arrayBuffer());
+
+    if (response.status !== 200) {
+      dialog.showErrorBox(
+        response.statusText,
+        new TextDecoder().decode(data),
+      );
+      return null;
+    }
+
+    return decodeNotebookList(data);
   };
 
   /**
-   * Very similar to `checkNotebook`, but instead of returning
-   * if for given location, it returns location for given id.
-   * @param key Id of the file
-   * @returns File location string if found, else false or undefined
+   * It is not possible to 'open' an already open notebook, so we check
+   * whether the file is already running to navigate to it directly.
+   * @param file location/url of the notebook to be checked
+   * @returns id of the notebook if it is currently open
    */
-  private static getFileLocation = async (key: string) => {
-    let result: string | boolean = false;
-
+  private static checkNotebook = async (file: string) => {
     try {
-      if (!Globals.PLUTO_STARTED) {
-        dialog.showErrorBox(
-          'Pluto not intialized',
-          'Please wait for pluto to initialize first',
-        );
-        return result;
-      }
-
-      const response = await fetchPluto(
-        withSearchParams('notebooklist', { secret: Globals.PLUTO_SECRET }),
-      );
-      const arrayBuffer = await response.arrayBuffer();
-      const data = Buffer.from(arrayBuffer);
-
-      if (response.status === 200) {
-        this.notebookManager = new NotebookManager(
-          decodeNotebookList(data),
-        );
-        if (this.notebookManager.hasId(key)) {
-          const temp = this.notebookManager.getFile(key)!;
-          if (isExtMatch(temp)) {
-            result = temp;
-          }
-        }
-      } else {
-        dialog.showErrorBox(response.statusText, String(data));
-      }
+      const notebooks = await Pluto.fetchRunningNotebooks();
+      if (!notebooks) return undefined;
+      return Object.keys(notebooks).find((id) => notebooks[id] === file);
     } catch (error: unknown) {
       generalLogger.error('PLUTO-CHECK-NOTEBOOK-ERROR', error);
+      return undefined;
     }
+  };
 
-    return result;
+  /**
+   * Inverse of `checkNotebook`: returns the file location for a given id.
+   * @param id Id of the file
+   * @returns File location string if found, else false
+   */
+  private static getFileLocation = async (id: string) => {
+    try {
+      const notebooks = await Pluto.fetchRunningNotebooks();
+      const file = notebooks?.[id];
+      return file && isExtMatch(file) ? file : false;
+    } catch (error: unknown) {
+      generalLogger.error('PLUTO-CHECK-NOTEBOOK-ERROR', error);
+      return false;
+    }
   };
 
   public static resolveHtmlPath = (htmlFileName: string) => {
     let plutoLocation = Globals.PLUTO_LOCATION;
-    generalLogger.log(`Pluto found at: ${Globals.PLUTO_LOCATION}`);
 
     // overwrite the default Pluto location if in development
     if (process.env.NODE_ENV === 'development') {
@@ -579,12 +540,6 @@ class Pluto {
     )}`;
   };
 
-  public setId(id: string) {
-    this.id = id;
-  }
-  public getId() {
-    return this.id;
-  }
   public getBrowserWindow() {
     return this.win;
   }
@@ -610,7 +565,6 @@ class Pluto {
   public close = () => {
     this.win.close(); // will trigger callback in constructor to do more cleanup
   };
-
 }
 
 export default Pluto;
