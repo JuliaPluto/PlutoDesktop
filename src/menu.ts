@@ -138,19 +138,31 @@ export default class MenuBuilder {
       {
         label: 'Pluto Notebook',
         click: async () => {
-          await this.executeIfID(Pluto.notebook.export, PlutoExport.FILE);
+          await this.executeIfID(
+            Pluto.notebook.export,
+            PlutoExport.FILE,
+            this.browser,
+          );
         },
       },
       {
         label: 'HTML File',
         click: async () => {
-          await this.executeIfID(Pluto.notebook.export, PlutoExport.HTML);
+          await this.executeIfID(
+            Pluto.notebook.export,
+            PlutoExport.HTML,
+            this.browser,
+          );
         },
       },
       {
         label: 'PDF File',
         click: async () => {
-          await this.executeIfID(Pluto.notebook.export, PlutoExport.PDF);
+          await this.executeIfID(
+            Pluto.notebook.export,
+            PlutoExport.PDF,
+            this.browser,
+          );
         },
       },
     ];

@@ -3,7 +3,7 @@
  * coming from the preload process.
  */
 
-import { ipcMain } from 'electron';
+import { BrowserWindow, ipcMain } from 'electron';
 
 import type { PlutoExportType } from './enums.ts';
 import Pluto from './pluto.ts';
@@ -17,6 +17,11 @@ ipcMain.handle(
   'pluto-desktop:is-backend-loaded',
   async (): Promise<boolean> => Globals.PLUTO_STARTED,
 );
+
+ipcMain.on('PLUTO-OPEN-MAIN-MENU', async (): Promise<void> => {
+  const { createPlutoWindow } = await import('./index.ts');
+  createPlutoWindow();
+});
 
 ipcMain.on(
   'PLUTO-OPEN-NOTEBOOK',
@@ -42,13 +47,20 @@ ipcMain.on(
 );
 
 ipcMain.on('PLUTO-MOVE-NOTEBOOK', async (event, id?: string): Promise<void> => {
-  const loc = await Pluto.notebook.move(id);
+  const loc = await Pluto.notebook.move(
+    id,
+    BrowserWindow.fromWebContents(event.sender),
+  );
   event.sender.send('PLUTO-MOVE-NOTEBOOK', loc);
 });
 
 ipcMain.on(
   'PLUTO-EXPORT-NOTEBOOK',
-  async (_event, id: string, type: PlutoExportType): Promise<void> => {
-    await Pluto.notebook.export(id, type);
+  async (event, id: string, type: PlutoExportType): Promise<void> => {
+    await Pluto.notebook.export(
+      id,
+      type,
+      BrowserWindow.fromWebContents(event.sender),
+    );
   },
 );

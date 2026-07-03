@@ -23,6 +23,14 @@ contextBridge.exposeInMainWorld('plutoDesktop', {
   isBackendLoaded: (): Promise<boolean> =>
     ipcRenderer.invoke('pluto-desktop:is-backend-loaded'),
 
+  /**
+   * Opens the main menu (welcome page) in a new window. Pluto.jl's frontend
+   * calls this when the user clicks the Pluto logo in the editor.
+   */
+  openMainMenu(): void {
+    ipcRenderer.send('PLUTO-OPEN-MAIN-MENU');
+  },
+
   ipcRenderer: {
     on(channel: Channels, func: (...args: unknown[]) => void) {
       const subscription = (_event: IpcRendererEvent, ...args: unknown[]) =>

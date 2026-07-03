@@ -104,15 +104,20 @@ export async function startup(app: App, loadingUrl: string) {
     res.stdout.on('data', loggerListener);
     res.stderr.on('data', loggerListener);
 
+    // An intentional kill (e.g. when the last window closes) exits with a
+    // non-zero code on Windows; only report unexpected exits as a crash.
+    let killedIntentionally = false;
+
     res.once('close', (code) => {
-      if (code !== 0) {
-        dialog.showErrorBox(String(code), 'Pluto crashed');
+      if (code !== 0 && !killedIntentionally) {
+        dialog.showErrorBox('Pluto crashed', `Exit code: ${code}`);
       }
       juliaLogger.info(`child process exited with code ${code}`);
     });
 
     Pluto.closePlutoFunction = () => {
       juliaLogger.verbose('Killing Pluto process.');
+      killedIntentionally = true;
       res.kill();
     };
   } catch (e) {

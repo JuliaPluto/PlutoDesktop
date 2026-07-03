@@ -258,9 +258,15 @@ class Pluto {
   /**
    * @param id id of notebook to be exported
    * @param type type of export, see type declarations
+   * @param requestingWindow the window showing the notebook. Falls back to
+   * the focused window, which can be null e.g. while a dialog is open.
    * @returns nothing
    */
-  private static exportNotebook = async (id: string, type: PlutoExportType) => {
+  private static exportNotebook = async (
+    id: string,
+    type: PlutoExportType,
+    requestingWindow?: BrowserWindow | null,
+  ) => {
     if (!Globals.PLUTO_STARTED) {
       dialog.showErrorBox(
         'Pluto not initialized',
@@ -269,7 +275,7 @@ class Pluto {
       return;
     }
 
-    const window = BrowserWindow.getFocusedWindow();
+    const window = requestingWindow ?? BrowserWindow.getFocusedWindow();
 
     if (!window) {
       dialog.showErrorBox(
@@ -389,9 +395,14 @@ class Pluto {
    * opens a location selection dialog and if a location
    * is selected the file is moved to that location
    * @param _id id of notebook to be moved
+   * @param requestingWindow the window showing the notebook. Falls back to
+   * the focused window, which can be null e.g. while a dialog is open.
    * @returns nothing
    */
-  private static moveNotebook = async (_id?: string) => {
+  private static moveNotebook = async (
+    _id?: string,
+    requestingWindow?: BrowserWindow | null,
+  ) => {
     try {
       if (!Globals.PLUTO_STARTED) {
         dialog.showErrorBox(
@@ -401,7 +412,8 @@ class Pluto {
         return undefined;
       }
 
-      const window = BrowserWindow.getFocusedWindow()!;
+      const window = requestingWindow ?? BrowserWindow.getFocusedWindow();
+      if (!window) return undefined;
       const id = _id ?? Pluto.getNotebookIdFromWindow(window);
       if (!id) return undefined;
 
