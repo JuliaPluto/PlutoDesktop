@@ -93,6 +93,25 @@ class Pluto {
       GlobalWindowManager.getInstance().unregisterWindow(this);
     });
 
+    // The editor prevents unload when there are unsubmitted cell edits.
+    // Electron cancels the close silently in that case, so show a confirm
+    // dialog and let the user decide.
+    this.win.webContents.on('will-prevent-unload', (event) => {
+      const choice = dialog.showMessageBoxSync(this.win, {
+        type: 'warning',
+        buttons: ['Leave', 'Stay'],
+        defaultId: 1,
+        cancelId: 1,
+        title: 'Unsaved changes',
+        message: 'This notebook has unsubmitted cell edits.',
+        detail: 'If you leave now, edits that have not been run will be lost.',
+      });
+      if (choice === 0) {
+        // Ignore the beforeunload handler and continue closing/navigating.
+        event.preventDefault();
+      }
+    });
+
     const menuBuilder = new MenuBuilder(this);
 
     let lastShowExport: boolean | undefined;
@@ -422,8 +441,12 @@ class Pluto {
         buttonLabel: 'Select',
         filters: [
           {
-            name: 'Pluto Notebook',
-            extensions: PLUTO_FILE_EXTENSIONS.map((v) => v.slice(1)),
+            name: 'Pluto notebook (.pluto.jl)',
+            extensions: ['pluto.jl'],
+          },
+          {
+            name: 'Pluto notebook (.jl)',
+            extensions: ['jl'],
           },
         ],
       });
