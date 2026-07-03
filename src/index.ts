@@ -28,7 +28,7 @@ if (require('electron-squirrel-startup')) {
  */
 export const createPlutoWindow = (landingUrl?: string | null): Pluto => {
   const win = new BrowserWindow({
-    title: '⚡ Pluto ⚡',
+    title: 'Pluto.jl',
     height: 800,
     width: 700,
     resizable: true,
