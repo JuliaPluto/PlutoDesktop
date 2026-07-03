@@ -114,14 +114,17 @@ class Pluto {
 
     const menuBuilder = new MenuBuilder(this);
 
-    let lastShowExport: boolean | undefined;
+    let lastShowNotebookActions: boolean | undefined;
     const refreshMenu = () => {
       if (this.win.isDestroyed()) return;
 
       updateViewedNotebookId();
-      const showExport = menuBuilder.showExport();
-      if (!menuBuilder.hasbuilt || showExport !== lastShowExport) {
-        lastShowExport = showExport;
+      const showNotebookActions = menuBuilder.showNotebookActions();
+      if (
+        !menuBuilder.hasbuilt ||
+        showNotebookActions !== lastShowNotebookActions
+      ) {
+        lastShowNotebookActions = showNotebookActions;
         this.win.setMenuBarVisibility(true);
         menuBuilder.buildMenu();
       }

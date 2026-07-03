@@ -2,7 +2,6 @@ import { Menu, dialog, shell } from 'electron';
 import type { BrowserWindow, MenuItemConstructorOptions } from 'electron';
 import { URL } from 'node:url';
 
-import { PlutoExport } from './enums.ts';
 import Pluto from './pluto.ts';
 import { createPlutoWindow } from './index.ts';
 import { getLogsFolder } from './logger.ts';
@@ -64,7 +63,7 @@ export default class MenuBuilder {
   }
 
   buildDefaultTemplate(): MenuItemConstructorOptions[] {
-    const show_export = this.showExport();
+    const showNotebookActions = this.showNotebookActions();
 
     const file: MenuItemConstructorOptions[] = [
       {
@@ -73,7 +72,7 @@ export default class MenuBuilder {
           createPlutoWindow();
         },
       },
-      ...(show_export
+      ...(showNotebookActions
         ? [
             {
               label: 'Reveal in File Explorer',
@@ -134,39 +133,6 @@ export default class MenuBuilder {
       },
     ];
 
-    const exportmenu: MenuItemConstructorOptions[] = [
-      {
-        label: 'Pluto Notebook',
-        click: async () => {
-          await this.executeIfID(
-            Pluto.notebook.export,
-            PlutoExport.FILE,
-            this.browser,
-          );
-        },
-      },
-      {
-        label: 'HTML File',
-        click: async () => {
-          await this.executeIfID(
-            Pluto.notebook.export,
-            PlutoExport.HTML,
-            this.browser,
-          );
-        },
-      },
-      {
-        label: 'PDF File',
-        click: async () => {
-          await this.executeIfID(
-            Pluto.notebook.export,
-            PlutoExport.PDF,
-            this.browser,
-          );
-        },
-      },
-    ];
-
     return [
       {
         label: '&File',
@@ -176,18 +142,10 @@ export default class MenuBuilder {
         label: '&View',
         submenu: view,
       },
-      ...(show_export
-        ? [
-            {
-              label: '&Export',
-              submenu: exportmenu,
-            },
-          ]
-        : []),
     ];
   }
 
-  showExport() {
+  showNotebookActions() {
     try {
       const url = new URL(this.browser.webContents.getURL());
       return url.searchParams.has('id');
@@ -196,18 +154,15 @@ export default class MenuBuilder {
     }
   }
 
-  private async executeIfID<Extra extends unknown[]>(
-    callback: (id: string, ...extra: Extra) => Promise<void> | void,
-    ...extraArgs: Extra
-  ) {
+  private async executeIfID(callback: (id: string) => Promise<void> | void) {
     const url = new URL(this.browser.webContents.getURL());
     const id = url.searchParams.get('id');
     if (id) {
-      await callback(id, ...extraArgs);
+      await callback(id);
     } else {
       dialog.showErrorBox(
         'Invalid ID',
-        'Invalid ID in the url, cannot export.',
+        'Invalid ID in the URL.',
       );
     }
   }
