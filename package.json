@@ -1,7 +1,7 @@
 {
   "name": "pluto-desktop",
   "productName": "Pluto.jl Desktop",
-  "version": "1.0.1",
+  "version": "1.0.1-build.1",
   "description": "Pluto.jl Desktop",
   "main": ".webpack/main",
   "scripts": {
@@ -10,6 +10,7 @@
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "lint": "eslint .",
+    "set-pluto-version": "node scripts/setPlutoVersion.mjs",
     "start:inspect": "cross-env SKIP_GENERATE_ASSETS=1 electron-forge start -- --remote-debugging-port=9333",
     "start:inspect:assets": "electron-forge start -- --remote-debugging-port=9333",
     "inspect:tabs": "node scripts/listCdpTargets.mjs 9333",

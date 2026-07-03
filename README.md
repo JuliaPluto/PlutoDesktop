@@ -38,3 +38,7 @@ are looking for.
 
 - Just download the latest release from [here](https://github.com/JuliaPluto/PlutoDesktop/releases) and get going!
   No need to install ANY other thing. Just install this and you are done!
+
+## Maintenance
+
+See the [maintenance guide](MAINTENANCE.md) for the versioning scheme and how to update the bundled Pluto and Julia versions.
