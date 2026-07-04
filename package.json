@@ -1,7 +1,7 @@
 {
   "name": "pluto-desktop",
   "productName": "Pluto.jl Desktop",
-  "version": "1.0.1-build002",
+  "version": "1.0.1-build003",
   "description": "Pluto.jl Desktop",
   "main": ".webpack/main",
   "scripts": {
