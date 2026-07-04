@@ -3,6 +3,7 @@ import type { BrowserWindow, MenuItemConstructorOptions } from 'electron';
 import { URL } from 'node:url';
 
 import Pluto from './pluto.ts';
+import { showAboutDialog } from './about.ts';
 import { createPlutoWindow } from './index.ts';
 import { getLogsFolder } from './logger.ts';
 
@@ -141,6 +142,17 @@ export default class MenuBuilder {
       {
         label: '&View',
         submenu: view,
+      },
+      {
+        label: '&Help',
+        submenu: [
+          {
+            label: 'About Pluto.jl Desktop',
+            click: async () => {
+              await showAboutDialog();
+            },
+          },
+        ],
       },
     ];
   }
