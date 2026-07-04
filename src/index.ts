@@ -18,21 +18,27 @@ import { getAssetPath } from './paths.ts';
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 
+const AUTO_UPDATE_CHECK_DELAY_MS = 2 * 60 * 1000;
+
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
   app.quit();
-} else {
+}
+
+const scheduleAutoUpdateChecks = () => {
   // Check for new releases on GitHub (via update.electronjs.org), download them
   // in the background, and prompt the user to restart. No-op during development.
-  updateElectronApp({
-    updateSource: {
-      type: UpdateSourceType.ElectronPublicUpdateService,
-      repo: 'JuliaPluto/PlutoDesktop',
-    },
-    updateInterval: '1 hour',
-    logger: generalLogger,
-  });
-}
+  setTimeout(() => {
+    updateElectronApp({
+      updateSource: {
+        type: UpdateSourceType.ElectronPublicUpdateService,
+        repo: 'JuliaPluto/PlutoDesktop',
+      },
+      updateInterval: '1 hour',
+      logger: generalLogger,
+    });
+  }, AUTO_UPDATE_CHECK_DELAY_MS);
+};
 
 /**
  * Create a new BrowserWindow and attach a Pluto instance to it.
@@ -76,7 +82,7 @@ app.whenReady().then(async () => {
   // run (it copies the bundled Julia depot to a writable location).
   createPlutoWindow();
   await initGlobals();
-  startup(app, MAIN_WINDOW_WEBPACK_ENTRY);
+  startup(app, MAIN_WINDOW_WEBPACK_ENTRY, scheduleAutoUpdateChecks);
 
   // This is set here because it required the app to be ready
   session.defaultSession.on('will-download', (_event, item) => {

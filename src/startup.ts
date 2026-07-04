@@ -35,7 +35,11 @@ export async function initGlobals() {
   generalLogger.log(`Pluto will run on port: ${Globals.PLUTO_PORT}`);
 }
 
-export async function startup(app: App, loadingUrl: string) {
+export async function startup(
+  app: App,
+  loadingUrl: string,
+  onLaunched?: () => void,
+) {
   const SYSIMAGE_LOCATION = getAssetPath('pluto.so');
 
   const options = [`--project=${plutoProject}`];
@@ -82,6 +86,7 @@ export async function startup(app: App, loadingUrl: string) {
             });
 
             generalLogger.verbose('Entry url found:', Globals.PLUTO_URL);
+            onLaunched?.();
           }
         } else if (
           plutoLog.includes(
