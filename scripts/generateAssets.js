@@ -57,17 +57,17 @@ if (platform === 'win32') {
 
 const DEPOT_NAME = `julia_depot`;
 
-// The app version is `<pluto-version>-build.<n>` (see MAINTENANCE.md), and the
+// The app version is `<pluto-version>-buildNNN` (see MAINTENANCE.md), and the
 // Julia environment must pin exactly that Pluto version. All three files are
 // kept in sync by `npm run set-pluto-version`; fail the build if they diverged.
 const validatePlutoVersionConsistency = () => {
   const pkg = JSON.parse(
     fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'),
   );
-  const versionMatch = pkg.version.match(/^(\d+\.\d+\.\d+)-build\.\d+$/);
+  const versionMatch = pkg.version.match(/^(\d+\.\d+\.\d+)-build\d{3,}$/);
   if (!versionMatch) {
     throw new Error(
-      `package.json version "${pkg.version}" does not have the required <pluto-version>-build.<n> format. Fix it with: npm run set-pluto-version -- <pluto-version>`,
+      `package.json version "${pkg.version}" does not have the required <pluto-version>-buildNNN format. Fix it with: npm run set-pluto-version -- <pluto-version>`,
     );
   }
   const plutoVersion = versionMatch[1];
@@ -395,4 +395,3 @@ export default async (config, platform, arch) => {
   //   julia_path: juliaPath,
   // });
 };
-

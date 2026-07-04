@@ -7,16 +7,16 @@ Notes for maintainers of Pluto Desktop: versioning, updating the bundled Pluto a
 Pluto Desktop versions are derived from the bundled [Pluto.jl](https://github.com/fonsp/Pluto.jl) version:
 
 ```
-<pluto-version>-build.<n>
+<pluto-version>-buildNNN
 ```
 
-where `n` counts the desktop releases based on that Pluto version. For example, `1.0.1-build.2` is the second desktop release that bundles Pluto v1.0.1.
+where `NNN` counts the desktop releases based on that Pluto version, zero-padded to at least three digits. For example, `1.0.1-build002` is the second desktop release that bundles Pluto v1.0.1.
 
 Why this exact format:
 
 - A four-part version (`1.0.1.2`) is not valid semver, and npm / Electron Forge reject it.
-- The dot in `build.2` matters: semver compares dot-separated prerelease identifiers one by one, and purely numeric ones compare *numerically*. Without the dot, `build10` would sort *before* `build4` (lexical comparison).
-- Semver treats `-build.n` as a prerelease, so `1.0.1-build.1 < 1.0.1`. This is harmless as long as every release uses the suffix — never ship a bare `x.y.z`.
+- Squirrel.Windows uses NuGet-style comparison and treats the prerelease part as a plain string. Fixed-width numbers keep `build010` after `build009`, while unpadded `build10` would sort before `build9`.
+- Semver treats `-buildNNN` as a prerelease, so `1.0.1-build001 < 1.0.1`. This is harmless as long as every release uses the suffix - never ship a bare `x.y.z`.
 
 Don't edit the version by hand; use the script below, which keeps `package.json`, `package-lock.json`, and the Julia environment in sync.
 
@@ -27,13 +27,13 @@ npm run set-pluto-version -- <pluto-version> [build-number]
 
 # examples
 npm run set-pluto-version -- 1.0.2      # first desktop release on Pluto v1.0.2
-npm run set-pluto-version -- 1.0.2      # run again: auto-increments to 1.0.2-build.2
+npm run set-pluto-version -- 1.0.2      # run again: auto-increments to 1.0.2-build002
 npm run set-pluto-version -- 1.0.2 5    # explicitly set the build number
 ```
 
 The script ([scripts/setPlutoVersion.mjs](scripts/setPlutoVersion.mjs)) does four things:
 
-1. Sets the package version to `<pluto-version>-build.<n>` via `npm version`, updating `package.json` and `package-lock.json`. Without an explicit build number, it starts at `1` and auto-increments when the current version is already based on the same Pluto version.
+1. Sets the package version to `<pluto-version>-buildNNN` via `npm version`, updating `package.json` and `package-lock.json`. Without an explicit build number, it starts at `1` and auto-increments when the current version is already based on the same Pluto version.
 2. Pins the exact Pluto version in [assets/env_for_julia/Project.toml](assets/env_for_julia/Project.toml) with a `Pluto = "=x.y.z"` compat entry.
 3. Updates [assets/env_for_julia/Manifest.toml](assets/env_for_julia/Manifest.toml) by running `Pkg.update("Pluto")`, so the build-time `Pkg.instantiate()` installs exactly the pinned version. It prefers the Julia binary in `generated_assets/` (the one the app ships) and falls back to `julia` on the PATH.
 4. Deletes `generated_assets/julia_depot` if present. The depot caches the previously installed Pluto, and asset generation skips preparation when it exists — a stale depot would silently ship the old Pluto.
@@ -66,7 +66,7 @@ Releases are built and published by CI ([.github/workflows/release.yml](.github/
 
 To test the build locally, run `npm run make`; the same artifacts land in `out/make/squirrel.windows/x64/`.
 
-The release must **not** be marked as draft or prerelease on GitHub (the workflow already gets this right): both flags make a release invisible to the auto-update service *and* to the `releases/latest` download link. This is independent of the semver prerelease suffix in the tag (`-build.n`), which is fine.
+The release must **not** be marked as draft or prerelease on GitHub (the workflow already gets this right): both flags make a release invisible to the auto-update service *and* to the `releases/latest` download link. This is independent of the semver prerelease suffix in the tag (`-buildNNN`), which is fine.
 
 ## Auto-updates
 
@@ -76,6 +76,6 @@ Installed apps check for updates every hour and on startup (see the `updateElect
 2. Squirrel.Windows downloads the new `-full.nupkg` from the GitHub release in the background and installs it.
 3. The user gets a small "restart to update" dialog.
 
-Squirrel caveat: NuGet package versions can't contain dots in the prerelease part, so `1.0.1-build.10` becomes `1.0.1-build10`, and Squirrel compares that part as a plain string — `build10` sorts *before* `build9`, so users on `-build.9` would not be offered `-build.10` until the next Pluto version bump. `set-pluto-version` warns about this; prefer staying below 10 builds per Pluto version. (The tag/semver side handles `build.10` correctly; only Squirrel's local comparison is affected.)
+Squirrel caveat: NuGet package versions compare the prerelease part as a plain string. The `buildNNN` scheme keeps Squirrel's order aligned with the intended numeric build order through `build999`; `set-pluto-version` warns at build 1000 and above. Prefer bumping the bundled Pluto version before then.
 
 The installer and app are currently **not code-signed**, so first-time installers see a Windows SmartScreen warning ("Windows protected your PC" → More info → Run anyway). Auto-updates are unaffected. To get rid of the warning we'd need a code-signing setup, e.g. Azure Trusted Signing (electron-winstaller's `windowsSign` option).

@@ -1,5 +1,5 @@
 // Set the bundled Pluto version. This updates:
-//   - the package version to `<pluto-version>-build.<n>` (n = nth desktop release for that Pluto version)
+//   - the package version to `<pluto-version>-buildNNN` (NNN = zero-padded desktop release number)
 //   - the `[compat]` entry in assets/env_for_julia/Project.toml to pin exactly that Pluto version
 //   - assets/env_for_julia/Manifest.toml, by running Pkg.update("Pluto") (requires Julia)
 //
@@ -29,6 +29,12 @@ const [plutoVersion, buildArg] = process.argv.slice(2);
 if (!plutoVersion || !/^\d+\.\d+\.\d+$/.test(plutoVersion)) usage();
 if (buildArg !== undefined && !/^\d+$/.test(buildArg)) usage();
 
+const parseDesktopVersion = (version) =>
+  version.match(/^(\d+\.\d+\.\d+)-build(\d+)$/) ??
+  version.match(/^(\d+\.\d+\.\d+)-build\.(\d+)$/);
+
+const formatBuildNumber = (build) => String(build).padStart(3, '0');
+
 // Determine the build number: explicit argument, or auto-increment when the
 // current package version is already based on the same Pluto version.
 const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
@@ -36,19 +42,19 @@ let build = 1;
 if (buildArg !== undefined) {
   build = Number(buildArg);
 } else {
-  const current = pkg.version.match(/^(\d+\.\d+\.\d+)-build\.(\d+)$/);
+  const current = parseDesktopVersion(pkg.version);
   if (current && current[1] === plutoVersion) {
     build = Number(current[2]) + 1;
   }
 }
-const newVersion = `${plutoVersion}-build.${build}`;
+if (build < 1) usage();
+const newVersion = `${plutoVersion}-build${formatBuildNumber(build)}`;
 
-if (build >= 10) {
+if (build >= 1000) {
   console.warn(
-    `⚠ Build number ${build}: Squirrel.Windows converts the version to a NuGet one without dots ` +
-      `in the prerelease part ("build${build}") and compares those as plain strings, so installed ` +
-      `"build9" sorts AFTER "build${build}" and auto-update will not pick this release up until the ` +
-      `next Pluto version bump. Prefer bumping the bundled Pluto version instead.`,
+    `Build number ${build}: Squirrel.Windows compares the prerelease part as a plain string, ` +
+      `so the fixed-width buildNNN scheme is only ordered correctly through build999. ` +
+      `Prefer bumping the bundled Pluto version instead.`,
   );
 }
 
