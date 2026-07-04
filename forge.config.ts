@@ -17,7 +17,12 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     extraResource: [
+      // Julia + the pre-instantiated Pluto depot, ends up at
+      // <resources>/generated_assets (see GENERATED_ASSETS_PATH in src/paths.ts).
       './generated_assets',
+      // Static assets (run_pluto.jl, env_for_julia, icons, ...), ends up at
+      // <resources>/assets (see RESOURCES_PATH in src/paths.ts).
+      './assets',
     ],
   },
   rebuildConfig: {},

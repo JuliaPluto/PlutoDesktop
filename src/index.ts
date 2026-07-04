@@ -72,8 +72,10 @@ export const createPlutoWindow = (landingUrl?: string | null): Pluto => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
-  await initGlobals();
+  // Show the loading window right away: initGlobals can take a while on first
+  // run (it copies the bundled Julia depot to a writable location).
   createPlutoWindow();
+  await initGlobals();
   startup(app, MAIN_WINDOW_WEBPACK_ENTRY);
 
   // This is set here because it required the app to be ready

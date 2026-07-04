@@ -60,7 +60,7 @@ export function copyDirectoryRecursive(source: string, destination: string) {
   }
 
   if (!fs.existsSync(destination)) {
-    fs.mkdirSync(destination);
+    fs.mkdirSync(destination, { recursive: true });
   }
 
   fs.readdirSync(source).forEach((file) => {

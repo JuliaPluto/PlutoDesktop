@@ -3,7 +3,11 @@
  */
 
 import * as fs from 'node:fs';
-import { DEPOT_LOCATION, getAssetPath } from './paths.ts';
+import {
+  DEPOT_LOCATION,
+  getAssetPath,
+  getGeneratedAssetPath,
+} from './paths.ts';
 import { generalLogger, juliaLogger } from './logger.ts';
 import { spawn } from 'node:child_process';
 
@@ -13,21 +17,26 @@ export const plutoProject =
 let _julia: string | null = null;
 export const findJulia = () => {
   if (_julia !== null) return _julia;
-  const files = fs.readdirSync(getAssetPath('.'));
+  // The generated_assets directory always exists in a packaged app, but in
+  // development it's only there after running `npm run make` once.
+  const generatedAssetsDir = getGeneratedAssetPath('.');
+  const files = fs.existsSync(generatedAssetsDir)
+    ? fs.readdirSync(generatedAssetsDir)
+    : [];
 
   let julia_dir = files.find((s) => /^julia-\d+.\d+.\d+$/.test(s));
   let result;
 
   if (julia_dir == null) {
     generalLogger.error(
-      "Couldn't find Julia in assets, falling back to the `julia` command.",
+      "Couldn't find Julia in generated_assets, falling back to the `julia` command.",
     );
     result = `julia`;
   } else {
     // Use platform-specific executable name
     const juliaExecutable =
       process.platform === 'win32' ? 'julia.exe' : 'julia';
-    result = getAssetPath(julia_dir, 'bin', juliaExecutable);
+    result = getGeneratedAssetPath(julia_dir, 'bin', juliaExecutable);
   }
 
   // cache the result

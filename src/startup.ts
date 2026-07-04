@@ -17,6 +17,14 @@ import { Globals } from './globals.ts';
 import { GlobalWindowManager } from './windowHelpers.ts';
 
 export async function initGlobals() {
+  // Copy the bundled read-only depot into a writable location before running
+  // any Julia: findPluto() below already needs it, and would otherwise fall
+  // back to downloading Pluto from the internet (see locate_pluto.jl).
+  if (!fs.existsSync(DEPOT_LOCATION) && fs.existsSync(READONLY_DEPOT_LOCATION)) {
+    generalLogger.verbose('Copying julia_depot from installation directory...');
+    copyDirectoryRecursive(READONLY_DEPOT_LOCATION, DEPOT_LOCATION);
+  }
+
   generalLogger.log(`Julia found at: ${findJulia()}`);
 
   // strip a trailing path separator
@@ -29,12 +37,6 @@ export async function initGlobals() {
 
 export async function startup(app: App, loadingUrl: string) {
   const SYSIMAGE_LOCATION = getAssetPath('pluto.so');
-
-  // ensure depot has been copied from read-only installation directory to writable directory
-  if (!fs.existsSync(DEPOT_LOCATION)) {
-    generalLogger.verbose('Copying julia_depot from installation directory...');
-    copyDirectoryRecursive(READONLY_DEPOT_LOCATION, DEPOT_LOCATION);
-  }
 
   const options = [`--project=${plutoProject}`];
   if (fs.existsSync(SYSIMAGE_LOCATION)) {
