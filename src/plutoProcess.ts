@@ -9,6 +9,7 @@ import {
   getGeneratedAssetPath,
 } from './paths.ts';
 import { generalLogger, juliaLogger } from './logger.ts';
+import { app, dialog } from 'electron';
 import { spawn } from 'node:child_process';
 
 export const plutoProject =
@@ -17,32 +18,27 @@ export const plutoProject =
 let _julia: string | null = null;
 export const findJulia = () => {
   if (_julia !== null) return _julia;
-  // The generated_assets directory always exists in a packaged app, but in
-  // development it's only there after running `npm run make` once.
+  // The generated_assets directory always exists in a packaged app; in
+  // development it's created by the first `npm start` or `npm run make`.
   const generatedAssetsDir = getGeneratedAssetPath('.');
   const files = fs.existsSync(generatedAssetsDir)
     ? fs.readdirSync(generatedAssetsDir)
     : [];
 
-  let julia_dir = files.find((s) => /^julia-\d+.\d+.\d+$/.test(s));
-  let result;
+  const julia_dir = files.find((s) => /^julia-\d+.\d+.\d+$/.test(s));
 
   if (julia_dir == null) {
-    generalLogger.error(
-      "Couldn't find Julia in generated_assets, falling back to the `julia` command.",
-    );
-    result = `julia`;
-  } else {
-    // Use platform-specific executable name
-    const juliaExecutable =
-      process.platform === 'win32' ? 'julia.exe' : 'julia';
-    result = getGeneratedAssetPath(julia_dir, 'bin', juliaExecutable);
+    const message = `Couldn't find the bundled Julia in ${generatedAssetsDir}. Pluto Desktop cannot start without it — please reinstall the app.`;
+    generalLogger.error('JULIA-NOT-FOUND', message);
+    dialog.showErrorBox('Julia not found', message);
+    app.exit(1);
+    throw new Error(message);
   }
 
-  // cache the result
-  _julia = result;
+  const juliaExecutable = process.platform === 'win32' ? 'julia.exe' : 'julia';
+  _julia = getGeneratedAssetPath(julia_dir, 'bin', juliaExecutable);
 
-  return result;
+  return _julia;
 };
 
 let _plutoLocation: string | null = null;
