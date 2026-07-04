@@ -1,4 +1,4 @@
-# Pluto Desktop
+# Pluto Desktop _(still in development)_
 [![Release](https://github.com/JuliaPluto/PlutoDesktop/actions/workflows/release.yml/badge.svg)](https://github.com/JuliaPluto/PlutoDesktop/actions/workflows/release.yml)
 
 All included one stop solution to run [Pluto](https://github.com/fonsp/Pluto.jl) notebooks. Just install this and get going!
@@ -35,6 +35,7 @@ are looking for.
 - MacOS only works in development mode (`npm run start`), because Code Signing is broken. We could get it to work with a Developer ID certificate?
 
 ## Installation
+You can already try an alpha preview of Pluto Desktop!
 
 **[⬇ Download Pluto for Windows](https://github.com/JuliaPluto/PlutoDesktop/releases/latest/download/PlutoSetup.exe)**
 
