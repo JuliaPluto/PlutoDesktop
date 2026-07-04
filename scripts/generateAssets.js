@@ -57,6 +57,46 @@ if (platform === 'win32') {
 
 const DEPOT_NAME = `julia_depot`;
 
+// The app version is `<pluto-version>-build.<n>` (see MAINTENANCE.md), and the
+// Julia environment must pin exactly that Pluto version. All three files are
+// kept in sync by `npm run set-pluto-version`; fail the build if they diverged.
+const validatePlutoVersionConsistency = () => {
+  const pkg = JSON.parse(
+    fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'),
+  );
+  const versionMatch = pkg.version.match(/^(\d+\.\d+\.\d+)-build\.\d+$/);
+  if (!versionMatch) {
+    throw new Error(
+      `package.json version "${pkg.version}" does not have the required <pluto-version>-build.<n> format. Fix it with: npm run set-pluto-version -- <pluto-version>`,
+    );
+  }
+  const plutoVersion = versionMatch[1];
+
+  const envDir = path.join(projectRoot, 'assets', 'env_for_julia');
+  const projectToml = fs.readFileSync(path.join(envDir, 'Project.toml'), 'utf8');
+  const compatMatch = projectToml.match(/^Pluto\s*=\s*"=([^"]*)"\s*$/m);
+  if (!compatMatch || compatMatch[1] !== plutoVersion) {
+    throw new Error(
+      `assets/env_for_julia/Project.toml pins Pluto to "${compatMatch?.[1] ?? '(no exact pin found)'}" but package.json version ${pkg.version} expects ${plutoVersion}. Fix it with: npm run set-pluto-version -- ${plutoVersion}`,
+    );
+  }
+
+  const manifest = fs.readFileSync(path.join(envDir, 'Manifest.toml'), 'utf8');
+  // Grab the [[deps.Pluto]] section (up to the next [[...]] section) and read
+  // its `version` line. Note that the section itself contains `[` characters.
+  const sectionMatch = manifest.match(
+    /^\[\[deps\.Pluto\]\]\r?\n([\s\S]*?)(?=^\[\[|(?![\s\S]))/m,
+  );
+  const manifestVersion = sectionMatch?.[1].match(/^version = "([^"]*)"\s*$/m)?.[1];
+  if (manifestVersion !== plutoVersion) {
+    throw new Error(
+      `assets/env_for_julia/Manifest.toml resolves Pluto ${manifestVersion ?? '(not found)'} but package.json version ${pkg.version} expects ${plutoVersion}. Fix it with: npm run set-pluto-version -- ${plutoVersion}`,
+    );
+  }
+
+  console.log(`Verified: bundling Pluto v${plutoVersion} (app version ${pkg.version})`);
+};
+
 const downloadJulia = async () => {
 
   console.log(`\tDownloading Julia ${JULIA_VERSION} for ${platform}`);
@@ -313,6 +353,8 @@ export default async (config, platform, arch) => {
   console.log('Running generateAssets hook...');
   console.log('Platform:', platform);
   console.log('Arch:', arch);
+
+  validatePlutoVersionConsistency();
 
   if (!fs.existsSync(generatedAssetsDir))
     fs.mkdirSync(generatedAssetsDir, { recursive: true });

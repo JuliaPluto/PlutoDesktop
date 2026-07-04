@@ -1,5 +1,5 @@
-# Pluto Desktop *(under development, on hold)*
-[![Build/Release](https://github.com/JuliaPluto/PlutoDesktop/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/JuliaPluto/PlutoDesktop/actions/workflows/build.yml)
+# Pluto Desktop
+[![Release](https://github.com/JuliaPluto/PlutoDesktop/actions/workflows/release.yml/badge.svg)](https://github.com/JuliaPluto/PlutoDesktop/actions/workflows/release.yml)
 
 All included one stop solution to run [Pluto](https://github.com/fonsp/Pluto.jl) notebooks. Just install this and get going!
 Abstracts and automates the following processes:
@@ -36,8 +36,9 @@ are looking for.
 
 ## Installation
 
-- Just download the latest release from [here](https://github.com/JuliaPluto/PlutoDesktop/releases) and get going!
-  No need to install ANY other thing. Just install this and you are done!
+**[⬇ Download Pluto for Windows](https://github.com/JuliaPluto/PlutoDesktop/releases/latest/download/PlutoSetup.exe)**
+
+Run the installer and you're done — no need to install anything else. The app keeps itself up to date automatically.
 
 ## Maintenance
 

@@ -3,6 +3,7 @@
  */
 import { app, BrowserWindow, nativeTheme, session } from 'electron';
 import * as path from 'path';
+import { updateElectronApp, UpdateSourceType } from 'update-electron-app';
 import Pluto from './pluto';
 import './baseEventListeners.ts';
 import { initGlobals, startup } from './startup.ts';
@@ -20,6 +21,17 @@ declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
   app.quit();
+} else {
+  // Check for new releases on GitHub (via update.electronjs.org), download them
+  // in the background, and prompt the user to restart. No-op during development.
+  updateElectronApp({
+    updateSource: {
+      type: UpdateSourceType.ElectronPublicUpdateService,
+      repo: 'JuliaPluto/PlutoDesktop',
+    },
+    updateInterval: '1 hour',
+    logger: generalLogger,
+  });
 }
 
 /**

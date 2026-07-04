@@ -1,0 +1,53 @@
+# Builds the Windows installer and publishes it to GitHub Releases.
+#
+# To make a release, push a tag matching the package.json version:
+#
+#     git tag v$(node -p "require('./package.json').version")
+#     git push origin --tags
+#
+# See MAINTENANCE.md for the full release process.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  # Needed to create the GitHub release and upload assets.
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Check that the tag matches the package version
+        shell: bash
+        run: |
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $PKG_VERSION." >&2
+            echo "::error::Run 'npm run set-pluto-version', commit, and tag the resulting version." >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Downloads Julia, instantiates the bundled Pluto environment, builds the
+      # app, creates the Squirrel installer, and uploads everything to a
+      # GitHub release for the pushed tag (created if it doesn't exist yet).
+      - name: Build and publish to GitHub Releases
+        run: npm run publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -43,6 +43,15 @@ if (buildArg !== undefined) {
 }
 const newVersion = `${plutoVersion}-build.${build}`;
 
+if (build >= 10) {
+  console.warn(
+    `⚠ Build number ${build}: Squirrel.Windows converts the version to a NuGet one without dots ` +
+      `in the prerelease part ("build${build}") and compares those as plain strings, so installed ` +
+      `"build9" sorts AFTER "build${build}" and auto-update will not pick this release up until the ` +
+      `next Pluto version bump. Prefer bumping the bundled Pluto version instead.`,
+  );
+}
+
 console.log(`Package version: ${pkg.version} -> ${newVersion}`);
 execSync(`npm version ${newVersion} --no-git-tag-version --allow-same-version`, {
   cwd: projectRoot,

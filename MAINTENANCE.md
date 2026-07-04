@@ -50,6 +50,32 @@ The Julia version is hardcoded in [scripts/generateAssets.js](scripts/generateAs
 
 ## Making a release
 
-1. Run `npm run set-pluto-version -- <pluto-version>` and commit the changes.
-2. Build with `npm run make`. Asset generation downloads Julia, instantiates the Pluto environment into a bundled depot, and packages everything.
-3. Tag and publish through the usual release flow.
+Releases are built and published by CI ([.github/workflows/release.yml](.github/workflows/release.yml)). Pushing a version tag triggers a Windows build that publishes a GitHub release — don't build installers by hand.
+
+1. Update the version if needed: `npm run set-pluto-version -- <pluto-version>`, commit.
+2. Tag the commit with the package version (`v` prefix) and push:
+
+   ```sh
+   git tag "v$(node -p "require('./package.json').version")"
+   git push origin main --tags
+   ```
+
+3. CI verifies that the tag matches `package.json`, builds, and publishes a release with three assets:
+   - `PlutoSetup.exe` — the installer users download. The name is version-independent so that <https://github.com/JuliaPluto/PlutoDesktop/releases/latest/download/PlutoSetup.exe> is a permanent "download the latest version" link (this is what plutojl.org links to).
+   - `pluto_desktop-<version>-full.nupkg` and `RELEASES` — consumed by the auto-updater, not by humans.
+
+To test the build locally, run `npm run make`; the same artifacts land in `out/make/squirrel.windows/x64/`.
+
+The release must **not** be marked as draft or prerelease on GitHub (the workflow already gets this right): both flags make a release invisible to the auto-update service *and* to the `releases/latest` download link. This is independent of the semver prerelease suffix in the tag (`-build.n`), which is fine.
+
+## Auto-updates
+
+Installed apps check for updates every hour and on startup (see the `updateElectronApp` call in [src/index.ts](src/index.ts)), using Electron's free [update.electronjs.org](https://github.com/electron/update.electronjs.org) service, which requires this repo to stay public. The flow on Windows:
+
+1. The app asks `update.electronjs.org/JuliaPluto/PlutoDesktop/win32-x64/<version>/RELEASES`, which forwards the `RELEASES` index of the newest GitHub release.
+2. Squirrel.Windows downloads the new `-full.nupkg` from the GitHub release in the background and installs it.
+3. The user gets a small "restart to update" dialog.
+
+Squirrel caveat: NuGet package versions can't contain dots in the prerelease part, so `1.0.1-build.10` becomes `1.0.1-build10`, and Squirrel compares that part as a plain string — `build10` sorts *before* `build9`, so users on `-build.9` would not be offered `-build.10` until the next Pluto version bump. `set-pluto-version` warns about this; prefer staying below 10 builds per Pluto version. (The tag/semver side handles `build.10` correctly; only Squirrel's local comparison is affected.)
+
+The installer and app are currently **not code-signed**, so first-time installers see a Windows SmartScreen warning ("Windows protected your PC" → More info → Run anyway). Auto-updates are unaffected. To get rid of the warning we'd need a code-signing setup, e.g. Azure Trusted Signing (electron-winstaller's `windowsSign` option).

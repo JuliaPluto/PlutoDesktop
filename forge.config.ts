@@ -4,6 +4,7 @@ import { MakerZIP } from '@electron-forge/maker-zip';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerRpm } from '@electron-forge/maker-rpm';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
+import { PublisherGithub } from '@electron-forge/publisher-github';
 import { WebpackPlugin } from '@electron-forge/plugin-webpack';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
@@ -24,10 +25,32 @@ const config: ForgeConfig = {
     generateAssets: generateAssets,
   },
   makers: [
-    new MakerSquirrel({}),
+    new MakerSquirrel({
+      // Fixed name (instead of the default, which includes the version) so that
+      // https://github.com/JuliaPluto/PlutoDesktop/releases/latest/download/PlutoSetup.exe
+      // is a permanent download link.
+      setupExe: 'PlutoSetup.exe',
+      setupIcon: './assets/icon.ico',
+      // Shown in Windows "Apps & features"; must be a URL, not a local path.
+      iconUrl:
+        'https://raw.githubusercontent.com/JuliaPluto/PlutoDesktop/main/assets/icon.ico',
+    }),
     new MakerZIP({}, ['darwin']),
     new MakerRpm({}),
     new MakerDeb({}),
+  ],
+  publishers: [
+    new PublisherGithub({
+      repository: {
+        owner: 'JuliaPluto',
+        name: 'PlutoDesktop',
+      },
+      // Draft or prerelease-flagged releases are invisible to
+      // update.electronjs.org and to the /releases/latest download link.
+      draft: false,
+      prerelease: false,
+      generateReleaseNotes: true,
+    }),
   ],
   plugins: [
     new AutoUnpackNativesPlugin({}),
