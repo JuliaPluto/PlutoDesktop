@@ -36,6 +36,11 @@ export async function initGlobals() {
 }
 
 export async function startup(app: App, loadingUrl: string) {
+  // In packaged Windows builds, MAIN_WINDOW_WEBPACK_ENTRY is a file:// URL
+  // built from a backslash path (`file://C:\...`), while webContents.getURL()
+  // returns Chromium's canonical form (`file:///C:/...`). Normalize so the
+  // comparison below works in both development and production.
+  const normalizedLoadingUrl = new URL(loadingUrl).href;
   const SYSIMAGE_LOCATION = getAssetPath('pluto.so');
 
   const options = [`--project=${plutoProject}`];
@@ -76,7 +81,7 @@ export async function startup(app: App, loadingUrl: string) {
             GlobalWindowManager.all((p) => {
               const window = p.getBrowserWindow();
               const currentUrl = window.webContents.getURL();
-              if (currentUrl === '' || currentUrl === loadingUrl) {
+              if (currentUrl === '' || currentUrl === normalizedLoadingUrl) {
                 void window.loadURL(Pluto.resolveHtmlPath('index.html'));
               }
             });
