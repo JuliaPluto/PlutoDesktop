@@ -46,7 +46,33 @@ Requirements and gotchas:
 
 ## Updating the bundled Julia version
 
-The Julia version is hardcoded in [scripts/generateAssets.js](scripts/generateAssets.js) (`JULIA_VERSION_PARTS`, near the top). After changing it, delete `generated_assets/` so the next build downloads the new Julia and rebuilds the depot from scratch.
+The Julia version is hardcoded in [scripts/generateAssets.js](scripts/generateAssets.js) (`JULIA_VERSION_PARTS`, near the top). It **must be ≥ 1.11**: the bundled depot ships precompile caches, and only Julia 1.11+ makes those caches relocatable (content hashes and `@depot`-relative source paths instead of absolute paths and mtimes). On 1.10 the caches embed build-machine paths and are rejected on every user's machine, forcing a multi-minute recompile on first launch.
+
+After changing the version:
+
+1. Regenerate the Manifest with the new Julia, so its `julia_version` and standard-library set match what ships:
+
+   ```sh
+   julia --project=assets/env_for_julia -e "import Pkg; Pkg.resolve()"
+   ```
+
+   `generateAssets.js` refuses to build if `Manifest.toml`'s `julia_version` doesn't match the bundled Julia, so this step is mandatory. Commit the updated Manifest.
+
+2. `generateAssets.js` detects a `generated_assets/julia-*` directory from a different version and removes it (along with the depot built against it) automatically on the next build. You only need to delete `generated_assets/` by hand if you want to force a clean rebuild.
+
+### How the bundled depot is used at runtime
+
+The depot prepared at build time is **read-only** and only provides what's needed to launch the Pluto server. At runtime the server's `JULIA_DEPOT_PATH` is a stack (see `getServerDepotPath` in [src/plutoProcess.ts](src/plutoProcess.ts)):
+
+```
+<user depot, usually ~/.julia> ; <bundled depot> ; <julia>/local/share/julia ; <julia>/share/julia
+```
+
+- The user's depot comes first, so anything Pluto installs for notebooks — packages, registries, precompile caches — goes there, exactly as in a plain Julia session. Nothing accumulates in app-managed directories.
+- The bundled depot supplies Pluto and its dependencies, so a normal launch needs no network access and no recompilation.
+- The Julia-installation depots supply the standard-library caches; they must be listed explicitly because setting `JULIA_DEPOT_PATH` replaces Julia's default stack.
+
+Notebook (worker) processes inherit this same stack. They must — Pluto resolves notebook environments in the server process, and a package it reuses from the bundled depot has to remain loadable in the worker. `Pkg` never reinstalls into the read-only bundled depot; new packages land in the user depot.
 
 ## Making a release
 

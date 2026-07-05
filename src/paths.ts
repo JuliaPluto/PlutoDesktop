@@ -17,8 +17,6 @@ export const GENERATED_ASSETS_PATH = app.isPackaged
   ? path.join(process.resourcesPath, 'generated_assets')
   : path.join(source_root_dir, 'generated_assets');
 
-export const APPDATA_PATH = app.getPath('appData');
-
 export const getAssetPath = (...paths: string[]): string => {
   return path.join(RESOURCES_PATH, ...paths);
 };
@@ -27,9 +25,9 @@ export const getGeneratedAssetPath = (...paths: string[]): string => {
   return path.join(GENERATED_ASSETS_PATH, ...paths);
 };
 
-export const getWritablePath = (...paths: string[]): string => {
-  return path.join(APPDATA_PATH, 'pluto', ...paths);
-};
-
-export const READONLY_DEPOT_LOCATION = getGeneratedAssetPath('julia_depot');
-export const DEPOT_LOCATION = getWritablePath('julia_depot');
+// The bundled, read-only Julia depot, prepared at build time
+// (scripts/generateAssets.js). It contains the package sources and precompile
+// caches needed to launch the Pluto server, and is only ever read: everything
+// Pluto installs for notebooks goes to the user's normal depot (see
+// getServerDepotPath in plutoProcess.ts).
+export const BUNDLED_DEPOT_LOCATION = getGeneratedAssetPath('julia_depot');

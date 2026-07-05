@@ -1,13 +1,13 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { generalLogger, juliaLogger } from './logger.ts';
+import { getAssetPath } from './paths.ts';
 import {
-  DEPOT_LOCATION,
-  READONLY_DEPOT_LOCATION,
-  getAssetPath,
-} from './paths.ts';
-import { findJulia, findPluto, plutoProject } from './plutoProcess.ts';
-import { copyDirectoryRecursive } from './util.ts';
+  findJulia,
+  findPluto,
+  getServerDepotPath,
+  plutoProject,
+} from './plutoProcess.ts';
 import type { App } from 'electron';
 import { dialog } from 'electron';
 import { spawn } from 'node:child_process';
@@ -17,14 +17,6 @@ import { Globals } from './globals.ts';
 import { GlobalWindowManager } from './windowHelpers.ts';
 
 export async function initGlobals() {
-  // Copy the bundled read-only depot into a writable location before running
-  // any Julia: findPluto() below already needs it, and would otherwise fall
-  // back to downloading Pluto from the internet (see locate_pluto.jl).
-  if (!fs.existsSync(DEPOT_LOCATION) && fs.existsSync(READONLY_DEPOT_LOCATION)) {
-    generalLogger.verbose('Copying julia_depot from installation directory...');
-    copyDirectoryRecursive(READONLY_DEPOT_LOCATION, DEPOT_LOCATION);
-  }
-
   generalLogger.log(`Julia found at: ${findJulia()}`);
 
   // strip a trailing path separator
@@ -53,14 +45,13 @@ export async function startup(app: App, loadingUrl: string) {
 
   options.push(getAssetPath('run_pluto.jl'));
   // See run_pluto.jl for info about these command line arguments.
-  options.push(DEPOT_LOCATION);
   options.push(path.join(app.getPath('userData'), 'unsaved_notebooks'));
   options.push(Globals.PLUTO_SECRET);
   options.push(String(Globals.PLUTO_PORT));
 
   try {
     const res = spawn(findJulia(), options, {
-      env: { ...process.env, JULIA_DEPOT_PATH: DEPOT_LOCATION },
+      env: { ...process.env, JULIA_DEPOT_PATH: getServerDepotPath() },
     });
 
     const loggerListener = (data: Buffer) => {

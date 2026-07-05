@@ -1,4 +1,5 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import process from 'process';
@@ -20,8 +21,12 @@ const generatedAssetsDir = path.join(projectRoot, 'generated_assets');
 
 
 // YOU CAN EDIT ME
-const JULIA_VERSION_PARTS = [1, 10, 10];
+const JULIA_VERSION_PARTS = [1, 12, 6];
 /// ☝️
+// Note: must be ≥ 1.11 — the bundled depot relies on relocatable precompile
+// caches (content hashes + @depot tags), which older Julia does not have.
+// After changing this, regenerate assets/env_for_julia/Manifest.toml with the
+// new Julia version (validatePlutoVersionConsistency will remind you).
 
 const JULIA_VERSION = JULIA_VERSION_PARTS.join('.');
 const JULIA_VERSION_MINOR = JULIA_VERSION_PARTS.slice(0, 2).join('.');
@@ -94,7 +99,17 @@ const validatePlutoVersionConsistency = () => {
     );
   }
 
-  console.log(`Verified: bundling Pluto v${plutoVersion} (app version ${pkg.version})`);
+  // The precompile caches prepared for the bundled depot are only valid for
+  // the exact Julia version they were built with, so the manifest must be
+  // resolved with the Julia we ship.
+  const manifestJuliaVersion = manifest.match(/^julia_version = "([^"]*)"\s*$/m)?.[1];
+  if (manifestJuliaVersion !== JULIA_VERSION) {
+    throw new Error(
+      `assets/env_for_julia/Manifest.toml was resolved with Julia ${manifestJuliaVersion ?? '(unknown)'} but the bundled Julia is ${JULIA_VERSION}. Regenerate it with Julia ${JULIA_VERSION}: julia --project=assets/env_for_julia -e "import Pkg; Pkg.resolve()"`,
+    );
+  }
+
+  console.log(`Verified: bundling Pluto v${plutoVersion} (app version ${pkg.version}, Julia ${JULIA_VERSION})`);
 };
 
 const downloadJulia = async () => {
@@ -187,6 +202,21 @@ const prepareJuliaDepot = async ({ julia_path }) => {
   console.log('prepareJuliaDepot: Project path:', projectPath);
   console.log('prepareJuliaDepot: Spawning Julia process...');
 
+  // Stack the depots that ship inside the Julia installation behind the depot
+  // we are building, exactly like the app does at runtime (see
+  // getServerDepotPath in src/plutoProcess.ts). The packages precompiled here
+  // record the build_ids of the stdlib caches they were compiled against;
+  // with a single-entry JULIA_DEPOT_PATH, Julia would compile its own stdlib
+  // caches into this depot instead of using the ones shipped with Julia, and
+  // every cache we ship would then be rejected on user machines ("module X is
+  // already loaded and incompatible").
+  const juliaRootDir = path.join(generatedAssetsDir, JULIA_DIR_NAME);
+  const depotStack = [
+    DEPOT_LOCATION,
+    path.join(juliaRootDir, 'local', 'share', 'julia'),
+    path.join(juliaRootDir, 'share', 'julia'),
+  ].join(path.delimiter);
+
   const res = spawn(
     julia_path,
     [
@@ -197,7 +227,14 @@ const prepareJuliaDepot = async ({ julia_path }) => {
     {
       env: {
         ...process.env,
-        JULIA_DEPOT_PATH: DEPOT_LOCATION,
+        JULIA_DEPOT_PATH: depotStack,
+        // Pluto's precompile workload creates a sample notebook in
+        // first(DEPOT_PATH)/pluto_notebooks unless this is set; keep that out
+        // of the shipped depot.
+        JULIA_PLUTO_NEW_NOTEBOOKS_DIR: path.join(
+          os.tmpdir(),
+          'pluto_desktop_build_notebooks',
+        ),
       },
     },
   );
@@ -231,11 +268,17 @@ const prepareJuliaDepot = async ({ julia_path }) => {
     throw new Error(`DEPOT preparation failed with exit code: ${exit_code}`);
   }
 
-  // Remove downloaded registry for file savings: you don't need it to run an environment that has already been instantiated.
-  fs.rmSync(path.join(DEPOT_LOCATION, 'registries'), {
-    force: true,
-    recursive: true,
-  });
+  // Remove build-machine artifacts from the shipped depot:
+  //  - registries: not needed to run an already-instantiated environment
+  //    (large, and the runtime never resolves)
+  //  - logs, scratchspaces: per-machine state; Julia only ever consults them
+  //    in the first depot of the stack, which at runtime is the user's depot
+  for (const junk of ['registries', 'logs', 'scratchspaces']) {
+    fs.rmSync(path.join(DEPOT_LOCATION, junk), {
+      force: true,
+      recursive: true,
+    });
+  }
 
   // Fix file permissions on macOS to prevent code signing issues
   if (platform === 'darwin') {
@@ -373,6 +416,28 @@ export default async (config, platform, arch) => {
   }
   
   let files = fs.readdirSync(generatedAssetsDir);
+
+  // Clean up after a Julia version change: findJulia() at runtime picks the
+  // first julia-* directory it sees, and a depot built with another Julia
+  // holds useless caches.
+  const staleJulias = files.filter(
+    (s) => /^julia-\d+\.\d+\.\d+$/.test(s) && s !== JULIA_DIR_NAME,
+  );
+  if (staleJulias.length > 0) {
+    for (const dir of staleJulias) {
+      console.log(`Removing stale ${dir}...`);
+      fs.rmSync(path.join(generatedAssetsDir, dir), {
+        recursive: true,
+        force: true,
+      });
+    }
+    console.log('Removing julia_depot built with a previous Julia...');
+    fs.rmSync(path.join(generatedAssetsDir, DEPOT_NAME), {
+      recursive: true,
+      force: true,
+    });
+    files = fs.readdirSync(generatedAssetsDir);
+  }
 
   if (!files.includes(JULIA_DIR_NAME)) {
     await downloadJulia();
