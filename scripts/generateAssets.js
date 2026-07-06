@@ -433,14 +433,6 @@ export default async (config, platform, arch) => {
     console.log('SKIP_GENERATE_ASSETS is set; skipping Julia download & depot preparation.');
     return;
   }
-
-  const architectureFilePath = path.join(generatedAssetsDir, 'architecture.txt');
-  try {
-    fs.writeFileSync(architectureFilePath, `${resolvedArch}\n`, 'utf8');
-    console.log('Recorded architecture to', architectureFilePath);
-  } catch (error) {
-    console.warn('Could not write architecture.txt:', error?.message ?? error);
-  }
   
   let files = fs.readdirSync(generatedAssetsDir);
 

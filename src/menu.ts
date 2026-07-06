@@ -147,6 +147,14 @@ export default class MenuBuilder {
         label: '&Help',
         submenu: [
           {
+            label: 'Submit PlutoDesktop feedback',
+            click: async () => {
+              await shell.openExternal(
+                'https://github.com/JuliaPluto/PlutoDesktop/issues',
+              );
+            },
+          },
+          {
             label: 'About Pluto.jl Desktop',
             click: async () => {
               await showAboutDialog();
