@@ -10,6 +10,11 @@ import Pluto from './pluto.ts';
 import { GlobalWindowManager } from './windowHelpers.ts';
 import { generalLogger } from './logger.ts';
 import { Globals } from './globals.ts';
+import {
+  uploadNotebookToPlutoLand,
+  uploadHtmlToPlutoLand,
+  deleteFromPlutoLand,
+} from './plutoland.ts';
 
 type OpenNotebookOptions = { newWindow?: boolean };
 
@@ -63,4 +68,20 @@ ipcMain.on(
       BrowserWindow.fromWebContents(event.sender),
     );
   },
+);
+
+ipcMain.handle(
+  'pluto-desktop:plutoland-upload',
+  async (_event, notebookId: string) => uploadNotebookToPlutoLand(notebookId),
+);
+
+ipcMain.handle(
+  'pluto-desktop:plutoland-upload-html',
+  async (_event, html: string) => uploadHtmlToPlutoLand(html),
+);
+
+ipcMain.handle(
+  'pluto-desktop:plutoland-delete',
+  async (_event, id: string, creationSecret: string) =>
+    deleteFromPlutoLand(id, creationSecret),
 );

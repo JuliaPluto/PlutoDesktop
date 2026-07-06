@@ -59,4 +59,31 @@ contextBridge.exposeInMainWorld('plutoDesktop', {
       ipcRenderer.send('PLUTO-EXPORT-NOTEBOOK', id, type);
     },
   },
+
+  /**
+   * Upload/delete the notebook's static HTML export to pluto.land.
+   *
+   * This goes through the main process because the editor page runs from a
+   * `file://` origin, which cannot fetch the export from the local server or
+   * talk to pluto.land directly (both are blocked by CORS).
+   */
+  plutoLand: {
+    upload(
+      notebookId: string,
+    ): Promise<{ id: string; creation_secret: string }> {
+      return ipcRenderer.invoke('pluto-desktop:plutoland-upload', notebookId);
+    },
+    uploadHtml(
+      html: string,
+    ): Promise<{ id: string; creation_secret: string }> {
+      return ipcRenderer.invoke('pluto-desktop:plutoland-upload-html', html);
+    },
+    delete(id: string, creationSecret: string): Promise<void> {
+      return ipcRenderer.invoke(
+        'pluto-desktop:plutoland-delete',
+        id,
+        creationSecret,
+      );
+    },
+  },
 });
