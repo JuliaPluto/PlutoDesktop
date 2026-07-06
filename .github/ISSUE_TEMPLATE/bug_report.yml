@@ -1,0 +1,58 @@
+name: Bug report
+description: Report a problem with Pluto.jl Desktop
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the problem and what you expected to happen instead.
+      placeholder: Tell us what you saw, what you expected, and whether the issue is consistent or intermittent.
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: Pluto.jl Desktop version
+      description: Find this in Help > About Pluto.jl Desktop.
+      placeholder: "1.0.2-build001"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS development mode
+        - Linux development mode
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: In the app, use Help > Open Logs Folder and paste the relevant parts of general.log and julia.log. Please remove secrets or private paths if needed.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or screen recordings
+      description: Drag images, videos, or a small notebook file here if they help explain the issue.
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Anything else that might help, such as antivirus warnings, SmartScreen prompts, offline use, or whether plain Pluto.jl works on the same machine.
+    validations:
+      required: false
