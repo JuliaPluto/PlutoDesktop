@@ -80,10 +80,10 @@ if (compatSection) {
 fs.writeFileSync(projectTomlPath, toml);
 console.log(`Pinned ${compatLine} in ${path.relative(projectRoot, projectTomlPath)}`);
 
-// Update the Manifest so Pkg.instantiate() at build time installs the new version.
-// Prefer the Julia bundled in generated_assets (same version as the shipped app),
-// fall back to `julia` on the PATH. This uses the user's default depot, which has
-// registries available (the generated_assets depot has them stripped).
+// Update the Manifest so the build-time instantiate/sysimage build uses the new
+// version. Prefer the Julia bundled in generated_assets (same version as the
+// shipped app), fall back to `julia` on the PATH. This uses the user's default
+// depot, which has the registry available to re-resolve.
 const findJulia = () => {
   const exe = process.platform === 'win32' ? 'julia.exe' : 'julia';
   if (fs.existsSync(generatedAssetsDir)) {
@@ -120,12 +120,23 @@ if (res.status !== 0) {
   process.exit(res.status ?? 1);
 }
 
-// The prepared depot caches the previously installed Pluto; remove it so the
-// next `npm run make` reinstalls with the new Manifest.
-const depotPath = path.join(generatedAssetsDir, 'julia_depot');
-if (fs.existsSync(depotPath)) {
-  console.log('Removing generated_assets/julia_depot so the next build uses the new Pluto...');
-  fs.rmSync(depotPath, { recursive: true, force: true });
+// The sysimage build outputs are built from the previous Pluto; remove them so
+// the next `npm run make` rebuilds the sysimage (and re-extracts the source and
+// artifacts) from the new Manifest. generateAssets.js skips the build when these
+// already exist, so a stale sysimage would otherwise silently ship the old Pluto.
+const staleBuildOutputs = [
+  'pluto_sysimage.dll',
+  'pluto_sysimage.so',
+  'pluto_sysimage.dylib',
+  'pluto_source',
+  'pluto_server_depot',
+];
+for (const name of staleBuildOutputs) {
+  const p = path.join(generatedAssetsDir, name);
+  if (fs.existsSync(p)) {
+    console.log(`Removing generated_assets/${name} so the next build uses the new Pluto...`);
+    fs.rmSync(p, { recursive: true, force: true });
+  }
 }
 
 console.log(`Done! PlutoDesktop is now version ${newVersion}, bundling Pluto v${plutoVersion}.`);

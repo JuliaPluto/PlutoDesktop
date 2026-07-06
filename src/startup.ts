@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { generalLogger, juliaLogger } from './logger.ts';
-import { getAssetPath } from './paths.ts';
+import { getAssetPath, PLUTO_SYSIMAGE_LOCATION } from './paths.ts';
 import {
   findJulia,
   findPluto,
@@ -33,13 +33,20 @@ export async function startup(app: App, loadingUrl: string) {
   // returns Chromium's canonical form (`file:///C:/...`). Normalize so the
   // comparison below works in both development and production.
   const normalizedLoadingUrl = new URL(loadingUrl).href;
-  const SYSIMAGE_LOCATION = getAssetPath('pluto.so');
 
   const options = [`--project=${plutoProject}`];
-  if (fs.existsSync(SYSIMAGE_LOCATION)) {
-    options.push(`--sysimage=${SYSIMAGE_LOCATION}`);
+  if (fs.existsSync(PLUTO_SYSIMAGE_LOCATION)) {
+    // The Pluto server image (scripts/generateAssets.js). It has Pluto and all
+    // its dependencies precompiled, so the server starts fast, offline, and
+    // without touching a depot. Notebook workers ignore it and use the default
+    // sysimage (Malt launches them with just the julia executable path).
+    options.push(`--sysimage=${PLUTO_SYSIMAGE_LOCATION}`);
     generalLogger.info(
-      `System image found at ${SYSIMAGE_LOCATION}. Julia will use this instead of the default`,
+      `System image found at ${PLUTO_SYSIMAGE_LOCATION}. Julia will use this instead of the default`,
+    );
+  } else {
+    generalLogger.warn(
+      `No Pluto sysimage at ${PLUTO_SYSIMAGE_LOCATION}; starting Pluto without one (slower; dev only).`,
     );
   }
 

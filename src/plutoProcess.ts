@@ -6,7 +6,8 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import {
-  BUNDLED_DEPOT_LOCATION,
+  PLUTO_SERVER_DEPOT_LOCATION,
+  PLUTO_SOURCE_LOCATION,
   getAssetPath,
   getGeneratedAssetPath,
 } from './paths.ts';
@@ -51,17 +52,18 @@ export const findJulia = () => {
  *     that everything Pluto installs for notebooks — packages, registries,
  *     precompile caches — goes to the same place as in a plain Julia session,
  *     and nothing accumulates in app-managed directories.
- *  2. The bundled read-only depot, which provides the package sources and
- *     precompile caches to launch the Pluto server itself, offline and
- *     without recompilation.
- *  3. The two depots inside the Julia installation, which provide the
- *     precompile caches for the standard libraries. Julia includes these by
+ *  2. The bundled read-only server depot, which holds only the JLL binary
+ *     artifacts the server needs at runtime (Pluto and its dependencies come
+ *     from the sysimage, so there are no package sources or precompile caches
+ *     here).
+ *  3. The two depots inside the Julia installation, which provide the standard
+ *     library caches and Julia's bundled JLL artifacts. Julia includes these by
  *     default, but setting JULIA_DEPOT_PATH replaces the whole stack, so they
  *     must be listed explicitly.
  *
- * Note that notebook processes don't use this stack: the server resets
- * JULIA_DEPOT_PATH to the user's original value before spawning them (see
- * run_pluto.jl).
+ * Notebook (worker) processes inherit this stack, but launch with the DEFAULT
+ * Julia sysimage (see run_pluto.jl / Malt) and install everything they need
+ * into the user's depot, which is first.
  */
 export const getServerDepotPath = (): string => {
   const juliaRoot = path.dirname(path.dirname(findJulia()));
@@ -70,7 +72,7 @@ export const getServerDepotPath = (): string => {
     : path.join(os.homedir(), '.julia');
   return [
     userDepots,
-    BUNDLED_DEPOT_LOCATION,
+    PLUTO_SERVER_DEPOT_LOCATION,
     path.join(juliaRoot, 'local', 'share', 'julia'),
     path.join(juliaRoot, 'share', 'julia'),
   ].join(path.delimiter);
@@ -81,6 +83,17 @@ export function findPluto(): Promise<string> {
   return new Promise((resolve, reject) => {
     if (_plutoLocation !== null) resolve(String(_plutoLocation));
 
+    // Normal (packaged) case: the Pluto source is shipped next to the sysimage
+    // (scripts/generateAssets.js). We know exactly where it is, so there's no
+    // need to ask Julia — this also avoids a Julia subprocess at startup.
+    if (fs.existsSync(PLUTO_SOURCE_LOCATION)) {
+      _plutoLocation = PLUTO_SOURCE_LOCATION;
+      resolve(_plutoLocation);
+      return;
+    }
+
+    // Dev fallback: no shipped source (e.g. SKIP_GENERATE_ASSETS). Ask Julia
+    // where Pluto is via locate_pluto.jl.
     const juliaCmd = findJulia();
     let resolved = false;
 
