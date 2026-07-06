@@ -35,8 +35,8 @@ The script ([scripts/setPlutoVersion.mjs](scripts/setPlutoVersion.mjs)) does fou
 
 1. Sets the package version to `<pluto-version>-buildNNN` via `npm version`, updating `package.json` and `package-lock.json`. Without an explicit build number, it starts at `1` and auto-increments when the current version is already based on the same Pluto version.
 2. Pins the exact Pluto version in [assets/env_for_julia/Project.toml](assets/env_for_julia/Project.toml) with a `Pluto = "=x.y.z"` compat entry.
-3. Updates [assets/env_for_julia/Manifest.toml](assets/env_for_julia/Manifest.toml) by running `Pkg.update("Pluto")`, so the build-time `Pkg.instantiate()` installs exactly the pinned version. It prefers the Julia binary in `generated_assets/` (the one the app ships) and falls back to `julia` on the PATH.
-4. Deletes `generated_assets/julia_depot` if present. The depot caches the previously installed Pluto, and asset generation skips preparation when it exists — a stale depot would silently ship the old Pluto.
+3. Updates [assets/env_for_julia/Manifest.toml](assets/env_for_julia/Manifest.toml) by running `Pkg.update("Pluto")`, so the build-time sysimage is compiled from exactly the pinned version. It prefers the Julia binary in `generated_assets/` (the one the app ships) and falls back to `julia` on the PATH.
+4. Deletes the sysimage build outputs (`generated_assets/pluto_sysimage.*`, `pluto_source/`, `pluto_server_depot/`) if present. Asset generation skips the (slow) sysimage build when these exist — stale outputs would silently ship the old Pluto.
 
 Requirements and gotchas:
 
@@ -46,7 +46,43 @@ Requirements and gotchas:
 
 ## Updating the bundled Julia version
 
-The Julia version is hardcoded in [scripts/generateAssets.js](scripts/generateAssets.js) (`JULIA_VERSION_PARTS`, near the top). After changing it, delete `generated_assets/` so the next build downloads the new Julia and rebuilds the depot from scratch.
+The Julia version is hardcoded in [scripts/generateAssets.js](scripts/generateAssets.js) (`JULIA_VERSION_PARTS`, near the top). It **must be ≥ 1.11**: notebook workers use the Julia install's own precompile caches (`<julia>/share/julia`), and only Julia 1.11+ makes those relocatable (content hashes and `@depot`-relative paths instead of absolute paths and mtimes). On 1.10 they embed build-machine paths and are rejected after every Squirrel relocation, forcing a multi-minute stdlib recompile.
+
+After changing the version:
+
+1. Regenerate the Manifest with the new Julia, so its `julia_version` and standard-library set match what ships:
+
+   ```sh
+   julia --project=assets/env_for_julia -e "import Pkg; Pkg.resolve()"
+   ```
+
+   `generateAssets.js` refuses to build if `Manifest.toml`'s `julia_version` doesn't match the bundled Julia, so this step is mandatory. Commit the updated Manifest. (The sysimage must be built with the exact Julia it will run under.)
+
+2. `generateAssets.js` detects a `generated_assets/julia-*` directory from a different version and removes it (along with the sysimage build outputs, which are Julia-version-specific) automatically on the next build. You only need to delete `generated_assets/` by hand if you want to force a clean rebuild.
+
+### How the sysimage is used at runtime
+
+The Pluto server is launched with `julia --sysimage=<generated_assets/pluto_sysimage.*>` (see [src/startup.ts](src/startup.ts)). The sysimage has Pluto and all its dependencies compiled in, so the server needs **no package sources, no precompile caches, and no writes to any depot** — it starts fast and offline. Pluto's own frontend/runner/sample folders are embedded in the sysimage (via RelocatableFolders) and re-materialize into a scratchspace in the user's depot on first launch.
+
+The build (`buildPlutoSysimage` in [scripts/generateAssets.js](scripts/generateAssets.js)) produces three things in `generated_assets/`:
+
+- `pluto_sysimage.<dll|so|dylib>` — the server image.
+- `pluto_source/Pluto/` — Pluto's package source. Needed on disk so `PLUTO_LOCATION` (the `file://` frontend in [src/pluto.ts](src/pluto.ts)) and `Base.locate_package` resolve; the Pluto *module* itself comes from the sysimage.
+- `pluto_server_depot/artifacts/` — only the JLL binary artifacts the server resolves at runtime whose versions differ from the ones bundled with Julia (e.g. `MbedTLS_jll`).
+
+It also creates temporary `build_depot/`, `build_tools_depot/`, and `build_tools_env/` (PackageCompiler + its mingw toolchain live in the tools depot, isolated from the shipped artifacts) and deletes them when done.
+
+At runtime the server's `JULIA_DEPOT_PATH` is a stack (see `getServerDepotPath` in [src/plutoProcess.ts](src/plutoProcess.ts)):
+
+```
+<user depot, usually ~/.julia> ; <pluto_server_depot> ; <julia>/local/share/julia ; <julia>/share/julia
+```
+
+- The user's depot comes first, so anything Pluto installs for notebooks — packages, registries, precompile caches — goes there, exactly as in a plain Julia session. Nothing accumulates in app-managed directories.
+- `pluto_server_depot` supplies the non-bundled JLL artifacts.
+- The Julia-installation depots supply the standard-library caches and Julia's own JLL artifacts; they must be listed explicitly because setting `JULIA_DEPOT_PATH` replaces Julia's default stack.
+
+Notebook (worker) processes inherit this stack but launch with the **default** Julia sysimage — Malt starts them with just the Julia executable path, and Pluto passes no `--sysimage` flag. `PlutoRunner` (stdlib-only deps) precompiles into the user's depot on first notebook launch. So userland runs on plain Julia with the normal global depot, unaffected by the server's sysimage.
 
 ## Making a release
 

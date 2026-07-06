@@ -1,4 +1,5 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import process from 'process';
@@ -7,7 +8,6 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import unzip from 'extract-zip';
 import { execSync } from 'child_process';
-import { exit } from 'process';
 
 
 
@@ -20,8 +20,12 @@ const generatedAssetsDir = path.join(projectRoot, 'generated_assets');
 
 
 // YOU CAN EDIT ME
-const JULIA_VERSION_PARTS = [1, 10, 10];
+const JULIA_VERSION_PARTS = [1, 12, 6];
 /// ☝️
+// Note: must be ≥ 1.11 — the bundled depot relies on relocatable precompile
+// caches (content hashes + @depot tags), which older Julia does not have.
+// After changing this, regenerate assets/env_for_julia/Manifest.toml with the
+// new Julia version (validatePlutoVersionConsistency will remind you).
 
 const JULIA_VERSION = JULIA_VERSION_PARTS.join('.');
 const JULIA_VERSION_MINOR = JULIA_VERSION_PARTS.slice(0, 2).join('.');
@@ -55,7 +59,36 @@ if (platform === 'win32') {
   throw new Error(`Unsupported platform: ${platform}`);
 }
 
-const DEPOT_NAME = `julia_depot`;
+// Sysimage approach (see SYSIMAGE_INVESTIGATION.md): instead of shipping a full
+// Julia depot (package sources + relocation-fragile precompile caches), we ship
+// Pluto compiled into a sysimage. What ends up in generated_assets/:
+//   - pluto_sysimage.<dll|so|dylib> : Pluto + all deps compiled in. Launched
+//     with `julia --sysimage=...`; the Pluto server needs no precompilation and
+//     works offline. Notebook workers keep using the DEFAULT sysimage.
+//   - pluto_source/Pluto/           : Pluto's own package source. Needed on disk
+//     so PLUTO_LOCATION (the file:// frontend) resolves; also the source the
+//     RelocatableFolders-embedded frontend/runner correspond to.
+//   - pluto_server_depot/artifacts/ : the JLL binary artifacts Pluto's deps
+//     resolve at runtime (e.g. MbedTLS_jll) whose versions differ from the ones
+//     bundled with Julia. Everything else is in the sysimage.
+const SYSIMAGE_BASENAME =
+  platform === 'win32'
+    ? 'pluto_sysimage.dll'
+    : platform === 'darwin'
+      ? 'pluto_sysimage.dylib'
+      : 'pluto_sysimage.so';
+const SYSIMAGE_LOCATION = path.join(generatedAssetsDir, SYSIMAGE_BASENAME);
+const PLUTO_SOURCE_LOCATION = path.join(generatedAssetsDir, 'pluto_source');
+const SERVER_DEPOT_LOCATION = path.join(generatedAssetsDir, 'pluto_server_depot');
+// Temporary build-only directories, removed after the sysimage is built. Keeping
+// PackageCompiler (and the ~700 MB mingw-w64 toolchain it downloads on Windows)
+// in a separate depot from the Pluto env means the shipped artifacts stay clean.
+const BUILD_DEPOT_LOCATION = path.join(generatedAssetsDir, 'build_depot');
+const BUILD_TOOLS_DEPOT_LOCATION = path.join(generatedAssetsDir, 'build_tools_depot');
+const BUILD_TOOLS_ENV_LOCATION = path.join(generatedAssetsDir, 'build_tools_env');
+
+// PackageCompiler.jl — pinned loosely; only used at build time.
+const PACKAGE_COMPILER_UUID = '9b87118b-4619-50d2-8e1e-99f35a4d4d9d';
 
 // The app version is `<pluto-version>-buildNNN` (see MAINTENANCE.md), and the
 // Julia environment must pin exactly that Pluto version. All three files are
@@ -94,7 +127,17 @@ const validatePlutoVersionConsistency = () => {
     );
   }
 
-  console.log(`Verified: bundling Pluto v${plutoVersion} (app version ${pkg.version})`);
+  // The precompile caches prepared for the bundled depot are only valid for
+  // the exact Julia version they were built with, so the manifest must be
+  // resolved with the Julia we ship.
+  const manifestJuliaVersion = manifest.match(/^julia_version = "([^"]*)"\s*$/m)?.[1];
+  if (manifestJuliaVersion !== JULIA_VERSION) {
+    throw new Error(
+      `assets/env_for_julia/Manifest.toml was resolved with Julia ${manifestJuliaVersion ?? '(unknown)'} but the bundled Julia is ${JULIA_VERSION}. Regenerate it with Julia ${JULIA_VERSION}: julia --project=assets/env_for_julia -e "import Pkg; Pkg.resolve()"`,
+    );
+  }
+
+  console.log(`Verified: bundling Pluto v${plutoVersion} (app version ${pkg.version}, Julia ${JULIA_VERSION})`);
 };
 
 const downloadJulia = async () => {
@@ -113,161 +156,184 @@ const downloadJulia = async () => {
   console.log(`\tDownloaded Julia ${JULIA_VERSION} for ${platform}`);
 };
 
-// Currently disabled, see https://github.com/JuliaPluto/PlutoDesktop/issues/56
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const precompilePluto = async ({ julia_path }) => {
-  // TODO: You need to add PackageCompiler to some environment for this to work.
-
-  const SYSIMAGE_LOCATION = path.join(
-    generatedAssetsDir,
-    // TODO: auto version number
-    'pluto.so',
-  );
-
-  // immediately return if the sysimage has already been compiled
-  if (fs.existsSync(SYSIMAGE_LOCATION)) {
-    return new Promise((resolve) => resolve());
-  }
-
-  const PRECOMPILE_SCRIPT_LOCATION = path.join(generatedAssetsDir, 'precompile.jl');
-  const PRECOMPILE_EXECUTION_LOCATION = path.join(
-    generatedAssetsDir,
-    'precompile_execution.jl',
-  );
-
-  const res = spawn(julia_path, [
-    `--project=${path.join(generatedAssetsDir, 'env_for_julia')}`,
-    PRECOMPILE_SCRIPT_LOCATION,
-    SYSIMAGE_LOCATION,
-    PRECOMPILE_EXECUTION_LOCATION,
-  ]);
-
-  // stderr includes precompile status text
-  res.stderr.on('data', (data) => {
-    process.stdout.write(data?.toString?.());
-  });
-
-  return new Promise((resolve) => {
-    res.once('close', (exit_code) => {
-      if (exit_code === 0) {
-        console.info('Pluto has been precompiled to', SYSIMAGE_LOCATION);
-      } else {
-        console.error('Pluto precompile failed');
-        exit(exit_code);
-      }
-      resolve(SYSIMAGE_LOCATION);
+// Run a Julia process, streaming its output, and resolve/reject on exit code.
+const runJulia = (julia_path, args, env) =>
+  new Promise((resolve, reject) => {
+    const res = spawn(julia_path, args, {
+      env: { ...process.env, ...env },
+    });
+    res.stdout.on('data', (data) => process.stdout.write(data?.toString?.()));
+    res.stderr.on('data', (data) => process.stderr.write(data?.toString?.()));
+    res.on('error', reject);
+    res.once('close', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`Julia exited with code ${code}: ${args.join(' ')}`));
     });
   });
+
+// Recreate the extended-attribute / permission fixup the old depot preparation
+// did, so shipped files don't break macOS code signing. No-op off macOS.
+const fixupMacPermissions = (dir) => {
+  if (platform !== 'darwin' || !fs.existsSync(dir)) return;
+  // (🤖🤖 This block is AI written and not tested on macOS.)
+  try {
+    execSync(`find "${dir}" -type f -exec chmod u+w {} +`, { stdio: 'ignore' });
+    execSync(`find "${dir}" -type d -exec chmod u+w {} +`, { stdio: 'ignore' });
+    execSync(`xattr -rc "${dir}" 2>/dev/null || true`, { stdio: 'ignore' });
+    execSync(`find "${dir}" -type f -exec chmod 644 {} +`, { stdio: 'ignore' });
+    execSync(`find "${dir}" -type d -exec chmod 755 {} +`, { stdio: 'ignore' });
+  } catch (error) {
+    console.warn('Warning: Could not fix file permissions:', error.message);
+  }
 };
 
-const prepareJuliaDepot = async ({ julia_path }) => {
-  console.log('prepareJuliaDepot: Starting...');
-  console.log('prepareJuliaDepot: Julia path:', julia_path);
-  
+// Build the Pluto sysimage and extract the small on-disk pieces the app still
+// needs (Pluto source for PLUTO_LOCATION, and the JLL artifacts). See the block
+// comment near SYSIMAGE_LOCATION and SYSIMAGE_INVESTIGATION.md.
+const buildPlutoSysimage = async ({ julia_path }) => {
   if (!fs.existsSync(julia_path)) {
     throw new Error(`Julia executable not found at: ${julia_path}`);
   }
 
-  const DEPOT_LOCATION = path.join(generatedAssetsDir, DEPOT_NAME);
-  console.log('prepareJuliaDepot: DEPOT_LOCATION:', DEPOT_LOCATION);
-  
-  
-  // immediately return if the depot has already been prepared
-  if (fs.existsSync(DEPOT_LOCATION)) {
-    console.info('DEPOT preparation already done', DEPOT_LOCATION);
+  const plutoSrcDir = path.join(PLUTO_SOURCE_LOCATION, 'Pluto');
+  const artifactsDir = path.join(SERVER_DEPOT_LOCATION, 'artifacts');
+  if (
+    fs.existsSync(SYSIMAGE_LOCATION) &&
+    fs.existsSync(plutoSrcDir) &&
+    fs.existsSync(artifactsDir)
+  ) {
+    console.info('Sysimage build already done', SYSIMAGE_LOCATION);
     return;
   }
 
-  fs.rmSync(DEPOT_LOCATION, {
-    force: true,
-    recursive: true,
-  });
+  // Start from a clean slate for every output and temp dir.
+  for (const p of [
+    SYSIMAGE_LOCATION,
+    PLUTO_SOURCE_LOCATION,
+    SERVER_DEPOT_LOCATION,
+    BUILD_DEPOT_LOCATION,
+    BUILD_TOOLS_DEPOT_LOCATION,
+    BUILD_TOOLS_ENV_LOCATION,
+  ]) {
+    fs.rmSync(p, { force: true, recursive: true });
+  }
 
-  const projectPath = path.join(projectRoot, 'assets', 'env_for_julia');
-  console.log('prepareJuliaDepot: Project path:', projectPath);
-  console.log('prepareJuliaDepot: Spawning Julia process...');
+  const envProject = path.join(projectRoot, 'assets', 'env_for_julia');
+  const juliaRootDir = path.join(generatedAssetsDir, JULIA_DIR_NAME);
+  // The depots inside the Julia install must be stacked so instantiate/build
+  // reuse the stdlib caches and JLL artifacts that ship with Julia (see the
+  // depot-stacking rationale in git history), and so JLLs that ARE bundled with
+  // Julia don't get their artifacts re-downloaded into our shipped depot.
+  const shareDepots = [
+    path.join(juliaRootDir, 'local', 'share', 'julia'),
+    path.join(juliaRootDir, 'share', 'julia'),
+  ];
+  const buildNotebooksDir = path.join(os.tmpdir(), 'pluto_desktop_build_notebooks');
 
-  const res = spawn(
+  // 1. Instantiate env_for_julia into the build depot. This downloads Pluto, its
+  //    dependencies, and their (non-bundled) artifacts. Pluto's precompile
+  //    workload runs here; keep its sample notebook out of the tree.
+  console.log('buildPlutoSysimage: instantiating env_for_julia...');
+  await runJulia(
     julia_path,
-    [
-      `--project=${projectPath}`,
-      `-e`,
-      `import Pkg; Pkg.instantiate(); import Pluto`,
-    ],
+    [`--project=${envProject}`, '-e', 'import Pkg; Pkg.instantiate()'],
     {
-      env: {
-        ...process.env,
-        JULIA_DEPOT_PATH: DEPOT_LOCATION,
-      },
+      JULIA_DEPOT_PATH: [BUILD_DEPOT_LOCATION, ...shareDepots].join(path.delimiter),
+      JULIA_PLUTO_NEW_NOTEBOOKS_DIR: buildNotebooksDir,
     },
   );
 
-  // Handle stdout to prevent buffer overflow
-  res.stdout.on('data', (data) => {
-    process.stdout.write(data?.toString?.());
-  });
+  // 2. Install PackageCompiler into a SEPARATE tools depot, so it and the mingw
+  //    toolchain it downloads never end up among the shipped artifacts.
+  console.log('buildPlutoSysimage: installing PackageCompiler...');
+  fs.mkdirSync(BUILD_TOOLS_ENV_LOCATION, { recursive: true });
+  fs.writeFileSync(
+    path.join(BUILD_TOOLS_ENV_LOCATION, 'Project.toml'),
+    `[deps]\nPackageCompiler = "${PACKAGE_COMPILER_UUID}"\n`,
+  );
+  await runJulia(
+    julia_path,
+    [`--project=${BUILD_TOOLS_ENV_LOCATION}`, '-e', 'import Pkg; Pkg.instantiate()'],
+    {
+      JULIA_DEPOT_PATH: [BUILD_TOOLS_DEPOT_LOCATION, ...shareDepots].join(
+        path.delimiter,
+      ),
+    },
+  );
 
-  // Handle stderr
-  res.stderr.on('data', (data) => {
-    process.stderr.write(data?.toString?.());
-  });
-
-  // Handle spawn errors
-  res.on('error', (error) => {
-    console.error('prepareJuliaDepot: Failed to spawn Julia process:', error);
-    throw error;
-  });
-
-  console.log('prepareJuliaDepot: Waiting for Julia process to complete...');
-  const exit_code = await new Promise((resolve) => {
-    res.once('close', (code) => {
-      console.log('prepareJuliaDepot: Julia process exited with code:', code);
-      resolve(code);
-    });
-  });
-
-  if (exit_code !== 0) {
-    console.error('DEPOT preparation failed with exit code:', exit_code);
-    throw new Error(`DEPOT preparation failed with exit code: ${exit_code}`);
+  // 3. Build the sysimage. The driver runs with the tools project (for
+  //    PackageCompiler); it compiles the Pluto env, resolved from the build
+  //    depot. cpu_target is left at PackageCompiler's default, which is already
+  //    a portable multi-arch target.
+  console.log('buildPlutoSysimage: creating sysimage (this takes a while)...');
+  const buildScript = [
+    'using PackageCompiler',
+    `create_sysimage(["Pluto"]; sysimage_path=raw"${SYSIMAGE_LOCATION}", project=raw"${envProject}", incremental=true)`,
+  ].join('\n');
+  await runJulia(
+    julia_path,
+    [`--project=${BUILD_TOOLS_ENV_LOCATION}`, '-e', buildScript],
+    {
+      JULIA_DEPOT_PATH: [
+        BUILD_TOOLS_DEPOT_LOCATION,
+        BUILD_DEPOT_LOCATION,
+        ...shareDepots,
+      ].join(path.delimiter),
+      JULIA_PLUTO_NEW_NOTEBOOKS_DIR: buildNotebooksDir,
+    },
+  );
+  if (!fs.existsSync(SYSIMAGE_LOCATION)) {
+    throw new Error(`Sysimage was not produced at ${SYSIMAGE_LOCATION}`);
   }
 
-  // Remove downloaded registry for file savings: you don't need it to run an environment that has already been instantiated.
-  fs.rmSync(path.join(DEPOT_LOCATION, 'registries'), {
-    force: true,
+  // 4. Extract Pluto's own source (frontend/, src/, sample/, …) so PLUTO_LOCATION
+  //    resolves at runtime. Drop dev-only trees we don't ship.
+  const plutoPackages = path.join(BUILD_DEPOT_LOCATION, 'packages', 'Pluto');
+  const plutoHashes = fs.readdirSync(plutoPackages);
+  if (plutoHashes.length !== 1) {
+    throw new Error(
+      `Expected exactly one Pluto package dir in ${plutoPackages}, found: ${plutoHashes.join(', ')}`,
+    );
+  }
+  const plutoBuildSrc = path.join(plutoPackages, plutoHashes[0]);
+  const skip = new Set(['test', 'frontend-bundler', '.git']);
+  fs.mkdirSync(PLUTO_SOURCE_LOCATION, { recursive: true });
+  fs.cpSync(plutoBuildSrc, plutoSrcDir, {
     recursive: true,
+    filter: (src) => {
+      const rel = path.relative(plutoBuildSrc, src);
+      const top = rel.split(path.sep)[0];
+      return !skip.has(top);
+    },
   });
+  console.info('Extracted Pluto source to', plutoSrcDir);
 
-  // Fix file permissions on macOS to prevent code signing issues
-  if (platform === 'darwin') {
-    // (🤖🤖 This if block is AI written and not reviewed.)
-    try {
-      // First, make files writable so we can remove extended attributes
-      execSync(`find "${DEPOT_LOCATION}" -type f -exec chmod u+w {} +`, {
-        stdio: 'ignore',
-      });
-      execSync(`find "${DEPOT_LOCATION}" -type d -exec chmod u+w {} +`, {
-        stdio: 'ignore',
-      });
-      // Remove extended attributes (quarantine, etc.) that can interfere with code signing
-      execSync(`xattr -rc "${DEPOT_LOCATION}" 2>/dev/null || true`, {
-        stdio: 'ignore',
-      });
-      // Set final correct permissions: 644 for files, 755 for directories
-      execSync(`find "${DEPOT_LOCATION}" -type f -exec chmod 644 {} +`, {
-        stdio: 'ignore',
-      });
-      execSync(`find "${DEPOT_LOCATION}" -type d -exec chmod 755 {} +`, {
-        stdio: 'ignore',
-      });
-      console.info(
-        'Fixed file permissions and removed extended attributes in DEPOT',
-      );
-    } catch (error) {
-      console.warn('Warning: Could not fix file permissions:', error.message);
-    }
+  // 5. Ship an artifacts-only depot: the JLL binaries Pluto's deps resolve at
+  //    runtime whose versions differ from the ones bundled with Julia.
+  fs.mkdirSync(SERVER_DEPOT_LOCATION, { recursive: true });
+  const buildArtifacts = path.join(BUILD_DEPOT_LOCATION, 'artifacts');
+  if (fs.existsSync(buildArtifacts)) {
+    fs.cpSync(buildArtifacts, artifactsDir, { recursive: true });
+    console.info('Extracted JLL artifacts to', artifactsDir);
+  } else {
+    // No non-bundled artifacts were needed; ship an empty artifacts dir so the
+    // runtime depot stack entry is valid.
+    fs.mkdirSync(artifactsDir, { recursive: true });
   }
 
-  console.info('DEPOT preparation success', DEPOT_LOCATION);
+  // 6. Remove the (large) build-only depots.
+  for (const p of [
+    BUILD_DEPOT_LOCATION,
+    BUILD_TOOLS_DEPOT_LOCATION,
+    BUILD_TOOLS_ENV_LOCATION,
+  ]) {
+    fs.rmSync(p, { force: true, recursive: true });
+  }
+
+  fixupMacPermissions(PLUTO_SOURCE_LOCATION);
+  fixupMacPermissions(SERVER_DEPOT_LOCATION);
+
+  console.info('Sysimage build success', SYSIMAGE_LOCATION);
 };
 
 /**  (🤖🤖 This function is AI written and not reviewed.) */
@@ -374,6 +440,40 @@ export default async (config, platform, arch) => {
   
   let files = fs.readdirSync(generatedAssetsDir);
 
+  // Clean up after a Julia version change: findJulia() at runtime picks the
+  // first julia-* directory it sees, and a sysimage built with another Julia is
+  // incompatible.
+  const staleJulias = files.filter(
+    (s) => /^julia-\d+\.\d+\.\d+$/.test(s) && s !== JULIA_DIR_NAME,
+  );
+  if (staleJulias.length > 0) {
+    for (const dir of staleJulias) {
+      console.log(`Removing stale ${dir}...`);
+      fs.rmSync(path.join(generatedAssetsDir, dir), {
+        recursive: true,
+        force: true,
+      });
+    }
+    // The sysimage, its extracted Pluto source, and the artifacts depot were
+    // built against the previous Julia; force a rebuild.
+    console.log('Removing sysimage build outputs from a previous Julia...');
+    for (const p of [
+      SYSIMAGE_LOCATION,
+      PLUTO_SOURCE_LOCATION,
+      SERVER_DEPOT_LOCATION,
+    ]) {
+      fs.rmSync(p, { recursive: true, force: true });
+    }
+    files = fs.readdirSync(generatedAssetsDir);
+  }
+
+  // Remove the old full depot from the pre-sysimage design if it's lying around.
+  const legacyDepot = path.join(generatedAssetsDir, 'julia_depot');
+  if (fs.existsSync(legacyDepot)) {
+    console.log('Removing legacy julia_depot (superseded by the sysimage)...');
+    fs.rmSync(legacyDepot, { recursive: true, force: true });
+  }
+
   if (!files.includes(JULIA_DIR_NAME)) {
     await downloadJulia();
     await extractJulia();
@@ -386,12 +486,7 @@ export default async (config, platform, arch) => {
     JULIA_EXECUTABLE,
   );
 
-  await prepareJuliaDepot({
+  await buildPlutoSysimage({
     julia_path: juliaPath,
   });
-
-  // NOT DOING THIS, see https://github.com/JuliaPluto/PlutoDesktop/issues/56
-  // await precompilePluto({
-  //   julia_path: juliaPath,
-  // });
 };

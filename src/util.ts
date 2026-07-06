@@ -1,6 +1,4 @@
 import { BrowserWindow } from 'electron';
-import path from 'node:path';
-import fs from 'node:fs';
 import { URL } from 'url';
 import { Globals } from './globals.ts';
 
@@ -52,28 +50,6 @@ export const PLUTO_FILE_EXTENSIONS = [
  */
 export const isExtMatch = (file: string) =>
   PLUTO_FILE_EXTENSIONS.some((ext) => file.endsWith(ext));
-
-export function copyDirectoryRecursive(source: string, destination: string) {
-  if (!fs.existsSync(source)) {
-    console.error(`Source directory ${source} does not exist.`);
-    return;
-  }
-
-  if (!fs.existsSync(destination)) {
-    fs.mkdirSync(destination, { recursive: true });
-  }
-
-  fs.readdirSync(source).forEach((file) => {
-    const filePath = path.join(source, file);
-    const destFilePath = path.join(destination, file);
-
-    if (fs.statSync(filePath).isDirectory()) {
-      copyDirectoryRecursive(filePath, destFilePath);
-    } else {
-      fs.copyFileSync(filePath, destFilePath);
-    }
-  });
-}
 
 /**
  * This is a loader, it simply inserts custom cursor
