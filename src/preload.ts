@@ -1,7 +1,7 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 
-import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import { app, contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 
 // Channels the renderer is allowed to listen on. This is the contract with
 // Pluto.jl's frontend/components/DesktopInterface.js.
@@ -11,6 +11,11 @@ type PlutoExport = 'file' | 'html' | 'state' | 'pdf';
 type OpenNotebookOptions = { newWindow?: boolean };
 
 contextBridge.exposeInMainWorld('plutoDesktop', {
+  /**
+   * Version of the Desktop package.json.
+   */
+  desktopVersion: app.getVersion(),
+  
   /**
    * Returns true once the wrapper has detected that the Pluto server is
    * accepting requests at the URL embedded in this page's `pluto_server_url`
