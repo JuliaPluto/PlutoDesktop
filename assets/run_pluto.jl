@@ -14,11 +14,22 @@ copy!(LOAD_PATH, ["@"])
 import Logging
 Logging.global_logger(Logging.ConsoleLogger(stdout));
 
-# This process runs with a JULIA_DEPOT_PATH that stacks the app's bundled read-only depot (and the depots inside the Julia installation) behind the user's own depot (see getServerDepotPath in plutoProcess.ts). The bundled depot contains the sources and precompile caches for everything in our manifest, so a normal launch needs no Pkg operations and works offline.
+# This process is normally launched with `--sysimage=<pluto_sysimage>` (see
+# startup.ts), which has Pluto and all its dependencies precompiled in. So
+# `import Pluto` resolves to the sysimage-resident module instantly, needs no
+# package sources or precompile caches in any depot, and works offline. The
+# JULIA_DEPOT_PATH still stacks a small read-only depot (JLL artifacts) and the
+# Julia install's own depots behind the user's depot (see getServerDepotPath in
+# plutoProcess.ts).
 #
-# Notebook processes inherit the same stack. The user's depot comes first, so everything Pluto installs for notebooks (packages, registries, precompile caches) goes to the user's normal depot, like in a plain Julia session. The stack must be shared with notebook processes because notebook environments are resolved in *this* process: a version that resolution finds in the bundled depot would not be downloaded again, so notebook processes need to see the bundled depot too.
+# Notebook (worker) processes inherit this stack but launch with the DEFAULT
+# Julia sysimage, and install everything they need into the user's depot, which
+# comes first — exactly like a plain Julia session.
 #
-# Pkg.instantiate() is only a repair path: it downloads the registry and any missing packages into the user's depot, so only run it when loading actually fails.
+# The Pkg.instantiate() branch is only a repair path for the dev/no-sysimage
+# case: when there is no sysimage and Pluto isn't installed in the user's depot,
+# it downloads the registry and missing packages. With the sysimage, `import
+# Pluto` never fails, so this branch is not taken.
 try
     import Pluto
 catch e
