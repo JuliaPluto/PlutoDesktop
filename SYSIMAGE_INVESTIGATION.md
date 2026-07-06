@@ -293,10 +293,19 @@ now) and the **~36 MB `packages/` sources** for Pluto's deps (in the sysimage).
   to resolve the UUID + the stdlib set, so its recorded tree-hash/path never has
   to exist on disk. This means the Manifest strategy needs **no changes** and
   `PLUTO_LOCATION` can simply be hardcoded to the shipped `pluto_source/Pluto`.
-- **`cpu_target` is a non-issue.** `PackageCompiler.create_sysimage` already
-  defaults `cpu_target = default_app_cpu_target()`, a portable multi-arch target
-  (x86_64: `generic;sandybridge,…;haswell,…`). My existing image was already
-  built portably. So we pass no `cpu_target`.
+- **`cpu_target` MUST be passed explicitly.** ⚠️ Earlier I wrongly claimed this
+  was a non-issue: `create_sysimage` defaults `cpu_target = NATIVE_CPU_TARGET`
+  (`"native"`) — it is `create_app`/`create_library` that default to the
+  portable `default_app_cpu_target()`. Building without it produced a
+  **native-only sysimage** (the CI runner's CPU), which crashed on end-user
+  machines with `ERROR: Unable to find compatible target in cached code image.
+  Target 0 (znver3): Rejecting this target due to use of runtime-disabled
+  features` (reported by a user on a Zen 3 machine after installing
+  v1.0.1-build005). Fix: pass
+  `cpu_target=PackageCompiler.default_app_cpu_target()` (portable multi-arch:
+  x86_64 `generic;sandybridge,…;haswell,…`, whose `generic` baseline runs on any
+  x86_64). A single-machine local test can NOT catch this — it only shows up on
+  a different CPU. Fixed in build006.
 
 ### Implemented layout (branch `sysimage-approach`)
 
@@ -362,7 +371,9 @@ Ran the actual `generateAssets` hook (via a driver) on this machine:
 
 ## Open considerations / follow-ups
 
-1. **cpu_target** — resolved: PackageCompiler's default is already portable.
+1. **cpu_target** — FIXED in build006: `create_sysimage` defaults to `"native"`,
+   so we now pass `cpu_target=PackageCompiler.default_app_cpu_target()`. (build005
+   shipped native-only and crashed on other CPUs.)
 2. **Worker first-run registry**: the worker's PlutoRunner boot environment
    caused Pkg to install the General registry. On a *truly offline, fresh* user
    machine this could fail. This is **shared with the current design** (which

@@ -263,12 +263,16 @@ const buildPlutoSysimage = async ({ julia_path }) => {
 
   // 3. Build the sysimage. The driver runs with the tools project (for
   //    PackageCompiler); it compiles the Pluto env, resolved from the build
-  //    depot. cpu_target is left at PackageCompiler's default, which is already
-  //    a portable multi-arch target.
+  //    depot. cpu_target MUST be set explicitly: create_sysimage defaults to
+  //    "native" (the build machine's CPU), which produces a sysimage that fails
+  //    to load on other CPUs with "Unable to find compatible target in cached
+  //    code image". default_app_cpu_target() is the portable multi-arch target
+  //    (a generic x86_64 baseline plus optimized clones) that Julia's own
+  //    distributed binaries use, so it runs on any end-user CPU.
   console.log('buildPlutoSysimage: creating sysimage (this takes a while)...');
   const buildScript = [
     'using PackageCompiler',
-    `create_sysimage(["Pluto"]; sysimage_path=raw"${SYSIMAGE_LOCATION}", project=raw"${envProject}", incremental=true)`,
+    `create_sysimage(["Pluto"]; sysimage_path=raw"${SYSIMAGE_LOCATION}", project=raw"${envProject}", incremental=true, cpu_target=PackageCompiler.default_app_cpu_target())`,
   ].join('\n');
   await runJulia(
     julia_path,
