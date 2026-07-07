@@ -1,7 +1,12 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 
-import { app, contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+
+// Injected at build time by webpack's DefinePlugin (see webpack.plugins.ts).
+// We can't call the Electron `app` module here: it's main-process only and is
+// `undefined` in this sandboxed preload script.
+declare const __DESKTOP_VERSION__: string;
 
 // Channels the renderer is allowed to listen on. This is the contract with
 // Pluto.jl's frontend/components/DesktopInterface.js.
@@ -14,7 +19,7 @@ contextBridge.exposeInMainWorld('plutoDesktop', {
   /**
    * Version of the Desktop package.json.
    */
-  desktopVersion: app.getVersion(),
+  desktopVersion: __DESKTOP_VERSION__,
   
   /**
    * Returns true once the wrapper has detected that the Pluto server is
