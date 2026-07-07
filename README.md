@@ -38,6 +38,22 @@ You can already try an beta preview of Pluto Desktop!
 
 Run the installer, this will take some minutes, and Pluto is installed! You don't need to install anything else. The app keeps itself up to date automatically.
 
+## Uninstalling
+
+Pluto Desktop installs per-user (no admin rights required), so removing it is quick:
+
+1. Open **Settings → Apps → Installed apps** (or **Control Panel → Programs and Features** on older Windows).
+2. Find **Pluto.jl Desktop** in the list and choose **Uninstall**.
+
+This removes the app together with the bundled Julia and Pluto — nothing else is required.
+
+Uninstalling does **not** delete files created while using the app. If you also want a clean slate, you can manually delete:
+
+- `%APPDATA%\Pluto.jl Desktop` — app logs and unsaved notebooks.
+- `%USERPROFILE%\.julia` — the Julia package depot, where Pluto installs the packages your notebooks use. ⚠️ Only delete this if you don't otherwise use Julia on your machine, as it is shared with any regular Julia installation.
+
+Notebooks you saved yourself (`.jl` files) live wherever you saved them and are never touched by uninstalling.
+
 ## Maintenance
 
 See the [maintenance guide](MAINTENANCE.md) for the versioning scheme and how to update the bundled Pluto and Julia versions.
