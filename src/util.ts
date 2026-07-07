@@ -52,6 +52,20 @@ export const isExtMatch = (file: string) =>
   PLUTO_FILE_EXTENSIONS.some((ext) => file.endsWith(ext));
 
 /**
+ * Find the first Pluto notebook path in a process argv array. Used to open a
+ * notebook that was passed on the command line, e.g. when Windows launches us
+ * to open a double-clicked `.jl` file (`"Pluto.jl Desktop.exe" "C:\path.jl"`).
+ * Skips argv[0] (the executable) and any flags/switches.
+ */
+export const firstNotebookPath = (argv: readonly string[]): string | null => {
+  for (const arg of argv.slice(1)) {
+    if (typeof arg !== 'string' || arg.startsWith('-')) continue;
+    if (isExtMatch(arg)) return arg;
+  }
+  return null;
+};
+
+/**
  * This is a loader, it simply inserts custom cursor
  * loading css into the window, and can also remove it.
  */

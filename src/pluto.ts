@@ -48,6 +48,13 @@ class Pluto {
 
   private viewedNotebookId: string | null = null;
 
+  /**
+   * A notebook path this window should open as soon as the Pluto server is
+   * ready, instead of showing the welcome page. Set for windows created to open
+   * a file passed on the command line (double-clicked `.jl`). See onServerReady.
+   */
+  public pendingNotebookPath: string | null = null;
+
   constructor(win: BrowserWindow, landingUrl: string | null) {
     this.win = win;
     if (landingUrl) {
@@ -564,6 +571,29 @@ class Pluto {
     }&pluto_server_url=${encodeURIComponent(
       `http://localhost:${Globals.PLUTO_PORT}?secret=${Globals.PLUTO_SECRET}`,
     )}`;
+  };
+
+  /**
+   * Called for every window once the Pluto server becomes ready. If this window
+   * was created to open a specific notebook (pendingNotebookPath), open it now;
+   * otherwise, if it's still showing the loading screen, move it to the welcome
+   * page.
+   * @param loadingUrl the URL shown while the server was starting up
+   */
+  public onServerReady = async (loadingUrl: string): Promise<void> => {
+    if (this.win.isDestroyed()) return;
+
+    if (this.pendingNotebookPath) {
+      const notebookPath = this.pendingNotebookPath;
+      this.pendingNotebookPath = null;
+      await this.open('path', notebookPath);
+      return;
+    }
+
+    const currentUrl = this.win.webContents.getURL();
+    if (currentUrl === '' || currentUrl === loadingUrl) {
+      await Pluto.loadHome(this.win);
+    }
   };
 
   public getBrowserWindow() {

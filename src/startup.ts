@@ -77,12 +77,9 @@ export async function startup(app: App, loadingUrl: string) {
 
             Globals.PLUTO_URL = new URL(`${tempURL.protocol}//${tempURL.host}`);
             GlobalWindowManager.all((p) => {
-              const window = p.getBrowserWindow();
-              const currentUrl = window.webContents.getURL();
-              if (currentUrl === '' || currentUrl === normalizedLoadingUrl) {
-                void window.loadURL(Pluto.resolveHtmlPath('index.html'));
-              }
+              void p.onServerReady(normalizedLoadingUrl);
             });
+            Globals.markStarted();
 
             generalLogger.verbose('Entry url found:', Globals.PLUTO_URL);
           }

@@ -28,4 +28,25 @@ export class Globals {
   public static get PLUTO_STARTED(): boolean {
     return !!this.PLUTO_URL;
   }
+
+  private static startResolvers: Array<() => void> = [];
+
+  /**
+   * Resolves once the Pluto server is up (PLUTO_URL is set). Callers that need
+   * the server before acting — e.g. opening a notebook passed on the command
+   * line — can await this instead of polling.
+   */
+  public static whenStarted(): Promise<void> {
+    if (this.PLUTO_STARTED) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      this.startResolvers.push(resolve);
+    });
+  }
+
+  /** Called by startup() once PLUTO_URL is set, to wake up whenStarted waiters. */
+  public static markStarted(): void {
+    const resolvers = this.startResolvers;
+    this.startResolvers = [];
+    for (const resolve of resolvers) resolve();
+  }
 }
