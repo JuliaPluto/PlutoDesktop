@@ -187,6 +187,10 @@ class Pluto {
               name: 'Pluto Notebook',
               extensions: PLUTO_FILE_EXTENSIONS.map((v) => v.slice(1)),
             },
+            {
+              name: 'All files',
+              extensions: ['*'],
+            },
           ],
           properties: ['openFile'],
         });
@@ -451,8 +455,8 @@ class Pluto {
         buttonLabel: 'Select',
         filters: [
           {
-            name: 'Pluto notebook (.pluto.jl)',
-            extensions: ['pluto.jl'],
+            name: 'Pluto notebook (.plutojl)',
+            extensions: ['plutojl'],
           },
           {
             name: 'Pluto notebook (.jl)',
