@@ -33,10 +33,10 @@ You can already try an beta preview of Pluto Desktop!
 
 **[⬇ Download Pluto for Windows](https://github.com/JuliaPluto/PlutoDesktop/releases/latest/download/PlutoSetup.exe)**
 
-> [^NOTE]
-> You will see a warning **Windows protected this PC**. Click on **Details**, and then **Run anyways**. You get this warning because we don't yet have a Windows code signing key.
-
 Run the installer, this will take some minutes, and Pluto is installed! You don't need to install anything else. The app keeps itself up to date automatically.
+
+> [!WARNING]
+> You will see a warning **Windows protected this PC**. Click on **Details**, and then **Run anyways**. You get this warning because we don't yet have a Windows code signing key.
 
 ## Uninstalling
 
