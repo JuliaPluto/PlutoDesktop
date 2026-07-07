@@ -3,10 +3,8 @@
 
 PlutoDesktop is a batteries-included Windows desktop application to run [Pluto](https://plutojl.org). PlutoDesktop is the easiest way to install and use Pluto on windows. 
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/JuliaPluto/PlutoDesktop/assets/22894011/553e7022-08c9-4aa5-a5cf-385f4244473f">
-  <img alt="Pluto.jl landing page in Pluto Desktop" width="600" src="https://github.com/JuliaPluto/PlutoDesktop/assets/22894011/4d98e70b-7b51-4139-be66-3059099824f3">
-</picture>
+<img width="1920" height="1200" alt="Screenshot of the Pluto Desktop landing page, showing the Pluto main menu in a Windows app" src="https://github.com/user-attachments/assets/ef2a4c68-e307-4f52-bad4-bdebb1775e80" />
+
 
 ## Features
 The advantages compared to installing Pluto as a Julia package are:
@@ -24,6 +22,9 @@ Although everybody is welcome to use this, it is generally focussed on people wh
 
 On all platforms (Windows, MacOS, Linux), you can still install Pluto as a package from the Julia package manager. PlutoDesktop is an extra option for Windows users.
 
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/3a7b10da-0129-4c77-bb3a-caa9b7ebdfd6" />
+
+
 ## Supported Platforms
 
 Windows 64 bit only. This is because most of our users use Windows, and this is the platform where using a terminal and typing file paths is the least comon.
@@ -36,7 +37,21 @@ You can already try an beta preview of Pluto Desktop!
 Run the installer, this will take some minutes, and Pluto is installed! You don't need to install anything else. The app keeps itself up to date automatically.
 
 > [!WARNING]
-> You will see a warning **Windows protected this PC**. Click on **Details**, and then **Run anyways**. You get this warning because we don't yet have a Windows code signing key.
+> You will see a warning **Windows protected your PC**. Click on **More info**, and then **Run anyways**. You get this warning because we don't yet have a Windows code signing key.
+
+
+<details>
+  <summary>Screenshots of "Windows protected your PC"</summary>
+
+<img width="1920" height="1200" alt="Windows protected your PC dialog: click More info" src="https://github.com/user-attachments/assets/cd81795f-2b77-4edf-8710-1bbb12edfff9" />
+
+
+<img width="1920" height="1200" alt="Windows protected your PC dialog: click Run anaway" src="https://github.com/user-attachments/assets/b2370966-171e-4728-a77b-33fa9f373b37" />
+
+  
+</details>
+
+
 
 ## Uninstalling
 
