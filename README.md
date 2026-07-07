@@ -1,13 +1,7 @@
-# Pluto Desktop _(still in development)_
+# Pluto Desktop _(beta release)_
 [![Release](https://github.com/JuliaPluto/PlutoDesktop/actions/workflows/release.yml/badge.svg)](https://github.com/JuliaPluto/PlutoDesktop/actions/workflows/release.yml)
 
-All included one stop solution to run [Pluto](https://github.com/fonsp/Pluto.jl) notebooks. Just install this and get going!
-Abstracts and automates the following processes:
-
-- Installing Julia (comes with its own binary)
-- Installing Pluto
-- Running Pluto
-- Creating a system image for better performance
+PlutoDesktop is a batteries-included Windows desktop application to run [Pluto](https://plutojl.org). PlutoDesktop is the easiest way to install and use Pluto on windows. 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://github.com/JuliaPluto/PlutoDesktop/assets/22894011/553e7022-08c9-4aa5-a5cf-385f4244473f">
@@ -15,31 +9,34 @@ Abstracts and automates the following processes:
 </picture>
 
 ## Features
-
-- Double click to open files
-- No path entering in that input box to move/save a notebook, it happens via a dialog box.
-- Multi-window support
-
-... among others.
-
+The advantages compared to installing Pluto as a Julia package are:
+- All-in-one: Julia and Pluto are **included in the app**
+  - You don't need to install and update Pluto
+  - In fact, you don't need a terminal!
+- File picker: when you open or save a notebook, you can use the **native Explorer window** instead of typing a `C:\...` path.
+  - You can also associate Pluto with the `.jl` or `.plutojl` file types, so you can **double click to open** notebooks.
+- Auto updating: the PlutoDesktop app checks for updates in the background. So you get the latest Julia and Pluto versions automatically.
+- Each window is one notebook. If you close a notebook, it shuts down.
+  
 ## Who is this for?
 
-Although everybody is welcome to use this, it is generally focussed on people who are not comfortable
-with using CLI. Students and Teachers who are just interested in using Pluto.jl and want to miss the
-whole process of installing Julia, then Pluto and then running it and everything, this is what you
-are looking for.
+Although everybody is welcome to use this, it is generally focussed on people who are not comfortable using the terminal. Students and teachers who are just interested in using Pluto.jl and want an easy installation, this is what you are looking for!
+
+On all platforms (Windows, MacOS, Linux), you can still install Pluto as a package from the Julia package manager. PlutoDesktop is an extra option for Windows users.
 
 ## Supported Platforms
 
-- Windows 64 bit only, as of now.
-- MacOS only works in development mode (`npm run start`), because Code Signing is broken. We could get it to work with a Developer ID certificate?
+Windows 64 bit only. This is because most of our users use Windows, and this is the platform where using a terminal and typing file paths is the least comon.
 
 ## Installation
-You can already try an alpha preview of Pluto Desktop!
+You can already try an beta preview of Pluto Desktop!
 
 **[⬇ Download Pluto for Windows](https://github.com/JuliaPluto/PlutoDesktop/releases/latest/download/PlutoSetup.exe)**
 
-Run the installer and you're done — no need to install anything else. The app keeps itself up to date automatically.
+> [^NOTE]
+> You will see a warning **Windows protected this PC**. Click on **Details**, and then **Run anyways**. You get this warning because we don't yet have a Windows code signing key.
+
+Run the installer, this will take some minutes, and Pluto is installed! You don't need to install anything else. The app keeps itself up to date automatically.
 
 ## Maintenance
 
