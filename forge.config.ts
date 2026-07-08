@@ -39,6 +39,8 @@ const config: ForgeConfig = {
       // Shown in Windows "Apps & features"; must be a URL, not a local path.
       iconUrl:
         'https://raw.githubusercontent.com/JuliaPluto/PlutoDesktop/main/assets/icon.ico',
+      remoteReleases:
+        'https://github.com/JuliaPluto/PlutoDesktop/releases/latest/download',
     }),
     new MakerZIP({}, ['darwin']),
     new MakerRpm({}),
